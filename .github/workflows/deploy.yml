@@ -2,72 +2,30 @@ name: Deploy Next.js to EC2
 
 on:
   push:
-    branches: [ "main" ]
-  workflow_dispatch: {}
+    branches:
+      - main
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted  # <-- uses your EC2 runner
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node (for build checks if building locally)
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "lts/*"
-          cache: "npm"
+          node-version: 'lts/*'
+          cache: 'npm'
 
-      - name: Prepare SSH
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Next.js app
+        run: npm run build
+
+      - name: Restart app with PM2
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/ec2_key
-          chmod 600 ~/.ssh/ec2_key
-          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Deploy to EC2
-        env:
-          EC2_HOST: ${{ secrets.EC2_HOST }}
-          EC2_USER: ${{ secrets.EC2_USER }}
-          APP_DIR: ${{ secrets.APP_DIR }}
-          PM2_NAME: ${{ secrets.PM2_NAME }}
-        run: |
-          ssh -i ~/.ssh/ec2_key ${EC2_USER}@${EC2_HOST} 'bash -s' << 'EOF'
-          set -e
-
-          # Ensure base tools
-          sudo apt-get update -y
-          sudo apt-get install -y build-essential git
-
-          # Ensure Node LTS and PM2 exist
-          if ! command -v node >/dev/null 2>&1; then
-            curl -sL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
-            sudo apt-get install -y nodejs
-          fi
-          sudo npm i -g pm2
-
-          # App directory
-          mkdir -p "$APP_DIR"
-          if [ ! -d "$APP_DIR/.git" ]; then
-            git clone https://github.com/pawan-gaur/braify-web-app.git "$APP_DIR"
-          fi
-
-          cd "$APP_DIR"
-          git fetch --all
-          git reset --hard origin/main
-          npm ci || npm i
-          npm run build
-
-          # Start or reload PM2
-          if pm2 describe "${PM2_NAME}" >/dev/null 2>&1; then
-            pm2 restart "${PM2_NAME}"
-          else
-            pm2 start npm --name "${PM2_NAME}" -- run start
-            pm2 save
-          fi
-
-          # Validate and reload Nginx if present
-          if command -v nginx >/dev/null 2>&1; then
-            sudo nginx -t && sudo systemctl reload nginx || sudo systemctl restart nginx
-          fi
-          EOF
+          pm2 delete braify-web-server || true
+          pm2 start npm --name "braify-web-server" -- run start
+          pm2 save
