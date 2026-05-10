@@ -1,0 +1,313 @@
+/* ─────────────────────────────────────────────────────────
+   Builder shell layout  (height-critical, not Tailwind)
+   ───────────────────────────────────────────────────────── */
+.builder-shell {
+  display: flex;
+  flex-direction: column;
+  /* 56px = top navbar  |  36px = breadcrumb bar above the builder */
+  height: calc(100vh - 56px - 36px);
+  overflow: hidden;
+}
+
+.builder-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.builder-canvas-wrap {
+  flex: 1;
+  background: #888;
+  overflow: auto;
+  position: relative;
+}
+
+#gjs-canvas {
+  height: 100%;
+  width: 100%;
+}
+
+.builder-panel-left,
+.builder-panel-right {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-section {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* ─────────────────────────────────────────────────────────
+   GrapesJS — block panel overrides
+   ───────────────────────────────────────────────────────── */
+.gjs-block-categories { background: transparent !important; }
+
+.gjs-block-category .gjs-title {
+  background: #14142a !important;
+  color: #7070a0 !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.15em !important;
+  text-transform: uppercase !important;
+  padding: 8px 10px !important;
+}
+
+.gjs-block {
+  background: #14142a !important;
+  border: 1px solid #1c1c35 !important;
+  color: #a0a0c0 !important;
+  font-size: 11px !important;
+  border-radius: 6px !important;
+  transition: border-color 0.15s, background 0.15s !important;
+  padding: 8px 4px !important;
+}
+
+.gjs-block:hover {
+  background: #1e1e40 !important;
+  border-color: #6366f1 !important;
+  color: #fff !important;
+}
+
+#blocks-panel { padding: 6px; }
+#layers-panel,
+#traits-panel { padding: 8px; color: #a0a0c0; font-size: 13px; }
+
+/* ── Block icon (media) area ── */
+.gjs-block__media {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 38px !important;
+  margin-bottom: 5px !important;
+}
+
+.gjs-block__media svg {
+  width: 28px !important;
+  height: 28px !important;
+  stroke: #7070a0 !important;
+  transition: stroke 0.15s !important;
+}
+
+.gjs-block:hover .gjs-block__media svg {
+  stroke: #a78bfa !important;
+}
+
+.gjs-block-label {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  color: #7070a0 !important;
+  text-align: center !important;
+  letter-spacing: 0.02em !important;
+  line-height: 1.3 !important;
+}
+
+.gjs-block:hover .gjs-block-label {
+  color: #c4b5fd !important;
+}
+
+/* ─────────────────────────────────────────────────────────
+   GrapesJS — Style / Layer / Trait manager overrides
+   ───────────────────────────────────────────────────────── */
+.gjs-sm-sector-title,
+.gjs-clm-title,
+.gjs-trt-header {
+  background: #14142a !important;
+  color: #7070a0 !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+}
+
+.gjs-sm-property label,
+.gjs-trt-trait label {
+  color: #737373 !important;
+  font-size: 11px !important;
+}
+
+.gjs-sm-property input,
+.gjs-sm-property select,
+.gjs-trt-trait input,
+.gjs-trt-trait select {
+  background: #14142a !important;
+  color: #e0e0ff !important;
+  border-color: #1c1c35 !important;
+  border-radius: 6px !important;
+}
+
+.gjs-field { background: #14142a !important; border-color: #1c1c35 !important; }
+.gjs-field input { color: #e0e0ff !important; }
+
+.gjs-layer-name { color: #a0a0c0 !important; }
+.gjs-layer { background: #14142a !important; border-color: #1c1c35 !important; }
+.gjs-layer:hover { background: #1e1e40 !important; }
+.gjs-layer.gjs-selected { background: linear-gradient(135deg, #4f46e5, #7c3aed) !important; }
+
+/* ─────────────────────────────────────────────────────────
+   GrapesJS — RTE toolbar
+   ───────────────────────────────────────────────────────── */
+.gjs-rte-toolbar {
+  background: #0d0d1a !important;
+  border: 1px solid #1c1c35 !important;
+  border-radius: 8px !important;
+  padding: 4px 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 2px !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
+}
+
+.gjs-rte-actionbar .gjs-rte-action {
+  color: #94a3b8 !important;
+  border: none !important;
+  background: transparent !important;
+  border-radius: 5px !important;
+  padding: 4px 8px !important;
+  min-width: 28px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 13px !important;
+  transition: background 0.15s, color 0.15s !important;
+}
+
+.gjs-rte-actionbar .gjs-rte-action:hover {
+  background: #0f3460 !important;
+  color: #fff !important;
+}
+
+.gjs-rte-actionbar .gjs-rte-action.active {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+  color: #fff !important;
+}
+
+.rte-sep-btn { pointer-events: none !important; }
+.rte-sep { color: #1e1e1e !important; padding: 0 2px !important; user-select: none !important; font-size: 16px !important; }
+
+/* ─────────────────────────────────────────────────────────
+   RTE extras (font-size select + color pickers)
+   ───────────────────────────────────────────────────────── */
+.rte-extras {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+  padding-left: 6px;
+  border-left: 1px solid #2d2d4e;
+}
+
+.rte-size-select {
+  background: #14142a;
+  color: #a0a0c0;
+  border: 1px solid #1c1c35;
+  border-radius: 5px;
+  padding: 3px 6px;
+  font-size: 11px;
+  cursor: pointer;
+  outline: none;
+  height: 26px;
+}
+
+.rte-size-select:hover { border-color: #6366f1; color: #fff; }
+
+.rte-color-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 26px;
+  border-radius: 5px;
+  cursor: pointer;
+  position: relative;
+  background: #14142a;
+  border: 1px solid #1c1c35;
+  transition: border-color 0.15s;
+}
+
+.rte-color-btn:hover { border-color: #6366f1; }
+
+.rte-color-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #cbd5e1;
+  line-height: 1;
+  pointer-events: none;
+  border-bottom: 3px solid #000;
+  padding-bottom: 1px;
+}
+
+.rte-bg-label { border-bottom-color: #ffff00; }
+
+.rte-color-input {
+  position: absolute;
+  width: 0; height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ─────────────────────────────────────────────────────────
+   GrapesJS — misc
+   ───────────────────────────────────────────────────────── */
+.gjs-cv-canvas { background: #e8eaf5 !important; }
+
+/* Toolbar (component action bar) */
+.gjs-toolbar {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+  border-radius: 8px !important;
+  padding: 2px !important;
+  gap: 2px !important;
+}
+.gjs-toolbar-item { color: #fff !important; border-radius: 5px !important; }
+.gjs-toolbar-item:hover { background: rgba(255,255,255,0.15) !important; }
+
+/* Selection outline */
+.gjs-selected { outline: 2px solid #6366f1 !important; outline-offset: 2px !important; }
+
+/* Drop placeholder */
+.gjs-placeholder { border-color: #6366f1 !important; background: rgba(99,102,241,0.08) !important; }
+.gjs-badge { background: linear-gradient(135deg, #6366f1, #8b5cf6) !important; border-radius: 4px !important; }
+
+/* ── Resize handles ── */
+.gjs-resizer-h {
+  background: #ffffff !important;
+  border: 2px solid #6366f1 !important;
+  border-radius: 3px !important;
+  width: 10px !important;
+  height: 10px !important;
+  margin: -5px !important;
+  box-shadow: 0 0 0 1px rgba(99,102,241,0.3), 0 2px 6px rgba(99,102,241,0.25) !important;
+  transition: background 0.15s, transform 0.15s, border-color 0.15s !important;
+  z-index: 10 !important;
+}
+
+.gjs-resizer-h:hover {
+  background: #6366f1 !important;
+  border-color: #4f46e5 !important;
+  transform: scale(1.35) !important;
+  box-shadow: 0 0 0 2px rgba(99,102,241,0.4), 0 4px 10px rgba(99,102,241,0.35) !important;
+}
+
+/* Corner handles slightly larger for easier grabbing */
+.gjs-resizer-h-tl,
+.gjs-resizer-h-tr,
+.gjs-resizer-h-bl,
+.gjs-resizer-h-br {
+  width: 12px !important;
+  height: 12px !important;
+  margin: -6px !important;
+  border-radius: 4px !important;
+}
+
+/* Size tooltip shown during resize */
+.gjs-resizer-h + .gjs-resizer-h-c {
+  background: #4f46e5 !important;
+  color: #fff !important;
+  border-radius: 4px !important;
+  font-size: 10px !important;
+  padding: 2px 6px !important;
+}

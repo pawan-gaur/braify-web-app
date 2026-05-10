@@ -1,0 +1,143 @@
+import axios from 'axios'
+
+const TOKEN_KEY = 'pdf-builder-token'
+
+export const http = axios.create({
+  baseURL: '/api',
+  headers: { 'Content-Type': 'application/json' },
+})
+
+/**
+ * Request interceptor — attach the JWT token stored in localStorage to every
+ * outgoing request so authenticated endpoints work automatically.
+ */
+http.interceptors.request.use(config => {
+  const token = localStorage.getItem(TOKEN_KEY)
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
+/**
+ * Response interceptor — normalises every API error into a plain Error whose
+ * .message is the text returned by the backend.
+ * 401 responses trigger a hard redirect to /login so the user can re-authenticate.
+ */
+http.interceptors.response.use(
+  res => res,
+  err => {
+    const data    = err.response?.data
+    const status  = err.response?.status
+
+    // Unauthorised → session expired or token revoked → send to login
+    if (status === 401 && !err.config?.url?.includes('/auth/')) {
+      localStorage.removeItem(TOKEN_KEY)
+      window.location.href = '/login'
+      return Promise.reject(new Error('Session expired. Please log in again.'))
+    }
+
+    // Backend sends { message, status, timestamp } via GlobalExceptionHandler
+    const message =
+      (typeof data === 'object' && data?.message)
+        ? data.message
+        : (typeof data === 'string' && data.trim())
+          ? data.trim()
+          : err.message || `HTTP ${status ?? 'error'}`
+
+    const normalised         = new Error(message)
+    normalised.status        = status
+    normalised.rawData       = data
+    normalised.originalError = err
+    return Promise.reject(normalised)
+  }
+)
+
+// ── Templates ──────────────────────────────────────────────
+export const getTemplates = () => http.get('/templates').then(r => r.data)
+export const getTemplate  = (id) => http.get(`/templates/${id}`).then(r => r.data)
+export const createTemplate = (payload) => http.post('/templates', payload).then(r => r.data)
+export const updateTemplate = (id, payload) => http.put(`/templates/${id}`, payload).then(r => r.data)
+export const deleteTemplate = (id) => http.delete(`/templates/${id}`)
+
+// ── Email templates ────────────────────────────────────────
+export const getEmailTemplates    = ()         => http.get('/email-templates').then(r => r.data)
+export const getEmailTemplate     = (id)       => http.get(`/email-templates/${id}`).then(r => r.data)
+export const createEmailTemplate  = (payload)  => http.post('/email-templates', payload).then(r => r.data)
+export const updateEmailTemplate  = (id, p)    => http.put(`/email-templates/${id}`, p).then(r => r.data)
+export const deleteEmailTemplate  = (id)       => http.delete(`/email-templates/${id}`)
+export const sendEmailTemplate    = (id, payload) => http.post(`/email-templates/${id}/send`, payload).then(r => r.data)
+
+// ── Email template versions ────────────────────────────────
+export const getEmailTemplateVersions    = (id)    => http.get(`/email-templates/${id}/versions`).then(r => r.data)
+export const getEmailTemplateVersion     = (id, v) => http.get(`/email-templates/${id}/versions/${v}`).then(r => r.data)
+export const restoreEmailTemplateVersion = (id, v) => http.post(`/email-templates/${id}/versions/${v}/restore`).then(r => r.data)
+
+// ── Version history ────────────────────────────────────────
+export const getTemplateVersions    = (id)              => http.get(`/templates/${id}/versions`).then(r => r.data)
+export const getTemplateVersion     = (id, v)           => http.get(`/templates/${id}/versions/${v}`).then(r => r.data)
+export const restoreTemplateVersion = (id, v)           => http.post(`/templates/${id}/versions/${v}/restore`).then(r => r.data)
+
+// ── Audit log ──────────────────────────────────────────────
+export const getAuditLogs         = (page = 0, size = 50) => http.get('/audit-logs', { params: { page, size } }).then(r => r.data)
+export const getTemplateAuditLogs = (id)                  => http.get(`/audit-logs/template/${id}`).then(r => r.data)
+
+// ── Dashboard ──────────────────────────────────────────────
+export const getDashboardStats = () => http.get('/dashboard').then(r => r.data)
+
+// ── Organizations (Platform Admin) ─────────────────────────
+export const getOrganizations    = ()         => http.get('/organizations').then(r => r.data)
+export const searchOrganizations = (q)        => http.get('/organizations/search', { params: { q } }).then(r => r.data)
+export const createOrganization  = (payload)  => http.post('/organizations', payload).then(r => r.data)
+export const updateOrganization  = (id, p)    => http.put(`/organizations/${id}`, p).then(r => r.data)
+export const deleteOrganization  = (id)       => http.delete(`/organizations/${id}`)
+
+// ── Users (Platform Admin / Org Admin / Admin) ─────────────
+export const getUsers       = ()                   => http.get('/users').then(r => r.data)
+export const searchUsers    = (q, orgId)           => http.get('/users/search', { params: { q, orgId } }).then(r => r.data)
+export const createUser     = (payload)            => http.post('/users', payload).then(r => r.data)
+export const updateUser     = (id, payload)        => http.put(`/users/${id}`, payload).then(r => r.data)
+export const deactivateUser = (id)                 => http.delete(`/users/${id}`)
+export const enableUser     = (id)                 => http.put(`/users/${id}/enable`)
+export const disableUser    = (id)                 => http.put(`/users/${id}/disable`)
+
+// ── Sessions ───────────────────────────────────────────────
+export const getSessions          = ()   => http.get('/sessions').then(r => r.data)
+export const revokeSession        = (id) => http.delete(`/sessions/${id}`)
+export const revokeOtherSessions  = ()   => http.delete('/sessions/me/others').then(r => r.data)
+
+// ── Auth — invite / password reset ─────────────────────────
+export const validateInviteToken = (token)            => http.get('/auth/validate-token', { params: { token } }).then(r => r.data)
+export const acceptInvite        = (token, password)  => http.post('/auth/accept-invite', { token, password }).then(r => r.data)
+export const forgotPassword      = (email)            => http.post('/auth/forgot-password', { email }).then(r => r.data)
+export const resetPassword       = (token, password)  => http.post('/auth/reset-password', { token, password }).then(r => r.data)
+
+// ── Profile (self) ─────────────────────────────────────────
+export const getMyProfile    = ()        => http.get('/profile/me').then(r => r.data)
+export const updateProfile   = (payload) => http.put('/profile/me', payload).then(r => r.data)
+export const changePassword  = (payload) => http.put('/profile/me/password', payload).then(r => r.data)
+export const uploadAvatar    = (avatar)  => http.post('/profile/me/avatar', { avatar }).then(r => r.data)
+export const getMyAuditLog   = ()        => http.get('/profile/me/audit').then(r => r.data)
+
+// ── PDF Generation ─────────────────────────────────────────
+export const generatePdf = async (templateId, data, filename) => {
+  const response = await http.post(
+    '/generate-pdf',
+    { templateId, data, filename },
+    { responseType: 'blob' }
+  )
+  // Trigger browser download
+  const url = URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename || 'document.pdf'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+export const previewPdfBlob = async (templateId, data) => {
+  const response = await http.post(
+    '/preview-pdf',
+    { templateId, data },
+    { responseType: 'blob' }
+  )
+  return URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }))
+}
