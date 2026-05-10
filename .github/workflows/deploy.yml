@@ -1,0 +1,56 @@
+name: CI/CD — braify-web-app
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout ────────────────────────────────────────────────────
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── 2. Node 20 ─────────────────────────────────────────────────────
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # ── 3. Install & Build ─────────────────────────────────────────────
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production bundle
+        run: npm run build
+        env:
+          # The frontend calls relative /api paths — Nginx proxies them to
+          # the backend on the same domain, so no absolute URL is needed.
+          # Set this only if you ever move to a separate API domain.
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+
+      # ── 4. Deploy dist/ to EC2 ─────────────────────────────────────────
+      - name: Deploy to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host:     ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key:      ${{ secrets.EC2_SSH_KEY }}
+          source:   "dist/"
+          target:   "/var/www/braify-web-app/"
+          strip_components: 1
+          rm: true   # remove old files before uploading new ones
+
+      # ── 5. Reload Nginx ────────────────────────────────────────────────
+      - name: Reload Nginx
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host:     ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key:      ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            sudo nginx -t && sudo systemctl reload nginx
+            echo "✅ Nginx reloaded — braify-web-app is live"
