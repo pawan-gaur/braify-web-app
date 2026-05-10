@@ -1,89 +1,48 @@
 /** @type {import('tailwindcss').Config} */
-module.exports = {
-  darkMode: ["class"],
-  content: [
-    './pages/**/*.{ts,tsx}',
-    './components/**/*.{ts,tsx}',
-    './app/**/*.{ts,tsx}',
-    './src/**/*.{ts,tsx}',
-	],
+export default {
+  content: ['./index.html', './src/**/*.{js,jsx,ts,tsx}'],
+  darkMode: 'class',
   theme: {
-    container: {
-      center: true,
-      padding: "2rem",
-      screens: {
-        "2xl": "1400px",
-      },
-    },
     extend: {
-
-      animation: {
-        'infinite-scroll': 'infinite-scroll 25s linear infinite',
-      },
-      keyframes: {
-        'infinite-scroll': {
-            from : { transform: 'translateX(0)' },
-            to   : { transform: 'translateX(-100%)' },
-        },
-      },
-      
-
-
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+          DEFAULT: '#6366f1',  // indigo-500
+          hover:   '#4f46e5',  // indigo-600
+          light:   '#eef2ff',  // indigo-50
+          dark:    '#3730a3',  // indigo-800
         },
-        secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+        violet: {
+          DEFAULT: '#8b5cf6',
+          dark:    '#7c3aed',
         },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
+        sidebar: {
+          DEFAULT: '#0d0d1a',  // near-black purple tint
+          hover:   '#14142a',
+          border:  '#1c1c35',
+          label:   '#4a4a75',
+          muted:   '#7070a0',
         },
-        muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
+        surface: {
+          DEFAULT: '#f5f7ff',  // light indigo-tinted page bg
+          card:    '#ffffff',
+          border:  '#e8eaf5',
         },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
-        },
-        popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
-        },
-        card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
-        },
+        navy: '#0f172a',
       },
-      borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+      backgroundImage: {
+        'gradient-primary': 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+        'gradient-primary-hover': 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+        'gradient-sidebar-active': 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+        'gradient-card': 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
       },
-      keyframes: {
-        "accordion-down": {
-          from: { height: 0 },
-          to: { height: "var(--radix-accordion-content-height)" },
-        },
-        "accordion-up": {
-          from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: 0 },
-        },
-      },
-      animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
+      boxShadow: {
+        card:          '0 1px 3px rgba(99,102,241,0.06), 0 4px 16px rgba(99,102,241,0.05)',
+        'card-hover':  '0 4px 12px rgba(99,102,241,0.15), 0 16px 40px rgba(139,92,246,0.12)',
+        glow:          '0 0 20px rgba(99,102,241,0.35)',
+        'glow-sm':     '0 0 10px rgba(99,102,241,0.25)',
+        sidebar:       '4px 0 20px rgba(0,0,0,0.4)',
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [],
 }
