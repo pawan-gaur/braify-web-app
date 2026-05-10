@@ -32,17 +32,26 @@ jobs:
           # Set this only if you ever move to a separate API domain.
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
 
-      # ── 4. Deploy dist/ to EC2 ─────────────────────────────────────────
-      - name: Deploy to EC2
+      # ── 4. Deploy dist/ to EC2 + Reload Nginx ─────────────────────────
+      - name: Deploy to EC2 and reload Nginx
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host:     ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key:      ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # Clear old build
+            rm -rf /var/www/braify-web-app/*
+
+      - name: Upload dist to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host:     ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key:      ${{ secrets.EC2_SSH_KEY }}
-          source:   "dist/"
+          source:   "dist/*"
           target:   "/var/www/braify-web-app/"
           strip_components: 1
-          rm: true   # remove old files before uploading new ones
 
       # ── 5. Reload Nginx ────────────────────────────────────────────────
       - name: Reload Nginx
