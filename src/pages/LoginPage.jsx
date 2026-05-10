@@ -165,12 +165,13 @@ export default function LoginPage() {
           </form>
         </div>
 
-        {/* Default credentials hint */}
+        {/* Default credentials hint
         <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-5">
           Default platform admin: <span className="font-mono">admin@platform.com</span>
           {' / '}
           <span className="font-mono">Admin@1234</span>
         </p>
+		 */}
       </div>
     </div>
   )
