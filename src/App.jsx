@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import React from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { AppProvider, useApp }  from './context/AppContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ToastProvider } from './context/ToastContext'
@@ -22,6 +23,43 @@ import ForgotPasswordPage   from './pages/ForgotPasswordPage'
 import ResetPasswordPage    from './pages/ResetPasswordPage'
 import DashboardPage        from './pages/DashboardPage'
 import LandingPage          from './pages/LandingPage'
+import ESignDocumentsPage   from './pages/ESignDocumentsPage'
+import ESignBuilderPage     from './pages/ESignBuilderPage'
+import ESignDetailPage      from './pages/ESignDetailPage'
+import ESignSigningPage     from './pages/ESignSigningPage'
+import ESignVerifyPage      from './pages/ESignVerifyPage'
+
+/**
+ * Smart router for /esign/:id
+ * - DRAFT documents → builder (fields can still be placed / sent)
+ * - Everything else  → detail/view page (read-only, signed PDF, audit trail)
+ */
+function ESignDocumentRouter() {
+  const { id } = useParams()
+  const [status, setStatus] = React.useState(null)
+
+  React.useEffect(() => {
+    import('./services/api').then(({ esignGetDocument }) =>
+      esignGetDocument(id)
+        .then(d => setStatus(d.status))
+        .catch(() => setStatus('DRAFT')) // fallback to builder on error
+    )
+  }, [id])
+
+  if (status === null) return (
+    <div className="flex justify-center items-center min-h-[60vh]">
+      <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"/>
+    </div>
+  )
+
+  // DRAFT, PENDING, IN_REVIEW → builder (fields can be edited / doc can be sent)
+  // COMPLETED, CANCELLED, EXPIRED → read-only detail view
+  // Pass the already-fetched status as a prop so ESignBuilderPage knows
+  // immediately whether to show the Send step or navigate back after saving.
+  return ['DRAFT', 'PENDING', 'IN_REVIEW'].includes(status)
+    ? <ESignBuilderPage initialDocStatus={status} />
+    : <ESignDetailPage />
+}
 
 /* ── Authenticated shell with sidebar + navbar ─────────────────────────── */
 function Shell() {
@@ -48,6 +86,12 @@ function Shell() {
           <Route path="/organizations"      element={<OrganizationsPage />} />
           <Route path="/users"              element={<UsersPage />} />
           <Route path="/sessions"           element={<SessionsPage />} />
+          {/* E-Sign Creator */}
+          <Route path="/esign"              element={<ESignDocumentsPage />} />
+          <Route path="/esign/new"          element={<ESignBuilderPage />} />
+          {/* /esign/:id — builder for editable docs, detail view for completed/terminal ones */}
+          <Route path="/esign/:id"          element={<ESignDocumentRouter />} />
+          <Route path="/esign/:id/view"     element={<ESignDetailPage />} />
           {/* Profile */}
           <Route path="/profile"            element={<ProfilePage />} />
           {/* Catch-all inside shell */}
@@ -86,6 +130,9 @@ function AppRoutes() {
       <Route path="/accept-invite"   element={<AcceptInvitePage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password"  element={<ResetPasswordPage />} />
+      {/* E-Sign public routes */}
+      <Route path="/sign/:token"    element={<ESignSigningPage />} />
+      <Route path="/verify/:id"     element={<ESignVerifyPage />} />
 
       {/* Everything else is protected */}
       <Route

@@ -117,6 +117,25 @@ export const changePassword  = (payload) => http.put('/profile/me/password', pay
 export const uploadAvatar    = (avatar)  => http.post('/profile/me/avatar', { avatar }).then(r => r.data)
 export const getMyAuditLog   = ()        => http.get('/profile/me/audit').then(r => r.data)
 
+// ── E-Sign (Creator) ───────────────────────────────────────
+export const esignCreateDocument  = (payload)              => http.post('/esign/documents', payload).then(r => r.data)
+export const esignListDocuments   = ()                     => http.get('/esign/documents').then(r => r.data)
+export const esignGetDocument     = (id)                   => http.get(`/esign/documents/${id}`).then(r => r.data)
+export const esignSaveFields      = (id, fields)           => http.put(`/esign/documents/${id}/fields`, fields).then(r => r.data)
+export const esignSendDocument    = (id, days = 7)         => http.post(`/esign/documents/${id}/send?tokenValidDays=${days}`).then(r => r.data)
+export const esignCancelDocument  = (id)                   => http.post(`/esign/documents/${id}/cancel`).then(r => r.data)
+export const esignResendDocument  = (id, days = 7)         => http.post(`/esign/documents/${id}/resend?tokenValidDays=${days}`).then(r => r.data)
+export const esignGetAudit        = (id)                   => http.get(`/esign/documents/${id}/audit`).then(r => r.data)
+export const esignDownloadSigned  = (id)                   => http.get(`/esign/documents/${id}/signed-pdf`, { responseType: 'blob' }).then(r => r.data)
+
+// ── E-Sign (Client — uses signing JWT directly in header) ──
+export const esignOpenDocument    = (token)                => http.get(`/esign/sign/${token}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data)
+export const esignSignField       = (token, fieldId, body) => http.put(`/esign/sign/${token}/fields/${fieldId}`, body, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data)
+export const esignSubmitDocument  = (token)                => http.post(`/esign/sign/${token}/submit`, {}, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data)
+
+// ── E-Sign Verify (public) ─────────────────────────────────
+export const esignVerifyDocument  = (id)                   => http.get(`/esign/verify/${id}`).then(r => r.data)
+
 // ── PDF Generation ─────────────────────────────────────────
 export const generatePdf = async (templateId, data, filename) => {
   const response = await http.post(

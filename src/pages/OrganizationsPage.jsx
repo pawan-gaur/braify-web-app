@@ -27,7 +27,7 @@ export default function OrganizationsPage() {
   const [editOrg,  setEditOrg]  = useState(null)   // org being edited (null = create mode)
   const [saving,   setSaving]   = useState(false)
 
-  const [form, setForm] = useState({ name: '', slug: '', description: '' })
+  const [form, setForm] = useState({ name: '', code: '', description: '' })
 
   const load = useCallback((q = '') => {
     setLoading(true)
@@ -47,19 +47,19 @@ export default function OrganizationsPage() {
     return () => clearTimeout(t)
   }, [query, load])
 
-  const openCreate = () => { setEditOrg(null); setForm({ name: '', slug: '', description: '' }); setShowForm(true) }
-  const openEdit   = (org) => { setEditOrg(org); setForm({ name: org.name, slug: org.slug, description: org.description || '' }); setShowForm(true) }
+  const openCreate = () => { setEditOrg(null); setForm({ name: '', code: '', description: '' }); setShowForm(true) }
+  const openEdit   = (org) => { setEditOrg(org); setForm({ name: org.name, code: org.code, description: org.description || '' }); setShowForm(true) }
   const closeForm  = () => { setShowForm(false); setEditOrg(null) }
 
-  const slugify = (v) => v.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+  const codify = (v) => v.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
   const handleNameChange = (v) => {
-    setForm(f => ({ ...f, name: v, slug: editOrg ? f.slug : slugify(v) }))
+    setForm(f => ({ ...f, name: v, code: editOrg ? f.code : codify(v) }))
   }
 
   const handleSave = async (e) => {
     e.preventDefault()
-    if (!form.name.trim() || !form.slug.trim()) { toast.error('Name and slug are required.'); return }
+    if (!form.name.trim() || !form.code.trim()) { toast.error('Name and code are required.'); return }
     setSaving(true)
     try {
       if (editOrg) {
@@ -115,7 +115,7 @@ export default function OrganizationsPage() {
         <input
           type="text"
           className="form-input pl-9"
-          placeholder="Search by name or slug…"
+          placeholder="Search by name or code…"
           value={query}
           onChange={e => setQuery(e.target.value)}
         />
@@ -144,7 +144,7 @@ export default function OrganizationsPage() {
             <thead>
               <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
                 <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Name</th>
-                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Slug</th>
+                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Code</th>
                 <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Status</th>
                 <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Created</th>
                 <th className="px-5 py-3"/>
@@ -159,7 +159,7 @@ export default function OrganizationsPage() {
                   </td>
                   <td className="px-5 py-3.5">
                     <code className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-gray-600 dark:text-gray-300">
-                      {org.slug}
+                      {org.code}
                     </code>
                   </td>
                   <td className="px-5 py-3.5">
@@ -227,9 +227,9 @@ export default function OrganizationsPage() {
                   value={form.name} onChange={e => handleNameChange(e.target.value)} required />
               </div>
               <div>
-                <label className="form-label">Slug *</label>
+                <label className="form-label">Code *</label>
                 <input className="form-input font-mono" placeholder="acme-corp"
-                  value={form.slug} onChange={e => setForm(f => ({ ...f, slug: slugify(e.target.value) }))}
+                  value={form.code} onChange={e => setForm(f => ({ ...f, code: codify(e.target.value) }))}
                   disabled={!!editOrg} required />
                 {!editOrg && <p className="text-xs text-gray-400 mt-1">Auto-generated from name. Cannot be changed later.</p>}
               </div>
