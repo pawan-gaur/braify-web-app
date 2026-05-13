@@ -77,7 +77,15 @@ export const getTemplateVersion     = (id, v)           => http.get(`/templates/
 export const restoreTemplateVersion = (id, v)           => http.post(`/templates/${id}/versions/${v}/restore`).then(r => r.data)
 
 // ── Audit log ──────────────────────────────────────────────
-export const getAuditLogs         = (page = 0, size = 50) => http.get('/audit-logs', { params: { page, size } }).then(r => r.data)
+export const getAuditLogs = (page = 0, size = 20, resourceType = null, orgId = null) =>
+  http.get('/audit-logs', {
+    params: {
+      page,
+      size,
+      ...(resourceType ? { resourceType } : {}),
+      ...(orgId        ? { orgId }        : {}),
+    },
+  }).then(r => r.data)
 export const getTemplateAuditLogs = (id)                  => http.get(`/audit-logs/template/${id}`).then(r => r.data)
 
 // ── Dashboard ──────────────────────────────────────────────
@@ -89,6 +97,10 @@ export const searchOrganizations = (q)        => http.get('/organizations/search
 export const createOrganization  = (payload)  => http.post('/organizations', payload).then(r => r.data)
 export const updateOrganization  = (id, p)    => http.put(`/organizations/${id}`, p).then(r => r.data)
 export const deleteOrganization  = (id)       => http.delete(`/organizations/${id}`)
+
+// ── Organization Features ───────────────────────────────────
+export const getOrgFeatures    = (id)         => http.get(`/organizations/${id}/features`).then(r => r.data)
+export const updateOrgFeatures = (id, feats)  => http.put(`/organizations/${id}/features`, { features: feats }).then(r => r.data)
 
 // ── Users (Platform Admin / Org Admin / Admin) ─────────────
 export const getUsers       = ()                   => http.get('/users').then(r => r.data)

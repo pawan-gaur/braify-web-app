@@ -1,12 +1,15 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { useAuth, ROLES } from '../../context/AuthContext'
+import { FEATURES } from '../../config/features'
 
 /* ─────────────────────────────────────────────
    Nav structure
    real      → renders as <NavLink>
    dummy     → renders as <button> with "Soon" chip
    minRole   → only shown when user role >= this value
+   feature   → only shown when org has this feature enabled
+              (PLATFORM_ADMIN bypasses all feature checks)
 ───────────────────────────────────────────── */
 const NAV_SECTIONS = [
   {
@@ -20,6 +23,7 @@ const NAV_SECTIONS = [
   },
   {
     section: 'PDF Templates',
+    feature: FEATURES.PDF_TEMPLATES,
     links: [
       {
         to: '/templates', end: true, label: 'PDF Templates',
@@ -41,6 +45,7 @@ const NAV_SECTIONS = [
   },
   {
     section: 'Email',
+    feature: FEATURES.EMAIL_TEMPLATES,
     links: [
       {
         to: '/email-templates', label: 'Email Templates',
@@ -62,6 +67,7 @@ const NAV_SECTIONS = [
   },
   {
     section: 'E-Sign',
+    feature: FEATURES.E_SIGN,
     links: [
       {
         to: '/esign', end: true, label: 'Documents',
@@ -184,11 +190,14 @@ const ROLE_RANK = { PLATFORM_ADMIN: 4, ORG_ADMIN: 3, ADMIN: 2, USER: 1 }
 
 export default function Sidebar() {
   const { collapsed, setCollapsed } = useApp()
-  const { user } = useAuth()
+  const { user, hasFeature } = useAuth()
   const navigate = useNavigate()
 
   const visibleSections = NAV_SECTIONS
+    // Gate by role
     .filter(s => !s.minRole || (ROLE_RANK[user?.role] ?? 0) >= (ROLE_RANK[s.minRole] ?? 0))
+    // Gate by feature (PLATFORM_ADMIN bypasses via hasFeature returning true)
+    .filter(s => !s.feature || hasFeature(s.feature))
     .map(s => ({
       ...s,
       links: s.links.filter(l => !l.minRole || (ROLE_RANK[user?.role] ?? 0) >= (ROLE_RANK[l.minRole] ?? 0)),

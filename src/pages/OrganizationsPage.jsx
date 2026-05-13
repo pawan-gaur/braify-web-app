@@ -1,9 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getOrganizations, searchOrganizations, createOrganization, updateOrganization, deleteOrganization } from '../services/api'
+import {
+  getOrganizations, searchOrganizations,
+  createOrganization, updateOrganization, deleteOrganization,
+  getOrgFeatures, updateOrgFeatures,
+} from '../services/api'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
+import { ALL_FEATURES, FEATURE_META } from '../config/features'
 
 const CRUMBS = [
   { label: 'Dashboard', to: '/' },
@@ -15,19 +20,39 @@ function fmtDate(iso) {
   return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+/* ── Helpers ─────────────────────────────────────────────────────────────── */
+function FeaturePill({ featureKey, size = 'sm' }) {
+  const meta = FEATURE_META[featureKey]
+  if (!meta) return null
+  const px  = size === 'sm' ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1 text-xs'
+  return (
+    <span
+      className={`inline-flex items-center gap-1 ${px} rounded-full font-semibold whitespace-nowrap`}
+      style={{ background: meta.bg, color: meta.color }}
+    >
+      <span>{meta.icon}</span>
+      {meta.label}
+    </span>
+  )
+}
+
+/* ── Main page ───────────────────────────────────────────────────────────── */
 export default function OrganizationsPage() {
   useDocumentTitle('Organizations')
   const navigate = useNavigate()
   const toast    = useToast()
 
-  const [orgs,     setOrgs]     = useState([])
-  const [loading,  setLoading]  = useState(true)
-  const [query,    setQuery]    = useState('')
-  const [showForm, setShowForm] = useState(false)
-  const [editOrg,  setEditOrg]  = useState(null)   // org being edited (null = create mode)
-  const [saving,   setSaving]   = useState(false)
+  const [orgs,        setOrgs]        = useState([])
+  const [loading,     setLoading]     = useState(true)
+  const [query,       setQuery]       = useState('')
+  const [showForm,    setShowForm]    = useState(false)
+  const [editOrg,     setEditOrg]     = useState(null)
+  const [saving,      setSaving]      = useState(false)
+  const [featOrg,     setFeatOrg]     = useState(null)   // org whose features modal is open
 
-  const [form, setForm] = useState({ name: '', code: '', description: '' })
+  const [form, setForm] = useState({
+    name: '', code: '', description: '', features: [],
+  })
 
   const load = useCallback((q = '') => {
     setLoading(true)
@@ -37,36 +62,61 @@ export default function OrganizationsPage() {
       .finally(() => setLoading(false))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* Single effect: immediate load when query is empty, debounced when typing */
   useEffect(() => {
-    if (!query.trim()) {
-      load()
-      return
-    }
+    if (!query.trim()) { load(); return }
     const t = setTimeout(() => load(query), 350)
     return () => clearTimeout(t)
   }, [query, load])
 
-  const openCreate = () => { setEditOrg(null); setForm({ name: '', code: '', description: '' }); setShowForm(true) }
-  const openEdit   = (org) => { setEditOrg(org); setForm({ name: org.name, code: org.code, description: org.description || '' }); setShowForm(true) }
-  const closeForm  = () => { setShowForm(false); setEditOrg(null) }
+  const openCreate = () => {
+    setEditOrg(null)
+    setForm({ name: '', code: '', description: '', features: [] })
+    setShowForm(true)
+  }
+  const openEdit = (org) => {
+    setEditOrg(org)
+    setForm({
+      name:        org.name,
+      code:        org.code,
+      description: org.description || '',
+      features:    org.features    || [],
+    })
+    setShowForm(true)
+  }
+  const closeForm = () => { setShowForm(false); setEditOrg(null) }
 
-  const codify = (v) => v.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+  const codify = v => v.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
   const handleNameChange = (v) => {
     setForm(f => ({ ...f, name: v, code: editOrg ? f.code : codify(v) }))
   }
 
+  const toggleFeature = (key) => {
+    setForm(f => ({
+      ...f,
+      features: f.features.includes(key)
+        ? f.features.filter(k => k !== key)
+        : [...f.features, key],
+    }))
+  }
+
   const handleSave = async (e) => {
     e.preventDefault()
-    if (!form.name.trim() || !form.code.trim()) { toast.error('Name and code are required.'); return }
+    if (!form.name.trim() || !form.code.trim()) {
+      toast.error('Name and code are required.')
+      return
+    }
     setSaving(true)
     try {
       if (editOrg) {
-        await updateOrganization(editOrg.id, form)
+        await updateOrganization(editOrg.id, {
+          name: form.name, description: form.description, features: form.features,
+        })
         toast.success('Organization updated.')
       } else {
-        await createOrganization(form)
+        await createOrganization({
+          name: form.name, code: form.code, description: form.description, features: form.features,
+        })
         toast.success('Organization created.')
       }
       closeForm()
@@ -89,6 +139,10 @@ export default function OrganizationsPage() {
     }
   }
 
+  const handleFeaturesUpdated = (orgId, newFeatures) => {
+    setOrgs(prev => prev.map(o => o.id === orgId ? { ...o, features: newFeatures } : o))
+  }
+
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
       <Breadcrumbs items={CRUMBS} />
@@ -97,7 +151,7 @@ export default function OrganizationsPage() {
       <div className="flex items-center justify-between mt-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-navy dark:text-white">Organizations</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage all tenant organizations on the platform.</p>
+          <p className="text-sm text-gray-500 mt-1">Manage all tenant organizations and their feature access.</p>
         </div>
         <button onClick={openCreate} className="btn btn-primary gap-2">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -145,6 +199,7 @@ export default function OrganizationsPage() {
               <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
                 <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Name</th>
                 <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Code</th>
+                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Features</th>
                 <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Status</th>
                 <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Created</th>
                 <th className="px-5 py-3"/>
@@ -155,12 +210,24 @@ export default function OrganizationsPage() {
                 <tr key={org.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group">
                   <td className="px-5 py-3.5">
                     <p className="font-semibold text-gray-800 dark:text-gray-200">{org.name}</p>
-                    {org.description && <p className="text-xs text-gray-400 mt-0.5 truncate max-w-[200px]">{org.description}</p>}
+                    {org.description && (
+                      <p className="text-xs text-gray-400 mt-0.5 truncate max-w-[200px]">{org.description}</p>
+                    )}
                   </td>
                   <td className="px-5 py-3.5">
                     <code className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-gray-600 dark:text-gray-300">
                       {org.code}
                     </code>
+                  </td>
+                  {/* Features column */}
+                  <td className="px-5 py-3.5">
+                    {org.features?.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {org.features.map(f => <FeaturePill key={f} featureKey={f} />)}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-300 dark:text-gray-600 italic">No features</span>
+                    )}
                   </td>
                   <td className="px-5 py-3.5">
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold
@@ -179,6 +246,14 @@ export default function OrganizationsPage() {
                         title="View users"
                       >
                         Users
+                      </button>
+                      <button
+                        onClick={() => setFeatOrg(org)}
+                        className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600
+                                   text-gray-500 hover:border-violet-400 hover:text-violet-600 transition-colors"
+                        title="Manage features"
+                      >
+                        Features
                       </button>
                       <button
                         onClick={() => openEdit(org)}
@@ -203,51 +278,296 @@ export default function OrganizationsPage() {
         )}
       </div>
 
-      {/* Create / Edit Modal */}
+      {/* ── Create / Edit Modal ── */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={closeForm}>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6"
-            onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-bold text-gray-800 dark:text-gray-100">
-                {editOrg ? 'Edit Organization' : 'New Organization'}
-              </h2>
-              <button onClick={closeForm}
-                className="w-8 h-8 flex items-center justify-center rounded-xl text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-              </button>
-            </div>
+        <OrgFormModal
+          editOrg={editOrg}
+          form={form}
+          saving={saving}
+          onClose={closeForm}
+          onSubmit={handleSave}
+          onNameChange={handleNameChange}
+          onFieldChange={(k, v) => setForm(f => ({ ...f, [k]: v }))}
+          onToggleFeature={toggleFeature}
+          codify={codify}
+        />
+      )}
 
-            <form onSubmit={handleSave} className="space-y-4">
-              <div>
-                <label className="form-label">Organization Name *</label>
-                <input className="form-input" placeholder="Acme Corp"
-                  value={form.name} onChange={e => handleNameChange(e.target.value)} required />
-              </div>
-              <div>
-                <label className="form-label">Code *</label>
-                <input className="form-input font-mono" placeholder="acme-corp"
-                  value={form.code} onChange={e => setForm(f => ({ ...f, code: codify(e.target.value) }))}
-                  disabled={!!editOrg} required />
-                {!editOrg && <p className="text-xs text-gray-400 mt-1">Auto-generated from name. Cannot be changed later.</p>}
-              </div>
-              <div>
-                <label className="form-label">Description</label>
-                <textarea className="form-input resize-none" rows={3} placeholder="Optional description…"
-                  value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button type="button" onClick={closeForm} className="btn btn-secondary flex-1">Cancel</button>
-                <button type="submit" disabled={saving} className="btn btn-primary flex-1">
-                  {saving ? 'Saving…' : editOrg ? 'Save Changes' : 'Create Organization'}
-                </button>
-              </div>
-            </form>
+      {/* ── Manage Features Modal ── */}
+      {featOrg && (
+        <ManageFeaturesModal
+          org={featOrg}
+          onClose={() => setFeatOrg(null)}
+          onUpdated={(newFeatures) => { handleFeaturesUpdated(featOrg.id, newFeatures); setFeatOrg(null) }}
+        />
+      )}
+    </div>
+  )
+}
+
+/* ── Org Create / Edit modal ─────────────────────────────────────────────── */
+function OrgFormModal({ editOrg, form, saving, onClose, onSubmit, onNameChange, onFieldChange, onToggleFeature, codify }) {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div
+        className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Modal header */}
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100 dark:border-gray-700">
+          <h2 className="text-base font-bold text-gray-800 dark:text-gray-100">
+            {editOrg ? 'Edit Organization' : 'New Organization'}
+          </h2>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-xl text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <form onSubmit={onSubmit} className="px-6 py-5 space-y-5">
+          {/* Name & Code */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="form-label">Organization Name *</label>
+              <input
+                className="form-input"
+                placeholder="Acme Corp"
+                value={form.name}
+                onChange={e => onNameChange(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label className="form-label">Code *</label>
+              <input
+                className="form-input font-mono"
+                placeholder="acme-corp"
+                value={form.code}
+                onChange={e => onFieldChange('code', codify(e.target.value))}
+                disabled={!!editOrg}
+                required
+              />
+              {!editOrg && (
+                <p className="text-xs text-gray-400 mt-1">Auto-generated. Cannot change later.</p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="form-label">Description</label>
+            <textarea
+              className="form-input resize-none"
+              rows={2}
+              placeholder="Optional description…"
+              value={form.description}
+              onChange={e => onFieldChange('description', e.target.value)}
+            />
+          </div>
+
+          {/* Feature Assignment */}
+          <div>
+            <label className="form-label mb-2">
+              Assign Features
+              <span className="ml-1.5 text-[10px] text-gray-400 font-normal normal-case tracking-normal">
+                ({form.features.length} selected)
+              </span>
+            </label>
+            <div className="space-y-2">
+              {ALL_FEATURES.map(feat => {
+                const active = form.features.includes(feat.key)
+                return (
+                  <label
+                    key={feat.key}
+                    className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all
+                      ${active
+                        ? 'border-opacity-100'
+                        : 'border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600'
+                      }`}
+                    style={active ? { borderColor: feat.color, background: feat.bg } : {}}
+                  >
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 rounded accent-indigo-600"
+                      checked={active}
+                      onChange={() => onToggleFeature(feat.key)}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">{feat.icon}</span>
+                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                          {feat.label}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{feat.description}</p>
+                    </div>
+                  </label>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-1">
+            <button type="button" onClick={onClose} className="btn btn-secondary flex-1">
+              Cancel
+            </button>
+            <button type="submit" disabled={saving} className="btn btn-primary flex-1">
+              {saving ? 'Saving…' : editOrg ? 'Save Changes' : 'Create Organization'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+/* ── Manage Features modal (for existing orgs) ───────────────────────────── */
+function ManageFeaturesModal({ org, onClose, onUpdated }) {
+  const toast = useToast()
+  const [selected, setSelected] = useState(org.features || [])
+  const [loading,  setLoading]  = useState(false)
+  const [saving,   setSaving]   = useState(false)
+
+  // Load latest features from backend when modal opens
+  useEffect(() => {
+    setLoading(true)
+    getOrgFeatures(org.id)
+      .then(data => setSelected(data.features ?? data ?? []))
+      .catch(() => setSelected(org.features || []))
+      .finally(() => setLoading(false))
+  }, [org.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggle = (key) => {
+    setSelected(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    )
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      await updateOrgFeatures(org.id, selected)
+      toast.success(`Features updated for ${org.name}.`)
+      onUpdated(selected)
+    } catch (err) {
+      toast.error(err.message || 'Failed to update features.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div
+        className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100 dark:border-gray-700">
+          <div>
+            <h2 className="text-base font-bold text-gray-800 dark:text-gray-100">Manage Features</h2>
+            <p className="text-xs text-gray-400 mt-0.5">{org.name}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-xl text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <div className="px-6 py-5">
+          {/* Steps guide */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl p-3 mb-5">
+            <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-1">How to add a feature</p>
+            <ol className="text-xs text-blue-600 dark:text-blue-400 space-y-0.5 list-decimal list-inside">
+              <li>Toggle the feature checkbox below to enable or disable it.</li>
+              <li>Click <strong>Save Changes</strong> — the org gains access immediately.</li>
+              <li>Users in the org will see the new module in their sidebar on next page load.</li>
+            </ol>
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <svg className="animate-spin h-5 w-5 text-primary" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+              </svg>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {ALL_FEATURES.map(feat => {
+                const active = selected.includes(feat.key)
+                return (
+                  <label
+                    key={feat.key}
+                    className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all
+                      ${active
+                        ? 'border-opacity-100'
+                        : 'border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600'
+                      }`}
+                    style={active ? { borderColor: feat.color, background: feat.bg } : {}}
+                  >
+                    {/* Toggle */}
+                    <div className="relative mt-0.5">
+                      <input type="checkbox" className="sr-only" checked={active} onChange={() => toggle(feat.key)} />
+                      <div
+                        className={`w-9 h-5 rounded-full transition-colors cursor-pointer flex-shrink-0`}
+                        style={{ background: active ? feat.color : '#d1d5db' }}
+                        onClick={() => toggle(feat.key)}
+                      >
+                        <div className={`w-4 h-4 bg-white rounded-full shadow-sm absolute top-0.5 transition-transform
+                          ${active ? 'translate-x-4' : 'translate-x-0.5'}`}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">{feat.icon}</span>
+                        <div>
+                          <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{feat.label}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{feat.description}</p>
+                        </div>
+                      </div>
+                      {/* Feature status badge */}
+                      <div className="mt-2">
+                        <span
+                          className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                          style={active
+                            ? { background: feat.color, color: '#fff' }
+                            : { background: '#f3f4f6', color: '#9ca3af' }
+                          }
+                        >
+                          {active ? '✓ Enabled' : '✗ Disabled'}
+                        </span>
+                      </div>
+                    </div>
+                  </label>
+                )
+              })}
+            </div>
+          )}
+
+          <div className="flex gap-3 mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
+            <button type="button" onClick={onClose} className="btn btn-secondary flex-1">
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving || loading}
+              className="btn btn-primary flex-1"
+            >
+              {saving ? 'Saving…' : 'Save Changes'}
+            </button>
           </div>
         </div>
-      )}
+      </div>
     </div>
   )
 }
