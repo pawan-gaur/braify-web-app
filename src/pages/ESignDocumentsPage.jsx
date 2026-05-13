@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { esignListDocuments, esignCancelDocument, esignResendDocument } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
+import ViewToggle, { useView } from '../components/ui/ViewToggle'
 
 const CRUMBS = [
   { label: 'Dashboard', to: '/' },
@@ -56,6 +57,7 @@ function CopyIdButton({ id }) {
 }
 
 export default function ESignDocumentsPage() {
+  const [view,    setView]    = useView('braify-view-esign', 'grid')
   const [docs, setDocs]       = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch]   = useState('')
@@ -114,17 +116,20 @@ export default function ESignDocumentsPage() {
             Manage documents sent for electronic signature
           </p>
         </div>
-        <button
-          onClick={() => navigate('/esign/new')}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold
-                     shadow-sm hover:shadow-md transition-all active:scale-95"
-          style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)' }}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4"/>
-          </svg>
-          New Document
-        </button>
+        <div className="flex items-center gap-3">
+          <ViewToggle view={view} onChange={setView} />
+          <button
+            onClick={() => navigate('/esign/new')}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold
+                       shadow-sm hover:shadow-md transition-all active:scale-95"
+            style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)' }}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4"/>
+            </svg>
+            New Document
+          </button>
+        </div>
       </div>
 
       {/* Search */}
@@ -170,7 +175,130 @@ export default function ESignDocumentsPage() {
             Create Document
           </button>
         </div>
+      ) : view === 'grid' ? (
+        /* ── Card / Grid view (default) ─────────────────────────── */
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {filtered.map(doc => {
+              const isTerminal = ['COMPLETED','CANCELLED','EXPIRED'].includes(doc.status)
+              const href = isTerminal ? `/esign/${doc.id}/view` : `/esign/${doc.id}`
+              return (
+                <div
+                  key={doc.id}
+                  onClick={() => navigate(href)}
+                  className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700
+                             shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col overflow-hidden"
+                >
+                  {/* Status bar */}
+                  <div className={`h-1.5 w-full ${
+                    doc.status === 'COMPLETED' ? 'bg-green-400' :
+                    doc.status === 'PENDING'   ? 'bg-yellow-400' :
+                    doc.status === 'IN_REVIEW' ? 'bg-blue-400' :
+                    doc.status === 'SIGNED'    ? 'bg-indigo-400' :
+                    doc.status === 'CANCELLED' ? 'bg-red-400' :
+                    doc.status === 'EXPIRED'   ? 'bg-orange-400' :
+                    'bg-gray-300'
+                  }`} />
+
+                  <div className="p-5 flex flex-col flex-1 gap-3">
+                    {/* Title + status */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-gray-900 dark:text-white text-sm leading-snug truncate">
+                          {doc.title}
+                        </h3>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{doc.sourceType}</p>
+                      </div>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0
+                                      ${STATUS_COLORS[doc.status] || STATUS_COLORS.DRAFT}`}>
+                        {doc.status?.replace('_', ' ')}
+                      </span>
+                    </div>
+
+                    {/* Client */}
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center shrink-0">
+                        <span className="text-xs font-bold text-purple-600 dark:text-purple-400">
+                          {doc.clientName?.charAt(0)?.toUpperCase() || '?'}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{doc.clientName}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{doc.clientEmail}</p>
+                      </div>
+                    </div>
+
+                    {/* ID row */}
+                    <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                      <span className="font-mono text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-md">
+                        …{doc.id.slice(-6)}
+                      </span>
+                      <CopyIdButton id={doc.id} />
+                    </div>
+
+                    {/* Dates */}
+                    <div className="flex gap-4 text-xs text-gray-400 dark:text-gray-500 mt-auto pt-2 border-t border-gray-100 dark:border-gray-700">
+                      <span>Sent: {fmtDate(doc.sentAt)}</span>
+                      {doc.completedAt && <span>Done: {fmtDate(doc.completedAt)}</span>}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                      <button
+                        onClick={() => navigate(href)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold
+                                   rounded-lg border border-gray-200 dark:border-gray-600
+                                   text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                        title={isTerminal ? 'View' : 'Edit'}
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                        </svg>
+                        {isTerminal ? 'View' : 'Edit'}
+                      </button>
+                      {doc.status === 'PENDING' && (
+                        <button
+                          onClick={e => handleResend(doc.id, e)}
+                          disabled={resending === doc.id}
+                          className="p-1.5 rounded-lg hover:bg-yellow-50 dark:hover:bg-yellow-900/30
+                                     text-gray-400 hover:text-yellow-600 transition-colors disabled:opacity-50"
+                          title="Resend invitation"
+                        >
+                          {resending === doc.id ? (
+                            <div className="w-3.5 h-3.5 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin"/>
+                          ) : (
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                            </svg>
+                          )}
+                        </button>
+                      )}
+                      {!isTerminal && (
+                        <button
+                          onClick={e => handleCancel(doc.id, e)}
+                          className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30
+                                     text-gray-400 hover:text-red-500 transition-colors"
+                          title="Cancel"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <p className="mt-4 text-xs text-gray-400">
+            {filtered.length} document{filtered.length !== 1 ? 's' : ''}
+          </p>
+        </>
       ) : (
+        /* ── Table view ─────────────────────────────────────────── */
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">

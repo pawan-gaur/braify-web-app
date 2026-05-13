@@ -4,12 +4,14 @@ import { getTemplates, getTemplate, generatePdf, previewPdfBlob } from '../servi
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
+import ViewToggle, { useView } from '../components/ui/ViewToggle'
 
 export default function GeneratePage() {
   useDocumentTitle('Generate PDF')
-  const toast          = useToast()
-  const [searchParams] = useSearchParams()
-  const preselectedId  = searchParams.get('templateId')
+  const toast              = useToast()
+  const [searchParams]     = useSearchParams()
+  const preselectedId      = searchParams.get('templateId')
+  const [tmplView, setTmplView] = useView('braify-view-generate')
 
   const [templates,  setTemplates]  = useState([])
   const [selectedId, setSelectedId] = useState(preselectedId || '')
@@ -89,19 +91,70 @@ export default function GeneratePage() {
 
           {/* Template selector */}
           <div className="card">
-            <label className="form-label">Template</label>
-            <select
-              className="form-select"
-              value={selectedId}
-              onChange={e => setSelectedId(e.target.value)}
-            >
-              <option value="">— Select a template —</option>
-              {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
+            <div className="flex items-center justify-between mb-2">
+              <label className="form-label mb-0">Template</label>
+              <ViewToggle view={tmplView} onChange={setTmplView} />
+            </div>
+
+            {tmplView === 'table' ? (
+              /* Compact dropdown */
+              <select
+                className="form-select"
+                value={selectedId}
+                onChange={e => setSelectedId(e.target.value)}
+              >
+                <option value="">— Select a template —</option>
+                {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            ) : (
+              /* Card grid picker */
+              <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto pr-0.5">
+                {templates.length === 0 && (
+                  <p className="text-xs text-gray-400 py-2 text-center">No templates found</p>
+                )}
+                {templates.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => setSelectedId(t.id)}
+                    className={`flex items-center gap-3 w-full text-left px-3 py-2.5 rounded-xl border transition-all
+                      ${selectedId === t.id
+                        ? 'border-purple-400 bg-purple-50 dark:bg-purple-900/20 dark:border-purple-500'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                      }`}
+                  >
+                    {/* Mini icon */}
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                      selectedId === t.id ? 'bg-purple-100 dark:bg-purple-900/40' : 'bg-gray-100 dark:bg-gray-700'
+                    }`}>
+                      <svg className={`w-4 h-4 ${selectedId === t.id ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`}
+                        fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/>
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-semibold truncate ${
+                        selectedId === t.id ? 'text-purple-700 dark:text-purple-300' : 'text-gray-800 dark:text-gray-200'
+                      }`}>{t.name}</p>
+                      <div className="flex gap-1.5 mt-0.5 flex-wrap">
+                        <span className="text-[10px] font-medium text-gray-400">{t.pageSize || 'A4'}</span>
+                        {t.placeholders?.length > 0 && (
+                          <span className="text-[10px] font-medium text-gray-400">· {t.placeholders.length} fields</span>
+                        )}
+                      </div>
+                    </div>
+                    {selectedId === t.id && (
+                      <svg className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/>
+                      </svg>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {template && (
-              <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-100 text-sm">
-                <p className="font-semibold text-navy">{template.name}</p>
+              <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-700 text-sm">
+                <p className="font-semibold text-navy dark:text-white">{template.name}</p>
                 {template.description && <p className="text-gray-400 text-xs mt-0.5">{template.description}</p>}
                 <div className="flex gap-2 mt-2 flex-wrap">
                   <span className="badge badge-indigo">{template.pageSize}</span>
