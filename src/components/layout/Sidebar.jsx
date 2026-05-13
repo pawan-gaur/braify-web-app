@@ -1,12 +1,17 @@
 import { NavLink, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import { useApp } from '../../context/AppContext'
 import { useAuth, ROLES } from '../../context/AuthContext'
+import { FEATURES } from '../../config/features'
+import { getPendingOnboardingCount } from '../../services/api'
 
 /* ─────────────────────────────────────────────
    Nav structure
    real      → renders as <NavLink>
    dummy     → renders as <button> with "Soon" chip
    minRole   → only shown when user role >= this value
+   feature   → only shown when org has this feature enabled
+              (PLATFORM_ADMIN bypasses all feature checks)
 ───────────────────────────────────────────── */
 const NAV_SECTIONS = [
   {
@@ -20,6 +25,7 @@ const NAV_SECTIONS = [
   },
   {
     section: 'PDF Templates',
+    feature: FEATURES.PDF_TEMPLATES,
     links: [
       {
         to: '/templates', end: true, label: 'PDF Templates',
@@ -41,6 +47,7 @@ const NAV_SECTIONS = [
   },
   {
     section: 'Email',
+    feature: FEATURES.EMAIL_TEMPLATES,
     links: [
       {
         to: '/email-templates', label: 'Email Templates',
@@ -62,6 +69,7 @@ const NAV_SECTIONS = [
   },
   {
     section: 'E-Sign',
+    feature: FEATURES.E_SIGN,
     links: [
       {
         to: '/esign', end: true, label: 'Documents',
@@ -125,6 +133,12 @@ const NAV_SECTIONS = [
         icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
       },
       {
+        to: '/onboarding-requests', label: 'Onboarding Requests',
+        minRole: ROLES.PLATFORM_ADMIN,
+        pendingBadge: true,
+        icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 8h6m-6 4h3',
+      },
+      {
         to: '/users', label: 'Users',
         minRole: ROLES.ADMIN,
         icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
@@ -184,11 +198,27 @@ const ROLE_RANK = { PLATFORM_ADMIN: 4, ORG_ADMIN: 3, ADMIN: 2, USER: 1 }
 
 export default function Sidebar() {
   const { collapsed, setCollapsed } = useApp()
-  const { user } = useAuth()
+  const { user, hasFeature } = useAuth()
   const navigate = useNavigate()
+  const [pendingOnboarding, setPendingOnboarding] = useState(0)
+
+  // Poll pending onboarding count for PLATFORM_ADMIN
+  useEffect(() => {
+    if (user?.role !== ROLES.PLATFORM_ADMIN) return
+    const fetch = () =>
+      getPendingOnboardingCount()
+        .then(d => setPendingOnboarding(d.count ?? 0))
+        .catch(() => {})
+    fetch()
+    const interval = setInterval(fetch, 60_000)
+    return () => clearInterval(interval)
+  }, [user?.role])
 
   const visibleSections = NAV_SECTIONS
+    // Gate by role
     .filter(s => !s.minRole || (ROLE_RANK[user?.role] ?? 0) >= (ROLE_RANK[s.minRole] ?? 0))
+    // Gate by feature (PLATFORM_ADMIN bypasses via hasFeature returning true)
+    .filter(s => !s.feature || hasFeature(s.feature))
     .map(s => ({
       ...s,
       links: s.links.filter(l => !l.minRole || (ROLE_RANK[user?.role] ?? 0) >= (ROLE_RANK[l.minRole] ?? 0)),
@@ -323,7 +353,8 @@ export default function Sidebar() {
               {links.map((link) =>
                 link.dummy
                   ? <DummyItem key={link.label} link={link} collapsed={collapsed} />
-                  : <RealItem  key={link.to}    link={link} collapsed={collapsed} />
+                  : <RealItem  key={link.to}    link={link} collapsed={collapsed}
+                               badge={link.pendingBadge ? pendingOnboarding : 0} />
               )}
             </ul>
           </div>
@@ -369,7 +400,7 @@ export default function Sidebar() {
 }
 
 /* ── Real NavLink item ── */
-function RealItem({ link, collapsed }) {
+function RealItem({ link, collapsed, badge = 0 }) {
   const { to, end, label, icon, dot } = link
   const inner = ({ isActive }) => (
     <span className={`flex items-center gap-3 px-2.5 py-2 rounded-xl text-[13px] font-semibold
@@ -392,9 +423,24 @@ function RealItem({ link, collapsed }) {
                            border border-white dark:border-sidebar"
             style={{ background: dot }} />
         )}
+        {/* Pending count dot (collapsed mode) */}
+        {collapsed && badge > 0 && (
+          <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] px-0.5 rounded-full
+                           bg-amber-500 text-white text-[9px] font-bold flex items-center justify-center">
+            {badge > 99 ? '99+' : badge}
+          </span>
+        )}
       </span>
       {!collapsed && <span className="flex-1 truncate">{label}</span>}
-      {!collapsed && isActive && <span className="w-1.5 h-1.5 rounded-full bg-white/70 shrink-0" />}
+      {/* Pending count pill (expanded mode) */}
+      {!collapsed && badge > 0 && (
+        <span className={`min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold
+                          flex items-center justify-center shrink-0
+                          ${isActive ? 'bg-white/30 text-white' : 'bg-amber-500 text-white'}`}>
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
+      {!collapsed && isActive && badge === 0 && <span className="w-1.5 h-1.5 rounded-full bg-white/70 shrink-0" />}
     </span>
   )
 

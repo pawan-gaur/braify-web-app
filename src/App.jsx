@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-
 import { AppProvider, useApp }  from './context/AppContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ToastProvider } from './context/ToastContext'
+import { FEATURES } from './config/features'
 import ToastContainer   from './components/ui/ToastContainer'
 import ProtectedRoute   from './components/auth/ProtectedRoute'
 import Sidebar          from './components/layout/Sidebar'
@@ -28,6 +29,8 @@ import ESignBuilderPage     from './pages/ESignBuilderPage'
 import ESignDetailPage      from './pages/ESignDetailPage'
 import ESignSigningPage     from './pages/ESignSigningPage'
 import ESignVerifyPage      from './pages/ESignVerifyPage'
+import GetStartedPage       from './pages/GetStartedPage'
+import OnboardingRequestsPage from './pages/OnboardingRequestsPage'
 
 /**
  * Smart router for /esign/:id
@@ -61,6 +64,16 @@ function ESignDocumentRouter() {
     : <ESignDetailPage />
 }
 
+/**
+ * FeatureRoute — renders `children` only if the user's org has the feature.
+ * Redirects to /dashboard with a friendly "not available" if not.
+ */
+function FeatureRoute({ feature, children }) {
+  const { hasFeature } = useAuth()
+  if (!hasFeature(feature)) return <Navigate to="/dashboard" replace />
+  return children
+}
+
 /* ── Authenticated shell with sidebar + navbar ─────────────────────────── */
 function Shell() {
   const { collapsed } = useApp()
@@ -72,28 +85,38 @@ function Shell() {
       <Navbar  />
       <main className={`flex-1 ${sideW} pt-14 transition-[margin-left] duration-300 min-w-0`}>
         <Routes>
-          <Route path="/"                   element={<DashboardPage />} />
-          <Route path="/dashboard"          element={<DashboardPage />} />
-          <Route path="/templates"          element={<TemplatesPage />} />
-          <Route path="/builder"            element={<BuilderPage />} />
-          <Route path="/builder/:id"        element={<BuilderPage />} />
-          <Route path="/generate"           element={<GeneratePage />} />
-          <Route path="/audit-log"          element={<AuditLogPage />} />
-          <Route path="/email-templates"    element={<EmailTemplatesPage />} />
-          <Route path="/email-builder"      element={<EmailBuilderPage />} />
-          <Route path="/email-builder/:id"  element={<EmailBuilderPage />} />
-          {/* Admin pages */}
-          <Route path="/organizations"      element={<OrganizationsPage />} />
-          <Route path="/users"              element={<UsersPage />} />
-          <Route path="/sessions"           element={<SessionsPage />} />
-          {/* E-Sign Creator */}
-          <Route path="/esign"              element={<ESignDocumentsPage />} />
-          <Route path="/esign/new"          element={<ESignBuilderPage />} />
-          {/* /esign/:id — builder for editable docs, detail view for completed/terminal ones */}
-          <Route path="/esign/:id"          element={<ESignDocumentRouter />} />
-          <Route path="/esign/:id/view"     element={<ESignDetailPage />} />
-          {/* Profile */}
-          <Route path="/profile"            element={<ProfilePage />} />
+          <Route path="/"        element={<DashboardPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
+
+          {/* ── PDF Templates (feature-gated) ── */}
+          <Route path="/templates"   element={<FeatureRoute feature={FEATURES.PDF_TEMPLATES}><TemplatesPage /></FeatureRoute>} />
+          <Route path="/builder"     element={<FeatureRoute feature={FEATURES.PDF_TEMPLATES}><BuilderPage /></FeatureRoute>} />
+          <Route path="/builder/:id" element={<FeatureRoute feature={FEATURES.PDF_TEMPLATES}><BuilderPage /></FeatureRoute>} />
+          <Route path="/generate"    element={<FeatureRoute feature={FEATURES.PDF_TEMPLATES}><GeneratePage /></FeatureRoute>} />
+
+          {/* ── Email Templates (feature-gated) ── */}
+          <Route path="/email-templates"   element={<FeatureRoute feature={FEATURES.EMAIL_TEMPLATES}><EmailTemplatesPage /></FeatureRoute>} />
+          <Route path="/email-builder"     element={<FeatureRoute feature={FEATURES.EMAIL_TEMPLATES}><EmailBuilderPage /></FeatureRoute>} />
+          <Route path="/email-builder/:id" element={<FeatureRoute feature={FEATURES.EMAIL_TEMPLATES}><EmailBuilderPage /></FeatureRoute>} />
+
+          {/* ── E-Sign (feature-gated) ── */}
+          <Route path="/esign"        element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignDocumentsPage /></FeatureRoute>} />
+          <Route path="/esign/new"    element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignBuilderPage /></FeatureRoute>} />
+          <Route path="/esign/:id"    element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignDocumentRouter /></FeatureRoute>} />
+          <Route path="/esign/:id/view" element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignDetailPage /></FeatureRoute>} />
+
+          {/* ── Audit log (always available) ── */}
+          <Route path="/audit-log" element={<AuditLogPage />} />
+
+          {/* ── Admin pages ── */}
+          <Route path="/organizations"         element={<OrganizationsPage />} />
+          <Route path="/onboarding-requests"   element={<OnboardingRequestsPage />} />
+          <Route path="/users"                 element={<UsersPage />} />
+          <Route path="/sessions"              element={<SessionsPage />} />
+
+          {/* ── Profile ── */}
+          <Route path="/profile" element={<ProfilePage />} />
+
           {/* Catch-all inside shell */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
@@ -127,6 +150,7 @@ function AppRoutes() {
             : <LoginPage />
         }
       />
+      <Route path="/get-started"      element={<GetStartedPage />} />
       <Route path="/accept-invite"   element={<AcceptInvitePage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password"  element={<ResetPasswordPage />} />

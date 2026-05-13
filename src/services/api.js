@@ -77,11 +77,41 @@ export const getTemplateVersion     = (id, v)           => http.get(`/templates/
 export const restoreTemplateVersion = (id, v)           => http.post(`/templates/${id}/versions/${v}/restore`).then(r => r.data)
 
 // ── Audit log ──────────────────────────────────────────────
-export const getAuditLogs         = (page = 0, size = 50) => http.get('/audit-logs', { params: { page, size } }).then(r => r.data)
-export const getTemplateAuditLogs = (id)                  => http.get(`/audit-logs/template/${id}`).then(r => r.data)
+export const getAuditLogs = (
+  page = 0, size = 20,
+  resourceType = null, orgId = null,
+  action = null, performedBy = null,
+  from = null, to = null,
+) =>
+  http.get('/audit-logs', {
+    params: {
+      page, size,
+      ...(resourceType ? { resourceType } : {}),
+      ...(orgId        ? { orgId }        : {}),
+      ...(action       ? { action }       : {}),
+      ...(performedBy  ? { performedBy }  : {}),
+      ...(from         ? { from }         : {}),
+      ...(to           ? { to }           : {}),
+    },
+  }).then(r => r.data)
+
+export const getAuditLogStats = (orgId = null) =>
+  http.get('/audit-logs/stats', { params: orgId ? { orgId } : {} }).then(r => r.data)
+
+export const exportAuditLogs = (params = {}) =>
+  http.get('/audit-logs/export', { params, responseType: 'blob' }).then(r => r.data)
+
+export const getTemplateAuditLogs = (id) => http.get(`/audit-logs/template/${id}`).then(r => r.data)
 
 // ── Dashboard ──────────────────────────────────────────────
 export const getDashboardStats = () => http.get('/dashboard').then(r => r.data)
+
+// ── Onboarding Requests ─────────────────────────────────────
+export const submitOnboardingRequest  = (data)           => http.post('/onboarding', data).then(r => r.data)
+export const getOnboardingRequests    = (status = null)  => http.get('/onboarding', { params: status ? { status } : {} }).then(r => r.data)
+export const getOnboardingRequest     = (id)             => http.get(`/onboarding/${id}`).then(r => r.data)
+export const getPendingOnboardingCount= ()               => http.get('/onboarding/count/pending').then(r => r.data)
+export const reviewOnboardingRequest  = (id, payload)    => http.put(`/onboarding/${id}/review`, payload).then(r => r.data)
 
 // ── Organizations (Platform Admin) ─────────────────────────
 export const getOrganizations    = ()         => http.get('/organizations').then(r => r.data)
@@ -89,6 +119,10 @@ export const searchOrganizations = (q)        => http.get('/organizations/search
 export const createOrganization  = (payload)  => http.post('/organizations', payload).then(r => r.data)
 export const updateOrganization  = (id, p)    => http.put(`/organizations/${id}`, p).then(r => r.data)
 export const deleteOrganization  = (id)       => http.delete(`/organizations/${id}`)
+
+// ── Organization Features ───────────────────────────────────
+export const getOrgFeatures    = (id)         => http.get(`/organizations/${id}/features`).then(r => r.data)
+export const updateOrgFeatures = (id, feats)  => http.put(`/organizations/${id}/features`, { features: feats }).then(r => r.data)
 
 // ── Users (Platform Admin / Org Admin / Admin) ─────────────
 export const getUsers       = ()                   => http.get('/users').then(r => r.data)
