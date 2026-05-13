@@ -29,6 +29,8 @@ import ESignBuilderPage     from './pages/ESignBuilderPage'
 import ESignDetailPage      from './pages/ESignDetailPage'
 import ESignSigningPage     from './pages/ESignSigningPage'
 import ESignVerifyPage      from './pages/ESignVerifyPage'
+import GetStartedPage       from './pages/GetStartedPage'
+import OnboardingRequestsPage from './pages/OnboardingRequestsPage'
 
 /**
  * Smart router for /esign/:id
@@ -107,9 +109,10 @@ function Shell() {
           <Route path="/audit-log" element={<AuditLogPage />} />
 
           {/* ── Admin pages ── */}
-          <Route path="/organizations" element={<OrganizationsPage />} />
-          <Route path="/users"         element={<UsersPage />} />
-          <Route path="/sessions"      element={<SessionsPage />} />
+          <Route path="/organizations"         element={<OrganizationsPage />} />
+          <Route path="/onboarding-requests"   element={<OnboardingRequestsPage />} />
+          <Route path="/users"                 element={<UsersPage />} />
+          <Route path="/sessions"              element={<SessionsPage />} />
 
           {/* ── Profile ── */}
           <Route path="/profile" element={<ProfilePage />} />
@@ -147,6 +150,7 @@ function AppRoutes() {
             : <LoginPage />
         }
       />
+      <Route path="/get-started"      element={<GetStartedPage />} />
       <Route path="/accept-invite"   element={<AcceptInvitePage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password"  element={<ResetPasswordPage />} />
