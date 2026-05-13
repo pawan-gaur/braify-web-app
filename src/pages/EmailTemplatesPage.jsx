@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getEmailTemplates, deleteEmailTemplate, sendEmailTemplate } from '../services/api'
 import useDocumentTitle from '../hooks/useDocumentTitle'
@@ -8,6 +8,7 @@ import Breadcrumbs from '../components/ui/Breadcrumbs'
 import ViewToggle, { useView } from '../components/ui/ViewToggle'
 import VersionHistoryModal from '../components/ui/VersionHistoryModal'
 import EmailPreviewModal from '../components/ui/EmailPreviewModal'
+import EmailLibraryModal from '../components/ui/EmailLibraryModal'
 
 const CRUMBS = [
   { label: 'Dashboard',       to: '/' },
@@ -23,6 +24,10 @@ export default function EmailTemplatesPage() {
   const [view,     setView]     = useView('braify-view-email-templates')
   const [templates,       setTemplates]       = useState([])
   const [loading,         setLoading]         = useState(true)
+  const [activeCategory,  setActiveCategory]  = useState('all')
+  const [search,          setSearch]          = useState('')
+  const [activeTags,      setActiveTags]      = useState([])
+  const [showLibrary,     setShowLibrary]     = useState(false)
   const [versionTemplate, setVersionTemplate] = useState(null)
   const [previewTemplate, setPreviewTemplate] = useState(null)
   const [sendTemplate,    setSendTemplate]    = useState(null)
@@ -41,6 +46,49 @@ export default function EmailTemplatesPage() {
     if (!confirm(`Delete email template "${name}"?`)) return
     await deleteEmailTemplate(id)
     setTemplates(prev => prev.filter(t => t.id !== id))
+  }
+
+  const CATEGORY_TABS = [
+    { key: 'all',            label: 'All' },
+    { key: 'transactional',  label: 'Transactional' },
+    { key: 'marketing',      label: 'Marketing' },
+    { key: 'onboarding',     label: 'Onboarding' },
+    { key: 'notification',   label: 'Notification' },
+    { key: 'custom',         label: 'Custom' },
+  ]
+
+  /* Compute all unique tags across templates */
+  const allTags = useMemo(() => {
+    const set = new Set()
+    templates.forEach(t => {
+      (t.tags || '').split(',').map(s => s.trim()).filter(Boolean).forEach(tag => set.add(tag))
+    })
+    return [...set].sort()
+  }, [templates])
+
+  const toggleTag = (tag) =>
+    setActiveTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
+
+  const visibleTemplates = templates.filter(t => {
+    if (activeCategory !== 'all' && (t.category || '') !== activeCategory) return false
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      const matchName    = t.name?.toLowerCase().includes(q)
+      const matchSubject = t.subject?.toLowerCase().includes(q)
+      const matchTags    = (t.tags || '').toLowerCase().includes(q)
+      if (!matchName && !matchSubject && !matchTags) return false
+    }
+    if (activeTags.length > 0) {
+      const tTags = (t.tags || '').split(',').map(s => s.trim())
+      if (!activeTags.every(at => tTags.includes(at))) return false
+    }
+    return true
+  })
+
+  /* Navigate to builder with a library template pre-loaded */
+  const handleLibrarySelect = (libTmpl) => {
+    if (!libTmpl) { navigate('/email-builder'); return }
+    navigate('/email-builder', { state: { libraryTemplate: libTmpl } })
   }
 
   return (
@@ -64,10 +112,114 @@ export default function EmailTemplatesPage() {
         </div>
         <div className="flex items-center gap-3">
           <ViewToggle view={view} onChange={setView} />
-          <button className="btn btn-primary" onClick={() => navigate('/email-builder')}>
-            + New Email Template
-          </button>
+          {/* Split button: quick blank OR from library */}
+          <div className="flex rounded-xl overflow-hidden shadow-sm">
+            <button
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white transition-all hover:opacity-90"
+              style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}
+              onClick={() => navigate('/email-builder')}
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4"/>
+              </svg>
+              New Template
+            </button>
+            <button
+              className="flex items-center gap-1 px-2.5 py-2 text-sm font-semibold text-white border-l border-white/20 transition-all hover:opacity-90"
+              style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}
+              onClick={() => setShowLibrary(true)}
+              title="Start from library"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+              </svg>
+              Library
+            </button>
+          </div>
         </div>
+      </div>
+
+      {/* Search + tag filter bar */}
+      <div className="flex flex-col gap-3 mb-6">
+        <div className="relative max-w-md">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
+          </svg>
+          <input
+            type="text"
+            placeholder="Search by name, subject or tag…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full pl-9 pr-9 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700
+                       bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white
+                       focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+          {search && (
+            <button onClick={() => setSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* Tag chips */}
+        {allTags.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs text-gray-400 mr-1">Tags:</span>
+            {allTags.map(tag => (
+              <button
+                key={tag}
+                onClick={() => toggleTag(tag)}
+                className={`text-xs px-2.5 py-1 rounded-full border transition-all font-medium ${
+                  activeTags.includes(tag)
+                    ? 'bg-indigo-600 border-indigo-600 text-white'
+                    : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-indigo-400 hover:text-indigo-600'
+                }`}
+              >
+                #{tag}
+              </button>
+            ))}
+            {activeTags.length > 0 && (
+              <button onClick={() => setActiveTags([])}
+                className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 ml-1 underline">
+                Clear
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Category filter tabs */}
+      <div className="flex items-center gap-1 mb-6 flex-wrap">
+        {CATEGORY_TABS.map(tab => {
+          const count = tab.key === 'all'
+            ? templates.length
+            : templates.filter(t => (t.category || '') === tab.key).length
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setActiveCategory(tab.key)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium
+                          transition-all border ${
+                activeCategory === tab.key
+                  ? 'bg-sky-50 dark:bg-sky-900/20 border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-400'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+              }`}
+            >
+              {tab.label}
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                activeCategory === tab.key
+                  ? 'bg-sky-200 dark:bg-sky-800 text-sky-800 dark:text-sky-300'
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+              }`}>{count}</span>
+            </button>
+          )
+        })}
       </div>
 
       {loading ? (
@@ -80,6 +232,18 @@ export default function EmailTemplatesPage() {
         </div>
       ) : templates.length === 0 ? (
         <EmptyState onNew={() => navigate('/email-builder')} />
+      ) : visibleTemplates.length === 0 ? (
+        <div className="text-center py-16">
+          <p className="text-gray-400 dark:text-gray-500 text-sm">
+            No templates in the <strong>{activeCategory}</strong> category yet.
+          </p>
+          <button
+            onClick={() => navigate('/email-builder')}
+            className="mt-3 text-sm font-medium text-sky-600 dark:text-sky-400 hover:underline"
+          >
+            Create one →
+          </button>
+        </div>
       ) : view === 'table' ? (
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
           <table className="w-full">
@@ -93,7 +257,7 @@ export default function EmailTemplatesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-              {templates.map(t => {
+              {visibleTemplates.map(t => {
                 const date = t.updatedAt
                   ? new Date(t.updatedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
                   : '—'
@@ -170,12 +334,12 @@ export default function EmailTemplatesPage() {
             </tbody>
           </table>
           <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-400">
-            {templates.length} template{templates.length !== 1 ? 's' : ''}
+            {visibleTemplates.length} template{visibleTemplates.length !== 1 ? 's' : ''}
           </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {templates.map(t => (
+          {visibleTemplates.map(t => (
             <EmailTemplateCard
               key={t.id}
               template={t}
@@ -187,6 +351,14 @@ export default function EmailTemplatesPage() {
             />
           ))}
         </div>
+      )}
+
+      {/* Library modal */}
+      {showLibrary && (
+        <EmailLibraryModal
+          onClose={() => setShowLibrary(false)}
+          onSelect={handleLibrarySelect}
+        />
       )}
 
       {/* Version history modal */}
@@ -296,9 +468,17 @@ function EmailTemplateCard({ template, onEdit, onDelete = null, onVersions, onPr
               </p>
             )}
           </div>
-          <span className="badge bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400 shrink-0 text-[10px]">
-            Email
-          </span>
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <span className="badge bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400 text-[10px]">
+              Email
+            </span>
+            {template.category && (
+              <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full capitalize
+                               bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400">
+                {template.category}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Placeholder chips */}

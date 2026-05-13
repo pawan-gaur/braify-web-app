@@ -1,20 +1,96 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import grapesjs from 'grapesjs'
 import { EDITOR_CONFIG } from './grapes-config'
+import PreviewDataModal from '../ui/PreviewDataModal'
 import '../../styles/builder.css'
 
-const DEVICES = ['A4 Portrait', 'A4 Landscape', 'Letter']
+/* ── Constants ────────────────────────────────────────────────────────────── */
+const DEVICES = [
+  { label: 'A4 Portrait',   value: 'A4 Portrait'   },
+  { label: 'A4 Landscape',  value: 'A4 Landscape'  },
+  { label: 'A3 Portrait',   value: 'A3 Portrait'   },
+  { label: 'A3 Landscape',  value: 'A3 Landscape'  },
+  { label: 'Letter',        value: 'Letter'         },
+  { label: 'Legal',         value: 'Legal'          },
+  { label: 'Custom',        value: 'Custom'         },
+]
+
 const FONT_SIZES = [8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 22, 24, 28, 32, 36, 48, 72]
 
+const ZOOM_LEVELS = [50, 75, 100, 125, 150, 200]
+
+const VAR_SUBTABS = ['Fields', 'Conditionals', 'Loops', 'Helpers']
+
+const DATE_FORMATS = [
+  { label: 'Jan 13, 2026',        fmt: 'MMMM D, YYYY'   },
+  { label: '01/13/2026',          fmt: 'MM/DD/YYYY'      },
+  { label: '13/01/2026',          fmt: 'DD/MM/YYYY'      },
+  { label: '2026-01-13',          fmt: 'YYYY-MM-DD'      },
+  { label: '13 Jan 2026',         fmt: 'D MMM YYYY'      },
+  { label: 'Tuesday, Jan 13',     fmt: 'dddd, MMM D'     },
+  { label: '1/13/26',             fmt: 'M/D/YY'          },
+  { label: 'January 2026',        fmt: 'MMMM YYYY'       },
+  { label: 'Unix Timestamp',      fmt: 'X'               },
+]
+
+const CURRENCIES = [
+  { label: 'USD ($)',  code: 'USD', symbol: '$'  },
+  { label: 'EUR (€)',  code: 'EUR', symbol: '€'  },
+  { label: 'GBP (£)',  code: 'GBP', symbol: '£'  },
+  { label: 'JPY (¥)',  code: 'JPY', symbol: '¥'  },
+  { label: 'CAD (CA$)', code: 'CAD', symbol: 'CA$' },
+  { label: 'AUD (A$)', code: 'AUD', symbol: 'A$' },
+  { label: 'INR (₹)',  code: 'INR', symbol: '₹'  },
+  { label: 'CHF',      code: 'CHF', symbol: 'CHF' },
+  { label: 'CNY (¥)',  code: 'CNY', symbol: '¥'  },
+  { label: 'BRL (R$)', code: 'BRL', symbol: 'R$' },
+]
+
+const PDF_PRESET_VARS = [
+  { name: 'page_number',    label: 'Page Number'    },
+  { name: 'total_pages',    label: 'Total Pages'    },
+  { name: 'current_date',   label: 'Current Date'   },
+  { name: 'current_time',   label: 'Current Time'   },
+  { name: 'company_name',   label: 'Company Name'   },
+  { name: 'company_logo',   label: 'Company Logo'   },
+  { name: 'recipient_name', label: 'Recipient Name' },
+  { name: 'recipient_email',label: 'Recipient Email'},
+  { name: 'invoice_number', label: 'Invoice #'      },
+  { name: 'invoice_date',   label: 'Invoice Date'   },
+  { name: 'due_date',       label: 'Due Date'       },
+  { name: 'total_amount',   label: 'Total Amount'   },
+  { name: 'tax_amount',     label: 'Tax Amount'     },
+  { name: 'subtotal',       label: 'Subtotal'       },
+  { name: 'currency',       label: 'Currency'       },
+  { name: 'reference_no',   label: 'Reference No'   },
+]
+
+/* ── Main component ───────────────────────────────────────────────────────── */
 export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
   const editorRef  = useRef(null)
   const mountedRef = useRef(false)
 
-  const [activePanel, setActivePanel]   = useState('blocks')
-  const [activeRight, setActiveRight]   = useState('styles')
-  const [placeholders, setPlaceholders] = useState([])
-  const [activeDevice, setActiveDevice] = useState('A4 Portrait')
-  const [showSettings, setShowSettings] = useState(false)
+  const [activePanel,      setActivePanel]      = useState('blocks')
+  const [activeRight,      setActiveRight]       = useState('styles')
+  const [activeVarTab,     setActiveVarTab]      = useState('Fields')
+  const [placeholders,     setPlaceholders]      = useState([])
+  const [activeDevice,     setActiveDevice]      = useState('A4 Portrait')
+  const [zoom,             setZoom]              = useState(100)
+  const [showSettings,     setShowSettings]      = useState(false)
+  const [showPreviewData,  setShowPreviewData]   = useState(false)
+  const [blockSearch,      setBlockSearch]       = useState('')
+  const [customVar,        setCustomVar]         = useState('')
+  const [condVar,          setCondVar]           = useState('')
+  const [condType,         setCondType]          = useState('if')
+  const [loopVar,          setLoopVar]           = useState('')
+  const [dateVar,          setDateVar]           = useState('')
+  const [dateFmt,          setDateFmt]           = useState('MMMM D, YYYY')
+  const [currVar,          setCurrVar]           = useState('')
+  const [currCode,         setCurrCode]          = useState('USD')
+  const [truncVar,         setTruncVar]          = useState('')
+  const [truncLen,         setTruncLen]          = useState(50)
+  const [caseVar,          setCaseVar]           = useState('')
+  const [copied,           setCopied]            = useState(false)
 
   const [settings, setSettings] = useState({
     name:         initialTemplate?.name         || 'Untitled Template',
@@ -32,6 +108,7 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
     setPlaceholders(unique)
   }, [])
 
+  /* ── Init GrapesJS ──────────────────────────────────────────────────────── */
   useEffect(() => {
     if (mountedRef.current) return
     mountedRef.current = true
@@ -42,13 +119,18 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
     if (initialTemplate?.gjsData) {
       try { editor.loadProjectData(JSON.parse(initialTemplate.gjsData)) }
       catch { editor.setComponents(initialTemplate.htmlContent || ''); editor.setStyle(initialTemplate.cssContent || '') }
+    } else if (initialTemplate?.htmlContent) {
+      // Starter templates ship only with raw HTML/CSS — no gjsData yet
+      editor.setComponents(initialTemplate.htmlContent)
+      editor.setStyle(initialTemplate.cssContent || '')
+      // Scan placeholders on first load
+      setTimeout(() => refreshPlaceholders(editor.getHtml()), 200)
     }
 
     editor.on('component:update component:add component:remove', () => {
       refreshPlaceholders(editor.getHtml())
     })
 
-    // Enable resizing on all block-level components when dropped onto canvas
     editor.on('component:add', enableResize)
 
     editor.on('rte:enable', () => {
@@ -61,11 +143,59 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
     return () => { editor.destroy(); mountedRef.current = false }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  /* ── Block search filter ─────────────────────────────────────────────────── */
+  useEffect(() => {
+    const delay = setTimeout(() => {
+      const panel = document.getElementById('blocks-panel')
+      if (!panel) return
+      const q = blockSearch.toLowerCase().trim()
+      panel.querySelectorAll('.gjs-block').forEach(block => {
+        const label = block.querySelector('.gjs-block-label')?.textContent?.toLowerCase() || ''
+        block.style.display = (!q || label.includes(q)) ? '' : 'none'
+      })
+      panel.querySelectorAll('.gjs-block-category').forEach(cat => {
+        const visible = [...cat.querySelectorAll('.gjs-block')].some(b => b.style.display !== 'none')
+        cat.style.display = visible ? '' : 'none'
+      })
+    }, 150)
+    return () => clearTimeout(delay)
+  }, [blockSearch])
+
+  /* ── Device change ───────────────────────────────────────────────────────── */
   const handleDeviceChange = (deviceName) => {
     setActiveDevice(deviceName)
     editorRef.current?.setDevice(deviceName)
   }
 
+  /* ── Zoom ────────────────────────────────────────────────────────────────── */
+  const handleZoom = useCallback((newZoom) => {
+    const clamped = Math.min(200, Math.max(25, newZoom))
+    setZoom(clamped)
+    editorRef.current?.Canvas.setZoom(clamped)
+  }, [])
+
+  /* ── Insert helpers ──────────────────────────────────────────────────────── */
+  const insertAtCursor = useCallback((text) => {
+    const canvasDoc = editorRef.current?.Canvas.getDocument()
+    if (canvasDoc?.activeElement) {
+      canvasDoc.execCommand('insertText', false, text)
+    }
+  }, [])
+
+  const insertVariable = useCallback((varName) => {
+    if (!varName.trim()) return
+    insertAtCursor(`{{${varName.trim()}}}`)
+    setPlaceholders(prev => prev.includes(varName.trim()) ? prev : [...prev, varName.trim()])
+  }, [insertAtCursor])
+
+  const insertBlock = useCallback((html) => {
+    const editor = editorRef.current
+    if (!editor) return
+    editor.addComponents(html)
+    setTimeout(() => refreshPlaceholders(editor.getHtml()), 100)
+  }, [refreshPlaceholders])
+
+  /* ── Save ────────────────────────────────────────────────────────────────── */
   const handleSave = () => {
     const editor = editorRef.current
     if (!editor) return
@@ -76,60 +206,443 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
     onSave({ ...settings, htmlContent: html, cssContent: css, gjsData })
   }
 
+  /* ── Export / Copy ───────────────────────────────────────────────────────── */
+  const handleExportHtml = () => {
+    const editor = editorRef.current
+    if (!editor) return
+    const html = `<!DOCTYPE html>\n<html>\n<head>\n<meta charset="utf-8">\n<title>${settings.name}</title>\n<style>\n${editor.getCss()}\n</style>\n</head>\n<body>\n${editor.getHtml()}\n</body>\n</html>`
+    const blob = new Blob([html], { type: 'text/html' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href = url
+    a.download = `${settings.name.replace(/\s+/g, '-').toLowerCase()}.html`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleCopyHtml = async () => {
+    const editor = editorRef.current
+    if (!editor) return
+    try {
+      await navigator.clipboard.writeText(editor.getHtml())
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch { /* ignore */ }
+  }
+
   const set = (key, value) => setSettings(prev => ({ ...prev, [key]: value }))
 
+  /* ── Variables Panel ─────────────────────────────────────────────────────── */
+  const VariablesPanel = () => {
+    const SnippetInsertBtn = ({ label, onClick, title, mono }) => (
+      <button
+        title={title}
+        onClick={onClick}
+        className={`w-full text-left px-2.5 py-1.5 rounded-lg border border-sidebar-border text-sidebar-muted hover:border-primary hover:text-white transition-all text-[11px] ${mono ? 'font-mono' : ''}`}
+      >
+        {label}
+      </button>
+    )
+
+    return (
+      <div className="flex flex-col h-full overflow-hidden">
+        {/* Sub-tabs */}
+        <div className="flex border-b border-sidebar-border shrink-0">
+          {VAR_SUBTABS.map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveVarTab(tab)}
+              className={`flex-1 py-2 text-[9px] font-bold uppercase tracking-wider transition-colors ${
+                activeVarTab === tab
+                  ? 'text-primary border-b-2 border-primary'
+                  : 'text-sidebar-muted hover:text-white'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-3 space-y-3">
+
+          {/* ── Fields ── */}
+          {activeVarTab === 'Fields' && (
+            <>
+              <p className="text-[10px] text-sidebar-muted">Click to insert a variable at cursor position.</p>
+              <div className="flex gap-1.5">
+                <input
+                  className="flex-1 bg-sidebar-hover border border-sidebar-border rounded-lg px-2 py-1.5 text-xs text-white placeholder-sidebar-muted outline-none focus:border-primary"
+                  placeholder="variable_name"
+                  value={customVar}
+                  onChange={e => setCustomVar(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && customVar.trim()) { insertVariable(customVar); setCustomVar('') } }}
+                />
+                <button
+                  className="px-2.5 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90 transition-colors"
+                  onClick={() => { if (customVar.trim()) { insertVariable(customVar); setCustomVar('') } }}
+                >
+                  + Insert
+                </button>
+              </div>
+              <p className="text-[10px] font-semibold text-sidebar-muted uppercase tracking-wider pt-1">PDF Presets</p>
+              <div className="grid grid-cols-1 gap-1">
+                {PDF_PRESET_VARS.map(v => (
+                  <button
+                    key={v.name}
+                    onClick={() => insertVariable(v.name)}
+                    className="flex items-center justify-between w-full px-2.5 py-1.5 rounded-lg border border-sidebar-border text-sidebar-muted hover:border-primary hover:text-white transition-all text-[11px] group"
+                  >
+                    <span>{v.label}</span>
+                    <span className="font-mono text-[10px] text-sidebar-muted group-hover:text-primary">{`{{${v.name}}}`}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* ── Conditionals ── */}
+          {activeVarTab === 'Conditionals' && (
+            <>
+              <p className="text-[10px] text-sidebar-muted">Insert conditional blocks that show/hide content based on a variable's value.</p>
+              <div className="space-y-2">
+                <div>
+                  <label className="text-[10px] text-sidebar-muted mb-1 block">Variable name</label>
+                  <input
+                    className="w-full bg-sidebar-hover border border-sidebar-border rounded-lg px-2 py-1.5 text-xs text-white placeholder-sidebar-muted outline-none focus:border-primary"
+                    placeholder="is_paid, show_logo…"
+                    value={condVar}
+                    onChange={e => setCondVar(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-sidebar-muted mb-1 block">Block type</label>
+                  <select
+                    className="w-full bg-sidebar-hover border border-sidebar-border rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-primary"
+                    value={condType}
+                    onChange={e => setCondType(e.target.value)}
+                  >
+                    <option value="if">if — show when true</option>
+                    <option value="unless">unless — show when false</option>
+                    <option value="if-else">if / else — show one of two</option>
+                  </select>
+                </div>
+                <button
+                  className="w-full py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90 transition-colors disabled:opacity-40"
+                  disabled={!condVar.trim()}
+                  onClick={() => {
+                    const v = condVar.trim()
+                    if (!v) return
+                    if (condType === 'if') {
+                      insertBlock(`<!-- {{#if ${v}}} --><div style="padding:8px;border:1px dashed #aaa;border-radius:4px;color:#333;">Content shown when <strong>${v}</strong> is true</div><!-- {{/if}} -->`)
+                    } else if (condType === 'unless') {
+                      insertBlock(`<!-- {{#unless ${v}}} --><div style="padding:8px;border:1px dashed #aaa;border-radius:4px;color:#333;">Content shown when <strong>${v}</strong> is false</div><!-- {{/unless}} -->`)
+                    } else {
+                      insertBlock(`<!-- {{#if ${v}}} --><div style="padding:8px;border:1px dashed #6aad6a;border-radius:4px;color:#333;">Shown when <strong>${v}</strong> is true</div><!-- {{else}} --><div style="padding:8px;border:1px dashed #ad6a6a;border-radius:4px;color:#333;">Shown when <strong>${v}</strong> is false</div><!-- {{/if}} -->`)
+                    }
+                  }}
+                >
+                  Insert Conditional Block
+                </button>
+              </div>
+              <p className="text-[10px] font-semibold text-sidebar-muted uppercase tracking-wider pt-2">Quick Snippets</p>
+              <div className="space-y-1">
+                <SnippetInsertBtn mono label="{{#if var}} … {{/if}}" title="Basic if block"
+                  onClick={() => insertAtCursor('<!-- {{#if variable}} -->')} />
+                <SnippetInsertBtn mono label="{{#unless var}} … {{/unless}}" title="Unless block"
+                  onClick={() => insertAtCursor('<!-- {{#unless variable}} -->')} />
+                <SnippetInsertBtn mono label="{{else}}" title="Else marker"
+                  onClick={() => insertAtCursor('<!-- {{else}} -->')} />
+                <SnippetInsertBtn mono label="{{/if}}" title="End if"
+                  onClick={() => insertAtCursor('<!-- {{/if}} -->')} />
+              </div>
+            </>
+          )}
+
+          {/* ── Loops ── */}
+          {activeVarTab === 'Loops' && (
+            <>
+              <p className="text-[10px] text-sidebar-muted">Repeat content for each item in an array variable.</p>
+              <div className="space-y-2">
+                <div>
+                  <label className="text-[10px] text-sidebar-muted mb-1 block">Array variable name</label>
+                  <input
+                    className="w-full bg-sidebar-hover border border-sidebar-border rounded-lg px-2 py-1.5 text-xs text-white placeholder-sidebar-muted outline-none focus:border-primary"
+                    placeholder="items, line_items, rows…"
+                    value={loopVar}
+                    onChange={e => setLoopVar(e.target.value)}
+                  />
+                </div>
+                <button
+                  className="w-full py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90 transition-colors disabled:opacity-40"
+                  disabled={!loopVar.trim()}
+                  onClick={() => {
+                    const v = loopVar.trim()
+                    if (!v) return
+                    insertBlock(
+                      `<!-- {{#each ${v}}} --><div style="padding:6px 8px;border-bottom:1px solid #eee;font-size:13px;">{{this.name}} — {{this.value}}</div><!-- {{/each}} -->`
+                    )
+                  }}
+                >
+                  Insert Loop Block
+                </button>
+              </div>
+              <p className="text-[10px] font-semibold text-sidebar-muted uppercase tracking-wider pt-2">Loop Variables</p>
+              <div className="space-y-1">
+                <SnippetInsertBtn mono label="{{this.name}}" title="Current item property"
+                  onClick={() => insertAtCursor('{{this.name}}')} />
+                <SnippetInsertBtn mono label="{{this.value}}" title="Current item value"
+                  onClick={() => insertAtCursor('{{this.value}}')} />
+                <SnippetInsertBtn mono label="{{this.description}}" title="Current item description"
+                  onClick={() => insertAtCursor('{{this.description}}')} />
+                <SnippetInsertBtn mono label="{{@index}}" title="Current loop index (0-based)"
+                  onClick={() => insertAtCursor('{{@index}}')} />
+                <SnippetInsertBtn mono label="{{@first}}" title="True for first item"
+                  onClick={() => insertAtCursor('{{@first}}')} />
+                <SnippetInsertBtn mono label="{{@last}}" title="True for last item"
+                  onClick={() => insertAtCursor('{{@last}}')} />
+              </div>
+              <p className="text-[10px] font-semibold text-sidebar-muted uppercase tracking-wider pt-1">Invoice Line Items</p>
+              <div className="space-y-1">
+                <SnippetInsertBtn label="Loop Table (line_items)" title="Insert a loop table for invoice line items"
+                  onClick={() => insertBlock(`<!-- {{#each line_items}} --><table width="100%" style="border-collapse:collapse;font-size:13px;"><tr><td style="padding:6px 8px;border-bottom:1px solid #eee;">{{this.description}}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;">{{this.quantity}}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;">{{this.unit_price}}</td><td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right;font-weight:600;">{{this.total}}</td></tr></table><!-- {{/each}} -->`)} />
+              </div>
+            </>
+          )}
+
+          {/* ── Helpers ── */}
+          {activeVarTab === 'Helpers' && (
+            <>
+              {/* Date Formatter */}
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-semibold text-sidebar-muted uppercase tracking-wider">Date Format</p>
+                <input
+                  className="w-full bg-sidebar-hover border border-sidebar-border rounded-lg px-2 py-1.5 text-xs text-white placeholder-sidebar-muted outline-none focus:border-primary"
+                  placeholder="date_field variable"
+                  value={dateVar}
+                  onChange={e => setDateVar(e.target.value)}
+                />
+                <select
+                  className="w-full bg-sidebar-hover border border-sidebar-border rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-primary"
+                  value={dateFmt}
+                  onChange={e => setDateFmt(e.target.value)}
+                >
+                  {DATE_FORMATS.map(f => <option key={f.fmt} value={f.fmt}>{f.label}</option>)}
+                </select>
+                <button
+                  className="w-full py-1.5 rounded-lg bg-sidebar-hover border border-sidebar-border text-xs text-white hover:border-primary transition-all disabled:opacity-40"
+                  disabled={!dateVar.trim()}
+                  onClick={() => insertAtCursor(`{{formatDate ${dateVar.trim()} "${dateFmt}"}}`)}
+                >
+                  Insert Date Helper
+                </button>
+              </div>
+
+              <div className="border-t border-sidebar-border pt-3 space-y-1.5">
+                <p className="text-[10px] font-semibold text-sidebar-muted uppercase tracking-wider">Currency Format</p>
+                <input
+                  className="w-full bg-sidebar-hover border border-sidebar-border rounded-lg px-2 py-1.5 text-xs text-white placeholder-sidebar-muted outline-none focus:border-primary"
+                  placeholder="amount variable"
+                  value={currVar}
+                  onChange={e => setCurrVar(e.target.value)}
+                />
+                <select
+                  className="w-full bg-sidebar-hover border border-sidebar-border rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-primary"
+                  value={currCode}
+                  onChange={e => setCurrCode(e.target.value)}
+                >
+                  {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
+                </select>
+                <button
+                  className="w-full py-1.5 rounded-lg bg-sidebar-hover border border-sidebar-border text-xs text-white hover:border-primary transition-all disabled:opacity-40"
+                  disabled={!currVar.trim()}
+                  onClick={() => insertAtCursor(`{{formatCurrency ${currVar.trim()} "${currCode}"}}`)}
+                >
+                  Insert Currency Helper
+                </button>
+              </div>
+
+              <div className="border-t border-sidebar-border pt-3 space-y-1.5">
+                <p className="text-[10px] font-semibold text-sidebar-muted uppercase tracking-wider">Truncate Text</p>
+                <input
+                  className="w-full bg-sidebar-hover border border-sidebar-border rounded-lg px-2 py-1.5 text-xs text-white placeholder-sidebar-muted outline-none focus:border-primary"
+                  placeholder="text variable"
+                  value={truncVar}
+                  onChange={e => setTruncVar(e.target.value)}
+                />
+                <input
+                  type="number" min={10} max={500}
+                  className="w-full bg-sidebar-hover border border-sidebar-border rounded-lg px-2 py-1.5 text-xs text-white outline-none focus:border-primary"
+                  value={truncLen}
+                  onChange={e => setTruncLen(Number(e.target.value))}
+                />
+                <button
+                  className="w-full py-1.5 rounded-lg bg-sidebar-hover border border-sidebar-border text-xs text-white hover:border-primary transition-all disabled:opacity-40"
+                  disabled={!truncVar.trim()}
+                  onClick={() => insertAtCursor(`{{truncate ${truncVar.trim()} ${truncLen}}}`)}
+                >
+                  Insert Truncate Helper
+                </button>
+              </div>
+
+              <div className="border-t border-sidebar-border pt-3 space-y-1.5">
+                <p className="text-[10px] font-semibold text-sidebar-muted uppercase tracking-wider">Case Helpers</p>
+                <input
+                  className="w-full bg-sidebar-hover border border-sidebar-border rounded-lg px-2 py-1.5 text-xs text-white placeholder-sidebar-muted outline-none focus:border-primary"
+                  placeholder="text variable"
+                  value={caseVar}
+                  onChange={e => setCaseVar(e.target.value)}
+                />
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    className="py-1.5 rounded-lg bg-sidebar-hover border border-sidebar-border text-xs text-white hover:border-primary transition-all disabled:opacity-40"
+                    disabled={!caseVar.trim()}
+                    onClick={() => insertAtCursor(`{{uppercase ${caseVar.trim()}}}`)}
+                  >
+                    UPPERCASE
+                  </button>
+                  <button
+                    className="py-1.5 rounded-lg bg-sidebar-hover border border-sidebar-border text-xs text-white hover:border-primary transition-all disabled:opacity-40"
+                    disabled={!caseVar.trim()}
+                    onClick={() => insertAtCursor(`{{lowercase ${caseVar.trim()}}}`)}
+                  >
+                    lowercase
+                  </button>
+                </div>
+              </div>
+
+              <div className="border-t border-sidebar-border pt-3 space-y-1">
+                <p className="text-[10px] font-semibold text-sidebar-muted uppercase tracking-wider">Quick Snippets</p>
+                {[
+                  [`{{formatDate current_date "MMMM D, YYYY"}}`, 'Formatted today'],
+                  [`{{formatCurrency total_amount "USD"}}`,       'USD amount'],
+                  [`{{uppercase company_name}}`,                  'Company uppercase'],
+                  [`{{truncate description 80}}`,                 'Truncate description'],
+                ].map(([snippet, label]) => (
+                  <button
+                    key={snippet}
+                    title={snippet}
+                    onClick={() => insertAtCursor(snippet)}
+                    className="w-full text-left px-2.5 py-1.5 rounded-lg border border-sidebar-border text-sidebar-muted hover:border-primary hover:text-white transition-all text-[10px] font-mono truncate"
+                  >
+                    {label}: {snippet}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  /* ── Render ──────────────────────────────────────────────────────────────── */
   return (
     <div className="builder-shell">
 
       {/* ── Top bar ── */}
-      <div className="flex items-center justify-between bg-sidebar text-white px-4 h-[52px] gap-3 shrink-0 border-b border-sidebar-border">
-        {/* Left */}
+      <div className="flex items-center justify-between bg-sidebar text-white px-3 h-[52px] gap-2 shrink-0 border-b border-sidebar-border">
+
+        {/* Left: name + settings */}
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <input
-            className="bg-transparent border border-sidebar-border text-white text-sm px-3 py-1.5 rounded-lg w-52 outline-none focus:border-primary transition-colors placeholder-sidebar-muted"
+            className="bg-transparent border border-sidebar-border text-white text-sm px-3 py-1.5 rounded-lg w-44 outline-none focus:border-primary transition-colors placeholder-sidebar-muted"
             value={settings.name}
             onChange={e => set('name', e.target.value)}
             placeholder="Template name…"
           />
           <button
-            className="text-xs px-3 py-1.5 rounded-lg border border-sidebar-border text-sidebar-muted hover:border-primary hover:text-white transition-all"
+            className="text-xs px-2.5 py-1.5 rounded-lg border border-sidebar-border text-sidebar-muted hover:border-primary hover:text-white transition-all whitespace-nowrap"
             onClick={() => setShowSettings(true)}
           >
-            Page Settings
+            ⚙ Settings
           </button>
         </div>
 
-        {/* Center — device switcher */}
-        <div className="flex gap-1 shrink-0">
-          {DEVICES.map(d => (
+        {/* Center: device + zoom */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Page size dropdown */}
+          <select
+            value={activeDevice}
+            onChange={e => handleDeviceChange(e.target.value)}
+            className="bg-sidebar-hover border border-sidebar-border text-white text-xs rounded-lg px-2.5 py-1.5 outline-none focus:border-primary cursor-pointer"
+          >
+            {DEVICES.map(d => (
+              <option key={d.value} value={d.value}>{d.label}</option>
+            ))}
+          </select>
+
+          {/* Zoom controls */}
+          <div className="flex items-center gap-1 bg-sidebar-hover border border-sidebar-border rounded-lg px-1.5 py-1">
             <button
-              key={d}
-              onClick={() => handleDeviceChange(d)}
-              className={`text-xs px-3 py-1.5 rounded-lg border transition-all ${
-                activeDevice === d
-                  ? 'bg-primary border-primary text-white'
-                  : 'bg-sidebar-hover border-sidebar-border text-sidebar-muted hover:border-primary hover:text-white'
-              }`}
+              className="text-sidebar-muted hover:text-white transition-colors w-5 h-5 flex items-center justify-center text-sm font-bold"
+              onClick={() => handleZoom(zoom - 10)}
+              title="Zoom out"
+            >−</button>
+            <select
+              value={ZOOM_LEVELS.includes(zoom) ? zoom : zoom}
+              onChange={e => handleZoom(Number(e.target.value))}
+              className="bg-transparent text-white text-xs outline-none cursor-pointer w-14 text-center"
             >
-              {d}
-            </button>
-          ))}
+              {ZOOM_LEVELS.map(z => <option key={z} value={z}>{z}%</option>)}
+              {!ZOOM_LEVELS.includes(zoom) && <option value={zoom}>{zoom}%</option>}
+            </select>
+            <button
+              className="text-sidebar-muted hover:text-white transition-colors w-5 h-5 flex items-center justify-center text-sm font-bold"
+              onClick={() => handleZoom(zoom + 10)}
+              title="Zoom in"
+            >+</button>
+          </div>
         </div>
 
-        {/* Right */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Right: actions */}
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
-            className="text-xs px-3 py-1.5 rounded-lg bg-sidebar-hover border border-sidebar-border text-sidebar-muted hover:text-white transition-colors"
+            className="text-xs px-2.5 py-1.5 rounded-lg bg-sidebar-hover border border-sidebar-border text-sidebar-muted hover:text-white transition-colors"
             onClick={() => editorRef.current?.runCommand('core:undo')}
+            title="Undo (Ctrl+Z)"
           >
             Undo
           </button>
           <button
-            className="text-xs px-3 py-1.5 rounded-lg bg-sidebar-hover border border-sidebar-border text-sidebar-muted hover:text-white transition-colors"
+            className="text-xs px-2.5 py-1.5 rounded-lg bg-sidebar-hover border border-sidebar-border text-sidebar-muted hover:text-white transition-colors"
             onClick={() => editorRef.current?.runCommand('core:redo')}
+            title="Redo (Ctrl+Y)"
           >
             Redo
           </button>
+
+          {/* Separator */}
+          <div className="w-px h-5 bg-sidebar-border" />
+
+          <button
+            className="text-xs px-2.5 py-1.5 rounded-lg bg-sidebar-hover border border-sidebar-border text-sidebar-muted hover:text-white transition-colors flex items-center gap-1.5"
+            onClick={() => setShowPreviewData(true)}
+            title="Preview with dynamic data"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+            </svg>
+            Preview
+          </button>
+          <button
+            className="text-xs px-2.5 py-1.5 rounded-lg bg-sidebar-hover border border-sidebar-border text-sidebar-muted hover:text-white transition-colors"
+            onClick={handleExportHtml}
+            title="Export as HTML file"
+          >
+            Export
+          </button>
+          <button
+            className="text-xs px-2.5 py-1.5 rounded-lg bg-sidebar-hover border border-sidebar-border text-sidebar-muted hover:text-white transition-colors"
+            onClick={handleCopyHtml}
+            title="Copy HTML to clipboard"
+          >
+            {copied ? '✓ Copied' : 'Copy HTML'}
+          </button>
+
+          {/* Separator */}
+          <div className="w-px h-5 bg-sidebar-border" />
+
           <button
             className="btn btn-primary btn-sm"
             onClick={handleSave}
@@ -154,14 +667,14 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
       <div className="builder-main">
 
         {/* Left panel */}
-        <div className="builder-panel-left w-[220px] bg-sidebar shrink-0 border-r border-sidebar-border">
+        <div className="builder-panel-left w-[230px] bg-sidebar shrink-0 border-r border-sidebar-border flex flex-col">
           {/* Tabs */}
-          <div className="flex border-b border-navy-border shrink-0">
-            {[['blocks', 'Blocks'], ['layers', 'Layers']].map(([key, label]) => (
+          <div className="flex border-b border-sidebar-border shrink-0">
+            {[['blocks', 'Blocks'], ['layers', 'Layers'], ['variables', 'Variables']].map(([key, label]) => (
               <button
                 key={key}
                 onClick={() => setActivePanel(key)}
-                className={`flex-1 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                className={`flex-1 py-2.5 text-[9px] font-bold uppercase tracking-widest transition-colors ${
                   activePanel === key
                     ? 'text-primary border-b-2 border-primary'
                     : 'text-sidebar-muted hover:text-white'
@@ -171,9 +684,25 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
               </button>
             ))}
           </div>
-          <div className="panel-section">
-            <div id="blocks-panel" className={activePanel === 'blocks' ? '' : 'hidden'} />
-            <div id="layers-panel" className={activePanel === 'layers' ? '' : 'hidden'} />
+
+          {/* Block search */}
+          {activePanel === 'blocks' && (
+            <div className="px-2.5 py-2 shrink-0 border-b border-sidebar-border">
+              <input
+                className="w-full bg-sidebar-hover border border-sidebar-border rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-sidebar-muted outline-none focus:border-primary transition-colors"
+                placeholder="Search blocks…"
+                value={blockSearch}
+                onChange={e => setBlockSearch(e.target.value)}
+              />
+            </div>
+          )}
+
+          <div className={`flex-1 overflow-hidden ${activePanel === 'variables' ? '' : 'panel-section'}`}>
+            <div id="blocks-panel"  className={activePanel === 'blocks'    ? 'h-full overflow-y-auto' : 'hidden'} />
+            <div id="layers-panel"  className={activePanel === 'layers'    ? 'h-full overflow-y-auto' : 'hidden'} />
+            <div                    className={activePanel === 'variables' ? 'h-full overflow-hidden flex flex-col' : 'hidden'}>
+              <VariablesPanel />
+            </div>
           </div>
         </div>
 
@@ -183,8 +712,8 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
         </div>
 
         {/* Right panel */}
-        <div className="builder-panel-right w-[260px] bg-sidebar shrink-0 border-l border-sidebar-border">
-          <div className="flex border-b border-navy-border shrink-0">
+        <div className="builder-panel-right w-[260px] bg-sidebar shrink-0 border-l border-sidebar-border flex flex-col">
+          <div className="flex border-b border-sidebar-border shrink-0">
             {[['styles', 'Styles'], ['traits', 'Properties']].map(([key, label]) => (
               <button
                 key={key}
@@ -199,14 +728,24 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
               </button>
             ))}
           </div>
-          <div id="style-manager-container" className={`panel-section ${activeRight === 'styles' ? '' : 'hidden'}`} />
-          <div id="traits-panel"            className={`panel-section ${activeRight === 'traits' ? '' : 'hidden'}`} />
+          <div id="style-manager-container" className={`panel-section flex-1 overflow-y-auto ${activeRight === 'styles' ? '' : 'hidden'}`} />
+          <div id="traits-panel"            className={`panel-section flex-1 overflow-y-auto ${activeRight === 'traits' ? '' : 'hidden'}`} />
         </div>
       </div>
 
-      {/* Page settings modal */}
+      {/* ── Page settings modal ── */}
       {showSettings && (
         <PageSettingsModal settings={settings} onChange={set} onClose={() => setShowSettings(false)} />
+      )}
+
+      {/* ── Preview with data modal ── */}
+      {showPreviewData && (
+        <PreviewDataModal
+          getHtml={() => editorRef.current?.getHtml() || ''}
+          getCss={() => editorRef.current?.getCss() || ''}
+          meta={settings}
+          onClose={() => setShowPreviewData(false)}
+        />
       )}
     </div>
   )
@@ -239,7 +778,7 @@ function PageSettingsModal({ settings, onChange, onClose }) {
           <div>
             <label className="form-label">Page Size</label>
             <select className="form-select" value={settings.pageSize} onChange={e => onChange('pageSize', e.target.value)}>
-              {['A4', 'A3', 'Letter', 'Legal'].map(s => <option key={s}>{s}</option>)}
+              {['A4', 'A3', 'Letter', 'Legal', 'Custom'].map(s => <option key={s}>{s}</option>)}
             </select>
           </div>
           <div>
@@ -268,7 +807,7 @@ function PageSettingsModal({ settings, onChange, onClose }) {
 
         <div className="flex justify-end gap-2 mt-6">
           <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={onClose}>Save</button>
+          <button className="btn btn-primary" onClick={onClose}>Done</button>
         </div>
       </div>
     </div>
@@ -297,7 +836,6 @@ function enableResize(component) {
   if (tag && RESIZABLE_TAGS.has(tag) && !component.get('resizable')) {
     component.set('resizable', RESIZE_CONFIG)
   }
-  // Recurse into children so nested cols / table cells are also resizable
   component.components().each(child => enableResize(child))
 }
 
@@ -340,12 +878,9 @@ function injectRteExtras(editor) {
     e.target.value = ''
   })
 
-  // Text color
   wrapper.appendChild(sizeSelect)
   wrapper.appendChild(makeColorPicker(canvasDoc, 'A', '#000', 'Text color',
     (color) => canvasDoc.execCommand('foreColor', false, color)))
-
-  // Highlight color
   wrapper.appendChild(makeColorPicker(canvasDoc, 'H', '#ffff00', 'Highlight',
     (color) => canvasDoc.execCommand('hiliteColor', false, color),
     'rte-bg-label'))

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import TemplateBuilder from '../components/builder/TemplateBuilder'
 import { getTemplate, createTemplate, updateTemplate } from '../services/api'
 import useDocumentTitle from '../hooks/useDocumentTitle'
@@ -7,24 +7,28 @@ import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 
 export default function BuilderPage() {
-  const { id }   = useParams()
-  const navigate = useNavigate()
-  const toast    = useToast()
-  const isEdit   = Boolean(id)
+  const { id }       = useParams()
+  const navigate     = useNavigate()
+  const location     = useLocation()
+  const toast        = useToast()
+  const isEdit       = Boolean(id)
 
-  const [template,  setTemplate]  = useState(null)
+  // Starter template passed from the Sample Gallery
+  const starterTemplate = location.state?.starterTemplate || null
+
+  const [template,  setTemplate]  = useState(starterTemplate)
   const [loading,   setLoading]   = useState(isEdit)
   const [saving,    setSaving]    = useState(false)
   const [fatalError, setFatalError] = useState(null)   // only for "template not found"
 
   const pageTitle = isEdit
-    ? (template ? `Edit – ${template.name}` : 'Edit Template')
-    : 'New Template'
+    ? (template ? `Edit – ${template.name}` : 'Edit PDF Template')
+    : (starterTemplate ? `New – ${starterTemplate.name}` : 'New PDF Template')
   useDocumentTitle(pageTitle)
 
   const crumbs = [
     { label: 'Dashboard', to: '/' },
-    { label: 'Templates', to: '/templates' },
+    { label: 'PDF Templates', to: '/templates' },
     { label: pageTitle },
   ]
 
