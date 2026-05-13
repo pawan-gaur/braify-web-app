@@ -5,6 +5,7 @@ import useDocumentTitle from '../hooks/useDocumentTitle'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
+import ViewToggle, { useView } from '../components/ui/ViewToggle'
 import VersionHistoryModal from '../components/ui/VersionHistoryModal'
 import TemplatePreviewModal from '../components/ui/TemplatePreviewModal'
 
@@ -18,6 +19,7 @@ export default function TemplatesPage() {
   const navigate = useNavigate()
   const { can }  = useAuth()
   const toast    = useToast()
+  const [view,     setView]     = useView('braify-view-templates')
   const [templates,        setTemplates]        = useState([])
   const [versionTemplate,  setVersionTemplate]  = useState(null)
   const [previewTemplate,  setPreviewTemplate]  = useState(null)
@@ -53,9 +55,12 @@ export default function TemplatesPage() {
             {templates.length} template{templates.length !== 1 ? 's' : ''} saved
           </p>
         </div>
-        <button className="btn btn-primary" onClick={() => navigate('/builder')}>
-          + New Template
-        </button>
+        <div className="flex items-center gap-3">
+          <ViewToggle view={view} onChange={setView} />
+          <button className="btn btn-primary" onClick={() => navigate('/builder')}>
+            + New Template
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -68,6 +73,100 @@ export default function TemplatesPage() {
         </div>
       ) : templates.length === 0 ? (
         <EmptyState onNew={() => navigate('/builder')} />
+      ) : view === 'table' ? (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
+          <table className="w-full">
+            <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+              <tr>
+                {['Name', 'Page Size', 'Placeholders', 'Updated', ''].map(h => (
+                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              {templates.map(t => {
+                const date = t.updatedAt
+                  ? new Date(t.updatedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+                  : '—'
+                return (
+                  <tr key={t.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <td className="px-4 py-3.5">
+                      <p className="font-semibold text-gray-900 dark:text-white text-sm">{t.name}</p>
+                      {t.description && <p className="text-xs text-gray-400 mt-0.5 truncate max-w-xs">{t.description}</p>}
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <span className="badge badge-indigo">{t.pageSize || 'A4'}</span>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      {t.placeholders?.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {t.placeholders.slice(0, 3).map(p => (
+                            <span key={p} className="ph-chip">{`{{${p}}}`}</span>
+                          ))}
+                          {t.placeholders.length > 3 && (
+                            <span className="text-xs text-gray-400">+{t.placeholders.length - 3}</span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3.5 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">{date}</td>
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => navigate(`/generate?templateId=${t.id}`)}
+                          className="px-3 py-1.5 text-xs font-semibold rounded-lg text-white transition-all hover:opacity-90"
+                          style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)' }}
+                          title="Generate PDF"
+                        >Generate</button>
+                        <button onClick={() => setPreviewTemplate(t)}
+                          className="p-1.5 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-gray-400 hover:text-indigo-600 transition-colors"
+                          title="Preview">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                          </svg>
+                        </button>
+                        <button onClick={() => setVersionTemplate(t)}
+                          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 transition-colors"
+                          title="Version history">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                          </svg>
+                        </button>
+                        <button onClick={() => navigate(`/builder/${t.id}`)}
+                          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 transition-colors"
+                          title="Edit">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                          </svg>
+                        </button>
+                        {can('delete') && (
+                          <button onClick={() => handleDelete(t.id, t.name)}
+                            className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500 transition-colors"
+                            title="Delete">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+          <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-400">
+            {templates.length} template{templates.length !== 1 ? 's' : ''}
+          </div>
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {templates.map(t => (
