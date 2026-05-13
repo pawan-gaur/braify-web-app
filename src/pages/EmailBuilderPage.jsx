@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import EmailTemplateBuilder from '../components/builder/EmailTemplateBuilder'
-import { getEmailTemplate, createEmailTemplate, updateEmailTemplate } from '../services/api'
+import { getEmailTemplate, createEmailTemplate, updateEmailTemplate, sendEmailTemplate } from '../services/api'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 
 export default function EmailBuilderPage() {
-  const { id }   = useParams()
-  const navigate = useNavigate()
-  const toast    = useToast()
-  const isEdit   = Boolean(id)
+  const { id }       = useParams()
+  const navigate     = useNavigate()
+  const location     = useLocation()
+  const toast        = useToast()
+  const isEdit       = Boolean(id)
+  const libraryTmpl  = location.state?.libraryTemplate || null
 
   const [template,    setTemplate]    = useState(null)
   const [loading,     setLoading]     = useState(isEdit)
@@ -51,6 +53,20 @@ export default function EmailBuilderPage() {
       toast.error(err?.message || 'Failed to save email template.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleTestSend = async ({ to, subject }) => {
+    if (!id) {
+      toast.error('Save the template first before sending a test.')
+      return
+    }
+    try {
+      await sendEmailTemplate(id, { to, subject, placeholders: {} })
+      toast.success(`Test email sent to ${to}`)
+    } catch (err) {
+      toast.error(err?.message || 'Failed to send test email.')
+      throw err // re-throw so modal stays open on error
     }
   }
 
@@ -97,8 +113,11 @@ export default function EmailBuilderPage() {
       </div>
       <EmailTemplateBuilder
         initialTemplate={template}
+        libraryTemplate={!isEdit ? libraryTmpl : null}
         onSave={handleSave}
         isSaving={saving}
+        templateId={id}
+        onTestSend={isEdit ? handleTestSend : undefined}
       />
     </div>
   )

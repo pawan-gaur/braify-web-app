@@ -19,14 +19,14 @@ const NAV_SECTIONS = [
     ],
   },
   {
-    section: 'Templates',
+    section: 'PDF Templates',
     links: [
       {
-        to: '/templates', end: true, label: 'All Templates',
+        to: '/templates', end: true, label: 'PDF Templates',
         icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
       },
       {
-        to: '/builder', label: 'New Template',
+        to: '/builder', label: 'New PDF Template',
         icon: 'M12 4v16m8-8H4',
       },
       {
@@ -275,7 +275,7 @@ export default function Sidebar() {
       {/* ── New Template CTA ── */}
       <div className={`px-3 pt-4 pb-2 shrink-0 ${collapsed ? 'flex justify-center' : ''}`}>
         {collapsed ? (
-          <Tip label="New Template">
+          <Tip label="New PDF Template">
             <button
               onClick={() => navigate('/builder')}
               className="w-9 h-9 rounded-xl flex items-center justify-center
@@ -298,7 +298,7 @@ export default function Sidebar() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4"/>
             </svg>
-            New Template
+            New PDF Template
           </button>
         )}
       </div>
