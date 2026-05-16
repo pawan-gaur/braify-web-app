@@ -10,6 +10,15 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
+      // Forward springdoc OpenAPI spec and Swagger UI assets to the backend
+      '/v3': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+      '/swagger-ui': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
     },
   },
 })

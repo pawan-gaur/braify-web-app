@@ -25,10 +25,7 @@ const STATUS_STYLE = {
   INFO_REQUIRED:{ bg: 'bg-blue-100   dark:bg-blue-900/30',   text: 'text-blue-700   dark:text-blue-300',   dot: 'bg-blue-500',   label: 'Info Required' },
 }
 
-function fmtDate(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
-}
+import { fmtDate } from '../utils/date'
 
 function StatusBadge({ status }) {
   const s = STATUS_STYLE[status] ?? { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400', label: status }

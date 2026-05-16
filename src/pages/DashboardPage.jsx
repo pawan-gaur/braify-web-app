@@ -13,13 +13,7 @@ function greeting() {
   return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
 }
 
-function fmtDate(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleString(undefined, {
-    day: 'numeric', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
-}
+import { fmtDateTime as fmtDate } from '../utils/date'
 
 function pct(n, total) {
   if (!total) return 0

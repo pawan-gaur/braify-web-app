@@ -20,10 +20,7 @@ const STATUS_COLORS = {
   CANCELLED: 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300',
 }
 
-function fmtDate(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-}
+import { fmtDateTimeGB as fmtDate } from '../utils/date'
 
 /** Copy text to clipboard and briefly toggle a "copied" state */
 function CopyIdButton({ id }) {

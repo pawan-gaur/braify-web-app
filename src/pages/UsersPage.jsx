@@ -24,10 +24,7 @@ const ROLE_BADGE = {
   USER:           'bg-gray-100   text-gray-600',
 }
 
-function fmtDate(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
-}
+import { fmtDate } from '../utils/date'
 
 function Avatar({ user, size = 'sm' }) {
   const s = size === 'sm' ? 'w-8 h-8 text-xs' : 'w-10 h-10 text-sm'

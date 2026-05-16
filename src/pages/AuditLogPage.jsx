@@ -92,13 +92,7 @@ const ALL_ACTIONS  = ['ALL', 'CREATED', 'UPDATED', 'DELETED', 'RESTORED', 'SENT'
 const USER_ACTIONS = ['ALL', 'CREATED', 'UPDATED', 'DELETED', 'RESTORED',
                       'SENT', 'PASSWORD_CHANGED', 'AVATAR_UPDATED']
 
-function fmtDate(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleString(undefined, {
-    day: 'numeric', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-  })
-}
+import { fmtDateTime as fmtDate } from '../utils/date'
 
 function scopeLabel(role) {
   switch (role) {

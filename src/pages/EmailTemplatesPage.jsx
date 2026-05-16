@@ -9,6 +9,7 @@ import ViewToggle, { useView } from '../components/ui/ViewToggle'
 import VersionHistoryModal from '../components/ui/VersionHistoryModal'
 import EmailPreviewModal from '../components/ui/EmailPreviewModal'
 import EmailLibraryModal from '../components/ui/EmailLibraryModal'
+import { fmtDate } from '../utils/date'
 
 const CRUMBS = [
   { label: 'Dashboard',       to: '/' },
@@ -258,9 +259,7 @@ export default function EmailTemplatesPage() {
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {visibleTemplates.map(t => {
-                const date = t.updatedAt
-                  ? new Date(t.updatedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
-                  : '—'
+                const date = fmtDate(t.updatedAt)
                 return (
                   <tr key={t.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                     <td className="px-4 py-3.5">
@@ -392,11 +391,7 @@ export default function EmailTemplatesPage() {
 
 /* ── Email Template Card ─────────────────────────────────────────────────── */
 function EmailTemplateCard({ template, onEdit, onDelete = null, onVersions, onPreview, onSend }) {
-  const date = template.updatedAt
-    ? new Date(template.updatedAt).toLocaleDateString(undefined, {
-        day: 'numeric', month: 'short', year: 'numeric',
-      })
-    : '—'
+  const date = fmtDate(template.updatedAt)
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-card hover:shadow-card-hover

@@ -22,10 +22,7 @@ const ACTION_BADGE = {
   SESSION_REVOKED:  'bg-orange-100 text-orange-700',
 }
 
-function fmtDate(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-}
+import { fmtDateTime as fmtDate } from '../utils/date'
 
 function Avatar({ user, size = 'lg' }) {
   const s = size === 'lg' ? 'w-24 h-24 text-2xl' : 'w-12 h-12 text-base'

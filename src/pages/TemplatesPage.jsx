@@ -9,6 +9,7 @@ import ViewToggle, { useView } from '../components/ui/ViewToggle'
 import VersionHistoryModal from '../components/ui/VersionHistoryModal'
 import TemplatePreviewModal from '../components/ui/TemplatePreviewModal'
 import { STARTER_CATEGORIES } from '../data/starterTemplates'
+import { fmtDate } from '../utils/date'
 
 const CRUMBS = [
   { label: 'Dashboard', to: '/' },
@@ -133,9 +134,7 @@ export default function TemplatesPage() {
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {templates.map(t => {
-                  const date = t.updatedAt
-                    ? new Date(t.updatedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
-                    : '—'
+                  const date = fmtDate(t.updatedAt)
                   return (
                     <tr key={t.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                       <td className="px-4 py-3.5">
@@ -454,9 +453,7 @@ function StarterCard({ template, category, onOpen }) {
 
 /* ── My Templates: TemplateCard ──────────────────────────────────────────── */
 function TemplateCard({ template, onEdit, onGenerate, onDelete = null, onVersions, onPreview }) {
-  const date = template.updatedAt
-    ? new Date(template.updatedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
-    : '—'
+  const date = fmtDate(template.updatedAt)
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-card hover:shadow-card-hover

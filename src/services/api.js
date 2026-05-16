@@ -170,6 +170,26 @@ export const esignSubmitDocument  = (token)                => http.post(`/esign/
 // ── E-Sign Verify (public) ─────────────────────────────────
 export const esignVerifyDocument  = (id)                   => http.get(`/esign/verify/${id}`).then(r => r.data)
 
+// ── Subscription (Platform Admin) ──────────────────────────
+export const getSubscription    = (orgId)           => http.get(`/organizations/${orgId}/subscription`).then(r => r.data)
+export const assignSubscription = (orgId, payload)  => http.put(`/organizations/${orgId}/subscription`, payload).then(r => r.data)
+
+// ── Quota config & usage ────────────────────────────────────
+export const getQuotaConfig    = (orgId)          => http.get(`/organizations/${orgId}/quota/config`).then(r => r.data)
+export const updateQuotaConfig = (orgId, payload) => http.put(`/organizations/${orgId}/quota/config`, payload).then(r => r.data)
+export const getUsageHistory   = (orgId)          => http.get(`/organizations/${orgId}/quota/usage`).then(r => r.data)
+
+// ── Org Branding ────────────────────────────────────────────
+export const getBranding    = (orgId)           => http.get(`/organizations/${orgId}/branding`).then(r => r.data)
+export const updateBranding = (orgId, payload)  => http.put(`/organizations/${orgId}/branding`, payload).then(r => r.data)
+
+// ── Template Sharing ────────────────────────────────────────
+export const shareTemplate        = (payload)     => http.post('/sharing', payload).then(r => r.data)
+export const revokeShare          = (id)          => http.delete(`/sharing/${id}`)
+export const getReceivedShares    = ()            => http.get('/sharing/received').then(r => r.data)
+export const getSentShares        = ()            => http.get('/sharing/sent').then(r => r.data)
+export const getSharesForTemplate = (templateId) => http.get(`/sharing/template/${templateId}`).then(r => r.data)
+
 // ── PDF Generation ─────────────────────────────────────────
 export const generatePdf = async (templateId, data, filename) => {
   const response = await http.post(

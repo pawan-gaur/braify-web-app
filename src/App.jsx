@@ -31,6 +31,10 @@ import ESignSigningPage     from './pages/ESignSigningPage'
 import ESignVerifyPage      from './pages/ESignVerifyPage'
 import GetStartedPage       from './pages/GetStartedPage'
 import OnboardingRequestsPage from './pages/OnboardingRequestsPage'
+import BrandingPage          from './pages/BrandingPage'
+import UsagePage             from './pages/UsagePage'
+import SharedTemplatesPage   from './pages/SharedTemplatesPage'
+import ApiDocsPage           from './pages/ApiDocsPage'
 
 /**
  * Smart router for /esign/:id
@@ -116,6 +120,12 @@ function Shell() {
 
           {/* ── Profile ── */}
           <Route path="/profile" element={<ProfilePage />} />
+
+          {/* ── Settings ── */}
+          <Route path="/settings/branding"  element={<BrandingPage />} />
+          <Route path="/usage"              element={<UsagePage />} />
+          <Route path="/shared-templates"   element={<SharedTemplatesPage />} />
+          <Route path="/api-docs"           element={<ApiDocsPage />} />
 
           {/* Catch-all inside shell */}
           <Route path="*" element={<Navigate to="/" replace />} />

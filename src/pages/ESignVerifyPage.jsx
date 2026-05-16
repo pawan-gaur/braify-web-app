@@ -142,9 +142,11 @@ function InfoRow({ label, value }) {
   )
 }
 
+import { parseUtc } from '../utils/date'
 function fmtDate(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleString('en-GB', {
+  const d = parseUtc(iso)
+  if (!d) return '—'
+  return d.toLocaleString('en-GB', {
     day: '2-digit', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
   })
