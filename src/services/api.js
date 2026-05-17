@@ -170,6 +170,26 @@ export const esignSubmitDocument  = (token)                => http.post(`/esign/
 // ── E-Sign Verify (public) ─────────────────────────────────
 export const esignVerifyDocument  = (id)                   => http.get(`/esign/verify/${id}`).then(r => r.data)
 
+// ── Subscription (Platform Admin) ──────────────────────────
+export const getSubscription    = (orgId)           => http.get(`/organizations/${orgId}/subscription`).then(r => r.data)
+export const assignSubscription = (orgId, payload)  => http.put(`/organizations/${orgId}/subscription`, payload).then(r => r.data)
+
+// ── Quota config & usage ────────────────────────────────────
+export const getQuotaConfig    = (orgId)          => http.get(`/organizations/${orgId}/quota/config`).then(r => r.data)
+export const updateQuotaConfig = (orgId, payload) => http.put(`/organizations/${orgId}/quota/config`, payload).then(r => r.data)
+export const getUsageHistory   = (orgId)          => http.get(`/organizations/${orgId}/quota/usage`).then(r => r.data)
+
+// ── Org Branding ────────────────────────────────────────────
+export const getBranding    = (orgId)           => http.get(`/organizations/${orgId}/branding`).then(r => r.data)
+export const updateBranding = (orgId, payload)  => http.put(`/organizations/${orgId}/branding`, payload).then(r => r.data)
+
+// ── Template Sharing ────────────────────────────────────────
+export const shareTemplate        = (payload)     => http.post('/sharing', payload).then(r => r.data)
+export const revokeShare          = (id)          => http.delete(`/sharing/${id}`)
+export const getReceivedShares    = ()            => http.get('/sharing/received').then(r => r.data)
+export const getSentShares        = ()            => http.get('/sharing/sent').then(r => r.data)
+export const getSharesForTemplate = (templateId) => http.get(`/sharing/template/${templateId}`).then(r => r.data)
+
 // ── PDF Generation ─────────────────────────────────────────
 export const generatePdf = async (templateId, data, filename) => {
   const response = await http.post(
@@ -194,3 +214,15 @@ export const previewPdfBlob = async (templateId, data) => {
   )
   return URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }))
 }
+
+// ── API Keys ───────────────────────────────────────────────────
+export const getApiKeys     = (orgId)          => http.get(`/organizations/${orgId}/api-keys`).then(r => r.data)
+export const getAllApiKeys   = ()               => http.get('/admin/api-keys').then(r => r.data)   // Platform Admin: all orgs
+export const createApiKey   = (orgId, payload) => http.post(`/organizations/${orgId}/api-keys`, payload).then(r => r.data)
+export const revokeApiKey   = (orgId, keyId)   => http.delete(`/organizations/${orgId}/api-keys/${keyId}`)
+export const toggleApiKey   = (orgId, keyId)   => http.patch(`/organizations/${orgId}/api-keys/${keyId}/toggle`).then(r => r.data)
+export const getApiKeyUsage = (orgId)          => http.get(`/organizations/${orgId}/api-keys/usage`).then(r => r.data)
+
+// ── Org users (admin view via /users/search with orgId filter) ─
+export const getUsersByOrg = (orgId) =>
+  http.get('/users/search', { params: { q: '', orgId } }).then(r => r.data)

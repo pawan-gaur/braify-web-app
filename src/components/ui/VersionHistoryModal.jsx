@@ -14,13 +14,7 @@ const ACTION_STYLE = {
   RESTORED: "bg-violet-100 text-violet-700",
 };
 
-function fmtDate(iso) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleString(undefined, {
-    day: "numeric", month: "short", year: "numeric",
-    hour: "2-digit", minute: "2-digit",
-  });
-}
+import { fmtDateTime as fmtDate } from '../../utils/date'
 
 /**
  * Generic version history modal — PDF templates and email templates.

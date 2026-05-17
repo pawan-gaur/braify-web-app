@@ -31,6 +31,12 @@ import ESignSigningPage     from './pages/ESignSigningPage'
 import ESignVerifyPage      from './pages/ESignVerifyPage'
 import GetStartedPage       from './pages/GetStartedPage'
 import OnboardingRequestsPage from './pages/OnboardingRequestsPage'
+import BrandingPage          from './pages/BrandingPage'
+import UsagePage             from './pages/UsagePage'
+import SharedTemplatesPage   from './pages/SharedTemplatesPage'
+import ApiDocsPage           from './pages/ApiDocsPage'
+import OrgDetailPage         from './pages/OrgDetailPage'
+import ApiKeysPage           from './pages/ApiKeysPage'
 
 /**
  * Smart router for /esign/:id
@@ -109,13 +115,21 @@ function Shell() {
           <Route path="/audit-log" element={<AuditLogPage />} />
 
           {/* ── Admin pages ── */}
-          <Route path="/organizations"         element={<OrganizationsPage />} />
-          <Route path="/onboarding-requests"   element={<OnboardingRequestsPage />} />
+          <Route path="/organizations"              element={<OrganizationsPage />} />
+          <Route path="/admin/organizations/:orgId" element={<OrgDetailPage />} />
+          <Route path="/onboarding-requests"        element={<OnboardingRequestsPage />} />
           <Route path="/users"                 element={<UsersPage />} />
           <Route path="/sessions"              element={<SessionsPage />} />
 
           {/* ── Profile ── */}
           <Route path="/profile" element={<ProfilePage />} />
+
+          {/* ── Settings ── */}
+          <Route path="/settings/branding"   element={<BrandingPage />} />
+          <Route path="/settings/api-keys"   element={<ApiKeysPage />} />
+          <Route path="/usage"              element={<UsagePage />} />
+          <Route path="/shared-templates"   element={<SharedTemplatesPage />} />
+          <Route path="/api-docs"           element={<ApiDocsPage />} />
 
           {/* Catch-all inside shell */}
           <Route path="*" element={<Navigate to="/" replace />} />
