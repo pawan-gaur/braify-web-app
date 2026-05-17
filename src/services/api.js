@@ -214,3 +214,15 @@ export const previewPdfBlob = async (templateId, data) => {
   )
   return URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }))
 }
+
+// ── API Keys ───────────────────────────────────────────────────
+export const getApiKeys     = (orgId)          => http.get(`/organizations/${orgId}/api-keys`).then(r => r.data)
+export const getAllApiKeys   = ()               => http.get('/admin/api-keys').then(r => r.data)   // Platform Admin: all orgs
+export const createApiKey   = (orgId, payload) => http.post(`/organizations/${orgId}/api-keys`, payload).then(r => r.data)
+export const revokeApiKey   = (orgId, keyId)   => http.delete(`/organizations/${orgId}/api-keys/${keyId}`)
+export const toggleApiKey   = (orgId, keyId)   => http.patch(`/organizations/${orgId}/api-keys/${keyId}/toggle`).then(r => r.data)
+export const getApiKeyUsage = (orgId)          => http.get(`/organizations/${orgId}/api-keys/usage`).then(r => r.data)
+
+// ── Org users (admin view via /users/search with orgId filter) ─
+export const getUsersByOrg = (orgId) =>
+  http.get('/users/search', { params: { q: '', orgId } }).then(r => r.data)

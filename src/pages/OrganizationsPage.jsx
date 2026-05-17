@@ -215,7 +215,12 @@ export default function OrganizationsPage() {
               {orgs.map(org => (
                 <tr key={org.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group">
                   <td className="px-5 py-3.5">
-                    <p className="font-semibold text-gray-800 dark:text-gray-200">{org.name}</p>
+                    <button
+                      onClick={() => navigate(`/admin/organizations/${org.id}`)}
+                      className="font-semibold text-indigo-600 hover:text-indigo-800 hover:underline text-left"
+                    >
+                      {org.name}
+                    </button>
                     {org.description && (
                       <p className="text-xs text-gray-400 mt-0.5 truncate max-w-[200px]">{org.description}</p>
                     )}

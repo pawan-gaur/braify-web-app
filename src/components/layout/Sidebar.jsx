@@ -171,6 +171,11 @@ const NAV_SECTIONS = [
         icon: 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01',
       },
       {
+        to: '/settings/api-keys', label: 'API Keys',
+        minRole: ROLES.ORG_ADMIN,
+        icon: 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z',
+      },
+      {
         to: '/api-docs', label: 'API Docs',
         minRole: ROLES.ADMIN,
         icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4',
