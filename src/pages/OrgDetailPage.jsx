@@ -275,11 +275,11 @@ function OverviewTab({ org, setOrg, orgId }) {
         )}
       </div>
 
-      {/* Branding preview */}
+      {/* Organization Settings preview */}
       <div className="card p-6">
-        <h3 className="font-bold text-gray-800 dark:text-gray-100 mb-4">Branding</h3>
+        <h3 className="font-bold text-gray-800 dark:text-gray-100 mb-4">Organization Settings</h3>
         {!branding?.configured ? (
-          <p className="text-sm text-gray-400 italic">No branding configured.</p>
+          <p className="text-sm text-gray-400 italic">No settings configured.</p>
         ) : (
           <div className="flex flex-wrap gap-6 items-start">
             {branding.logoBase64 && (

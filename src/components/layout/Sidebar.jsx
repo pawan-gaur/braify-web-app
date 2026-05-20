@@ -82,6 +82,16 @@ const NAV_SECTIONS = [
     ],
   },
   {
+    section: 'File Storage',
+    feature: FEATURES.FILE_STORAGE,
+    links: [
+      {
+        to: '/files', end: true, label: 'My Files',
+        icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z',
+      },
+    ],
+  },
+  {
     section: 'Generate',
     links: [
       {
@@ -166,7 +176,7 @@ const NAV_SECTIONS = [
     section: 'Settings',
     links: [
       {
-        to: '/settings/branding', label: 'Branding',
+        to: '/settings/org-settings', label: 'Organization Settings',
         minRole: ROLES.ADMIN,
         icon: 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01',
       },
@@ -330,7 +340,7 @@ export default function Sidebar() {
         </div>
       )}
 
-      {/* ── New Template CTA ── */}
+      {/* ── New Template CTA ── 
       <div className={`px-3 pt-4 pb-2 shrink-0 ${collapsed ? 'flex justify-center' : ''}`}>
         {collapsed ? (
           <Tip label="New PDF Template">
@@ -360,6 +370,7 @@ export default function Sidebar() {
           </button>
         )}
       </div>
+	  */}
 
       {/* ── Scrollable nav ── */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden py-2 px-2 space-y-1 sidebar-scroll">

@@ -31,12 +31,14 @@ import ESignSigningPage     from './pages/ESignSigningPage'
 import ESignVerifyPage      from './pages/ESignVerifyPage'
 import GetStartedPage       from './pages/GetStartedPage'
 import OnboardingRequestsPage from './pages/OnboardingRequestsPage'
-import BrandingPage          from './pages/BrandingPage'
+import OrgSettingsPage       from './pages/BrandingPage'
 import UsagePage             from './pages/UsagePage'
 import SharedTemplatesPage   from './pages/SharedTemplatesPage'
 import ApiDocsPage           from './pages/ApiDocsPage'
 import OrgDetailPage         from './pages/OrgDetailPage'
 import ApiKeysPage           from './pages/ApiKeysPage'
+import FilesPage             from './pages/FilesPage'
+import FeatureDetailPage     from './pages/FeatureDetailPage'
 
 /**
  * Smart router for /esign/:id
@@ -111,6 +113,9 @@ function Shell() {
           <Route path="/esign/:id"    element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignDocumentRouter /></FeatureRoute>} />
           <Route path="/esign/:id/view" element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignDetailPage /></FeatureRoute>} />
 
+          {/* ── File Storage (feature-gated) ── */}
+          <Route path="/files" element={<FeatureRoute feature={FEATURES.FILE_STORAGE}><FilesPage /></FeatureRoute>} />
+
           {/* ── Audit log (always available) ── */}
           <Route path="/audit-log" element={<AuditLogPage />} />
 
@@ -125,7 +130,7 @@ function Shell() {
           <Route path="/profile" element={<ProfilePage />} />
 
           {/* ── Settings ── */}
-          <Route path="/settings/branding"   element={<BrandingPage />} />
+          <Route path="/settings/org-settings" element={<OrgSettingsPage />} />
           <Route path="/settings/api-keys"   element={<ApiKeysPage />} />
           <Route path="/usage"              element={<UsagePage />} />
           <Route path="/shared-templates"   element={<SharedTemplatesPage />} />
@@ -165,6 +170,7 @@ function AppRoutes() {
         }
       />
       <Route path="/get-started"      element={<GetStartedPage />} />
+      <Route path="/features/:slug"   element={<FeatureDetailPage />} />
       <Route path="/accept-invite"   element={<AcceptInvitePage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password"  element={<ResetPasswordPage />} />

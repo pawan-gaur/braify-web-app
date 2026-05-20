@@ -11,6 +11,7 @@ import {
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
+import ViewToggle, { useView } from '../components/ui/ViewToggle'
 import { ALL_FEATURES, FEATURE_META } from '../config/features'
 import PlanBadge from '../components/ui/PlanBadge'
 import QuotaProgressBar from '../components/ui/QuotaProgressBar'
@@ -54,6 +55,7 @@ export default function OrganizationsPage() {
   const [planOrg,     setPlanOrg]     = useState(null)   // org whose plan modal is open
   const [quotaOrg,    setQuotaOrg]    = useState(null)   // org whose quota modal is open
   const [brandingOrg, setBrandingOrg] = useState(null)   // org whose branding modal is open
+  const [view, setView] = useView('braify-organizations-view')
 
   const [form, setForm] = useState({
     name: '', code: '', description: '', features: [],
@@ -158,12 +160,15 @@ export default function OrganizationsPage() {
           <h1 className="text-2xl font-bold text-navy dark:text-white">Organizations</h1>
           <p className="text-sm text-gray-500 mt-1">Manage all tenant organizations and their feature access.</p>
         </div>
-        <button onClick={openCreate} className="btn btn-primary gap-2">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/>
-          </svg>
-          New Organization
-        </button>
+        <div className="flex items-center gap-3">
+          <ViewToggle view={view} onChange={setView} />
+          <button onClick={openCreate} className="btn btn-primary gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/>
+            </svg>
+            New Organization
+          </button>
+        </div>
       </div>
 
       {/* Search */}
@@ -180,25 +185,90 @@ export default function OrganizationsPage() {
         />
       </div>
 
-      {/* Table */}
-      <div className="card p-0 overflow-hidden">
-        {loading ? (
-          <div className="flex items-center justify-center py-20 text-gray-400 gap-3">
-            <svg className="animate-spin h-5 w-5 text-primary" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-            </svg>
-            Loading…
-          </div>
-        ) : orgs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-            <svg className="w-10 h-10 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-            </svg>
-            <p className="text-sm">{query ? `No organizations match "${query}".` : 'No organizations yet.'}</p>
-          </div>
-        ) : (
+      {/* List */}
+      {loading ? (
+        <div className="card flex items-center justify-center py-20 text-gray-400 gap-3">
+          <svg className="animate-spin h-5 w-5 text-primary" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+          </svg>
+          Loading…
+        </div>
+      ) : orgs.length === 0 ? (
+        <div className="card flex flex-col items-center justify-center py-20 text-gray-400">
+          <svg className="w-10 h-10 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+          </svg>
+          <p className="text-sm">{query ? `No organizations match "${query}".` : 'No organizations yet.'}</p>
+        </div>
+      ) : view === 'grid' ? (
+        /* ── Grid view ── */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {orgs.map(org => (
+            <div key={org.id} className="card p-5 flex flex-col gap-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <button
+                    onClick={() => navigate(`/admin/organizations/${org.id}`)}
+                    className="font-bold text-indigo-600 hover:text-indigo-800 hover:underline text-left truncate block"
+                  >
+                    {org.name}
+                  </button>
+                  <code className="text-[11px] bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-gray-500 dark:text-gray-400 mt-1 inline-block">
+                    {org.code}
+                  </code>
+                </div>
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold shrink-0
+                  ${org.active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${org.active ? 'bg-emerald-500' : 'bg-gray-400'}`}/>
+                  {org.active ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+
+              {org.description && (
+                <p className="text-xs text-gray-400 line-clamp-2">{org.description}</p>
+              )}
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <PlanBadge plan={org.subscriptionPlan || 'FREE'} />
+                {org.features?.length > 0 && org.features.map(f => <FeaturePill key={f} featureKey={f} />)}
+              </div>
+
+              <p className="text-[11px] text-gray-400 mt-auto">Created {fmtDate(org.createdAt)}</p>
+
+              <div className="flex items-center gap-1 flex-wrap pt-1 border-t border-gray-100 dark:border-gray-700">
+                <button onClick={() => navigate(`/users?orgId=${org.id}`)}
+                  className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
+                  Users
+                </button>
+                <button onClick={() => setFeatOrg(org)}
+                  className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 hover:border-violet-400 hover:text-violet-600 transition-colors">
+                  Features
+                </button>
+                <button onClick={() => setPlanOrg(org)}
+                  className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 hover:border-amber-400 hover:text-amber-600 transition-colors">
+                  Plan
+                </button>
+                <button onClick={() => setQuotaOrg(org)}
+                  className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 hover:border-emerald-400 hover:text-emerald-600 transition-colors">
+                  Quotas
+                </button>
+                <button onClick={() => openEdit(org)}
+                  className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 hover:border-primary hover:text-primary transition-colors">
+                  Edit
+                </button>
+                <button onClick={() => handleDelete(org)}
+                  className="text-xs px-2.5 py-1 rounded-lg border border-red-200 text-red-400 hover:bg-red-50 hover:border-red-400 transition-colors">
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        /* ── Table view ── */
+        <div className="card p-0 overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
@@ -290,9 +360,9 @@ export default function OrganizationsPage() {
                         onClick={() => setBrandingOrg(org)}
                         className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600
                                    text-gray-500 hover:border-pink-400 hover:text-pink-600 transition-colors"
-                        title="View branding"
+                        title="View organization settings"
                       >
-                        Branding
+                        Settings
                       </button>
                       <button
                         onClick={() => openEdit(org)}
@@ -314,8 +384,8 @@ export default function OrganizationsPage() {
               ))}
             </tbody>
           </table>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* ── Create / Edit Modal ── */}
       {showForm && (
@@ -733,7 +803,7 @@ function QuotaModal({ org, onClose }) {
   )
 }
 
-/* ── Branding Preview modal ───────────────────────────────────────────────── */
+/* ── Organization Settings Preview modal ─────────────────────────────────── */
 function BrandingPreviewModal({ org, onClose }) {
   const [branding, setBranding] = useState(null)
   const [loading,  setLoading]  = useState(true)
@@ -752,7 +822,7 @@ function BrandingPreviewModal({ org, onClose }) {
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100 dark:border-gray-700">
           <div>
-            <h2 className="text-base font-bold text-gray-800 dark:text-gray-100">Branding</h2>
+            <h2 className="text-base font-bold text-gray-800 dark:text-gray-100">Organization Settings</h2>
             <p className="text-xs text-gray-400 mt-0.5">{org.name}</p>
           </div>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
@@ -772,7 +842,7 @@ function BrandingPreviewModal({ org, onClose }) {
             </div>
           ) : !branding?.configured ? (
             <p className="text-sm text-gray-400 text-center py-6 italic">
-              This organisation has not configured branding yet.
+              This organisation has not configured settings yet.
             </p>
           ) : (
             <div className="space-y-4">

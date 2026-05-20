@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { getBranding, updateBranding } from '../services/api'
+import { getBranding, updateBranding, getCloudConfig, updateCloudConfig } from '../services/api'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import LogoUpload from '../components/ui/LogoUpload'
@@ -10,7 +10,7 @@ import ColorPicker from '../components/ui/ColorPicker'
 const CRUMBS = [
   { label: 'Dashboard', to: '/' },
   { label: 'Settings' },
-  { label: 'Branding' },
+  { label: 'Organization Settings' },
 ]
 
 const DEFAULT_PRIMARY = '#6366f1'
@@ -42,8 +42,8 @@ const PRESETS = [
 ]
 
 /* ─────────────────────────────────────────────────────────────── */
-export default function BrandingPage() {
-  useDocumentTitle('Organisation Branding')
+export default function OrgSettingsPage() {
+  useDocumentTitle('Organization Settings')
   const { user, setFeatureRoleAccess } = useAuth()
   const toast = useToast()
   const orgId = user?.organizationId
@@ -51,9 +51,10 @@ export default function BrandingPage() {
   const [activeTab, setActiveTab] = useState('identity')
   const [loading,   setLoading]   = useState(true)
   const [saving,    setSaving]    = useState(false)
+  const [savingCloud, setSavingCloud] = useState(false)
   const [orgFeatures, setOrgFeatures] = useState([])   // which features org has enabled
 
-  /* Shared form state */
+  /* Branding form state */
   const [form, setForm] = useState({
     logoBase64:      null,
     primaryColor:    DEFAULT_PRIMARY,
@@ -64,12 +65,33 @@ export default function BrandingPage() {
     featureRoleAccess: null,  // null = no restrictions
   })
 
+  /* Cloud config form state */
+  const [cloudForm, setCloudForm] = useState({
+    cloud:                  '',
+    bucket:                 '',
+    path:                   '',
+    module:                 '',
+    accessKey:              '',
+    secretKey:              '',
+    awsRegion:              '',
+    allowedFileTypes:       [],
+    maxUploadSizeMb:        '',
+    retentionDays:          '',
+    presignedUrlExpiration: '',
+  })
+
   useEffect(() => {
     if (!orgId) return
     setLoading(true)
-    getBranding(orgId)
-      .then(data => {
-        setOrgFeatures(user?.features ?? [])
+    Promise.allSettled([
+      getBranding(orgId),
+      getCloudConfig(orgId),
+    ]).then(([brandingResult, cloudResult]) => {
+      setOrgFeatures(user?.features ?? [])
+
+      // Branding
+      if (brandingResult.status === 'fulfilled') {
+        const data = brandingResult.value
         setForm({
           logoBase64:        data.logoBase64        || null,
           primaryColor:      data.primaryColor      || DEFAULT_PRIMARY,
@@ -79,30 +101,73 @@ export default function BrandingPage() {
           footerText:        data.footerText        || '',
           featureRoleAccess: data.featureRoleAccess || buildDefaultAccess(user?.features ?? []),
         })
-      })
-      .catch(() => {
-        setOrgFeatures(user?.features ?? [])
+      } else {
         setForm(f => ({ ...f, featureRoleAccess: buildDefaultAccess(user?.features ?? []) }))
-      })
-      .finally(() => setLoading(false))
+      }
+
+      // Cloud config
+      if (cloudResult.status === 'fulfilled' && cloudResult.value?.configured) {
+        const c = cloudResult.value
+        setCloudForm({
+          cloud:                  c.cloud                  || '',
+          bucket:                 c.bucket                 || '',
+          path:                   c.path                   || '',
+          module:                 c.module                 || '',
+          accessKey:              '',   // always blank — masked value is shown separately
+          secretKey:              '',
+          awsRegion:              c.awsRegion              || '',
+          allowedFileTypes:       c.allowedFileTypes       || [],
+          maxUploadSizeMb:        c.maxUploadSizeMb        != null ? String(c.maxUploadSizeMb) : '',
+          retentionDays:          c.retentionDays          != null ? String(c.retentionDays)   : '',
+          presignedUrlExpiration: c.presignedUrlExpiration != null ? String(c.presignedUrlExpiration) : '',
+        })
+      }
+    }).finally(() => setLoading(false))
   }, [orgId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const set = (key, val) => setForm(f => ({ ...f, [key]: val }))
+  const set      = (key, val) => setForm(f      => ({ ...f,      [key]: val }))
+  const setCloud = (key, val) => setCloudForm(f => ({ ...f, [key]: val }))
 
+  /* Save branding */
   const handleSave = async () => {
     setSaving(true)
     try {
       const res = await updateBranding(orgId, form)
-      // Refresh role access in AuthContext so hasFeature reflects new rules immediately
       setFeatureRoleAccess(res.featureRoleAccess ?? null)
-      // Apply new theme colors to the app immediately
       if (form.primaryColor) document.documentElement.style.setProperty('--brand-primary', form.primaryColor)
       if (form.accentColor)  document.documentElement.style.setProperty('--brand-accent',  form.accentColor)
-      toast.success('Branding saved successfully.')
+      toast.success('Settings saved successfully.')
     } catch (err) {
-      toast.error(err.message || 'Failed to save branding.')
+      toast.error(err.message || 'Failed to save settings.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  /* Save cloud config */
+  const handleSaveCloud = async () => {
+    setSavingCloud(true)
+    try {
+      const payload = {
+        cloud:                  cloudForm.cloud   || null,
+        bucket:                 cloudForm.bucket  || null,
+        path:                   cloudForm.path    || null,
+        module:                 cloudForm.module  || null,
+        // Only send credentials if the user typed something new (non-empty = replace)
+        accessKey:              cloudForm.accessKey  || null,
+        secretKey:              cloudForm.secretKey  || null,
+        awsRegion:              cloudForm.awsRegion  || null,
+        allowedFileTypes:       cloudForm.allowedFileTypes.length ? cloudForm.allowedFileTypes : null,
+        maxUploadSizeMb:        cloudForm.maxUploadSizeMb        ? Number(cloudForm.maxUploadSizeMb)        : null,
+        retentionDays:          cloudForm.retentionDays          ? Number(cloudForm.retentionDays)          : null,
+        presignedUrlExpiration: cloudForm.presignedUrlExpiration ? Number(cloudForm.presignedUrlExpiration) : null,
+      }
+      await updateCloudConfig(orgId, payload)
+      toast.success('Cloud storage configuration saved.')
+    } catch (err) {
+      toast.error(err.message || 'Failed to save cloud config.')
+    } finally {
+      setSavingCloud(false)
     }
   }
 
@@ -113,15 +178,16 @@ export default function BrandingPage() {
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
         </svg>
-        Loading branding…
+        Loading settings…
       </div>
     )
   }
 
   const TABS = [
-    { id: 'identity',  label: 'Identity',       icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
-    { id: 'theme',     label: 'Theme & Colors',  icon: 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01' },
-    { id: 'access',    label: 'Access Control',  icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
+    { id: 'identity', label: 'Identity',      icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
+    { id: 'theme',    label: 'Theme & Colors', icon: 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01' },
+    { id: 'access',   label: 'Access Control', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
+    { id: 'cloud',    label: 'Cloud Storage',  icon: 'M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z' },
   ]
 
   return (
@@ -130,9 +196,9 @@ export default function BrandingPage() {
 
       <div className="flex items-center justify-between mt-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Organisation Branding</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Organization Settings</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Customise your logo, theme, and control who can access each feature.
+            Customise your logo, theme, cloud storage, and control who can access each feature.
           </p>
         </div>
       </div>
@@ -175,6 +241,16 @@ export default function BrandingPage() {
           saving={saving}
           onSave={handleSave}
           orgFeatures={orgFeatures}
+        />
+      )}
+
+      {/* ── Tab: Cloud Storage ── */}
+      {activeTab === 'cloud' && (
+        <CloudStorageTab
+          form={cloudForm}
+          set={setCloud}
+          saving={savingCloud}
+          onSave={handleSaveCloud}
         />
       )}
     </div>
@@ -690,6 +766,382 @@ function AppThemePreview({ form }) {
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Tab: Cloud Storage — AWS / Azure / GCP credentials & upload policy
+══════════════════════════════════════════════════════════════════ */
+
+const CLOUD_PROVIDERS = [
+  {
+    key: 'AWS',
+    label: 'Amazon Web Services',
+    short: 'AWS',
+    color: '#FF9900',
+    icon: (
+      <svg viewBox="0 0 40 24" className="w-10 h-6 fill-current">
+        <text x="0" y="18" fontSize="16" fontWeight="bold" fontFamily="sans-serif">AWS</text>
+      </svg>
+    ),
+  },
+  {
+    key: 'AZURE',
+    label: 'Microsoft Azure',
+    short: 'Azure',
+    color: '#0078D4',
+    icon: (
+      <svg viewBox="0 0 40 24" className="w-10 h-6 fill-current">
+        <text x="0" y="18" fontSize="11" fontWeight="bold" fontFamily="sans-serif">Azure</text>
+      </svg>
+    ),
+  },
+  {
+    key: 'GCP',
+    label: 'Google Cloud Platform',
+    short: 'GCP',
+    color: '#4285F4',
+    icon: (
+      <svg viewBox="0 0 40 24" className="w-10 h-6 fill-current">
+        <text x="0" y="18" fontSize="13" fontWeight="bold" fontFamily="sans-serif">GCP</text>
+      </svg>
+    ),
+  },
+]
+
+const COMMON_FILE_TYPES = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'zip']
+
+function CloudStorageTab({ form, set, saving, onSave }) {
+  const [fileTypeInput, setFileTypeInput] = useState('')
+
+  const addFileType = (type) => {
+    const normalized = type.trim().toLowerCase().replace(/^\./, '')
+    if (!normalized || form.allowedFileTypes.includes(normalized)) return
+    set('allowedFileTypes', [...form.allowedFileTypes, normalized])
+    setFileTypeInput('')
+  }
+
+  const removeFileType = (type) => {
+    set('allowedFileTypes', form.allowedFileTypes.filter(t => t !== type))
+  }
+
+  const handleFileTypeKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault()
+      addFileType(fileTypeInput)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+
+      {/* Info banner */}
+      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl px-5 py-4">
+        <div className="flex items-start gap-3">
+          <svg className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+          </svg>
+          <div>
+            <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Credentials are stored securely</p>
+            <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+              Access and secret keys are encrypted at rest and only displayed in masked form.
+              Leave the credential fields blank to keep existing stored values unchanged.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {/* ── Left column: Provider + Credentials ── */}
+        <div className="space-y-6">
+
+          {/* Cloud provider */}
+          <div className="card p-6">
+            <h2 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-1">Cloud Provider</h2>
+            <p className="text-xs text-gray-400 mb-4">Select the storage backend for this organisation's files.</p>
+            <div className="grid grid-cols-3 gap-3">
+              {CLOUD_PROVIDERS.map(provider => (
+                <button
+                  key={provider.key}
+                  type="button"
+                  onClick={() => {
+                    set('cloud', provider.key)
+                    if (provider.key !== 'AWS') set('awsRegion', '')
+                  }}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all
+                    ${form.cloud === provider.key
+                      ? 'border-indigo-400 dark:border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 shadow-md'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                    }`}
+                >
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-xs font-black"
+                    style={{ background: provider.color }}
+                  >
+                    {provider.short}
+                  </div>
+                  <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-400 text-center leading-tight">
+                    {provider.label}
+                  </span>
+                  {form.cloud === provider.key && (
+                    <div className="w-4 h-4 rounded-full bg-indigo-500 flex items-center justify-center">
+                      <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/>
+                      </svg>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Credentials */}
+          <div className="card p-6 space-y-4">
+            <div>
+              <h2 className="text-sm font-bold text-gray-700 dark:text-gray-200">Credentials</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Leave blank to keep the currently stored value.</p>
+            </div>
+
+            <div>
+              <label className="form-label">Access Key</label>
+              <input
+                type="password"
+                className="form-input font-mono"
+                placeholder="Paste new access key to replace"
+                value={form.accessKey}
+                onChange={e => set('accessKey', e.target.value)}
+                autoComplete="new-password"
+              />
+            </div>
+
+            <div>
+              <label className="form-label">Secret Key</label>
+              <input
+                type="password"
+                className="form-input font-mono"
+                placeholder="Paste new secret key to replace"
+                value={form.secretKey}
+                onChange={e => set('secretKey', e.target.value)}
+                autoComplete="new-password"
+              />
+            </div>
+
+            {/* AWS Region — only show for AWS */}
+            {(form.cloud === 'AWS' || !form.cloud) && (
+              <div>
+                <label className="form-label">AWS Region</label>
+                <select
+                  className="form-input"
+                  value={form.awsRegion}
+                  onChange={e => set('awsRegion', e.target.value)}
+                >
+                  <option value="">— Select region —</option>
+                  <option value="us-east-1">us-east-1 (N. Virginia)</option>
+                  <option value="us-east-2">us-east-2 (Ohio)</option>
+                  <option value="us-west-1">us-west-1 (N. California)</option>
+                  <option value="us-west-2">us-west-2 (Oregon)</option>
+                  <option value="eu-west-1">eu-west-1 (Ireland)</option>
+                  <option value="eu-west-2">eu-west-2 (London)</option>
+                  <option value="eu-central-1">eu-central-1 (Frankfurt)</option>
+                  <option value="ap-south-1">ap-south-1 (Mumbai)</option>
+                  <option value="ap-southeast-1">ap-southeast-1 (Singapore)</option>
+                  <option value="ap-southeast-2">ap-southeast-2 (Sydney)</option>
+                  <option value="ap-northeast-1">ap-northeast-1 (Tokyo)</option>
+                  <option value="sa-east-1">sa-east-1 (São Paulo)</option>
+                  <option value="ca-central-1">ca-central-1 (Canada)</option>
+                  <option value="af-south-1">af-south-1 (Cape Town)</option>
+                </select>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Right column: Storage + Upload Policy ── */}
+        <div className="space-y-6">
+
+          {/* Storage coordinates */}
+          <div className="card p-6 space-y-4">
+            <h2 className="text-sm font-bold text-gray-700 dark:text-gray-200">Storage Location</h2>
+
+            <div>
+              <label className="form-label">Bucket / Container Name</label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="my-company-documents"
+                value={form.bucket}
+                onChange={e => set('bucket', e.target.value)}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="form-label">Path Prefix</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="org/docs"
+                  value={form.path}
+                  onChange={e => set('path', e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="form-label">Module</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="claims, kyc…"
+                  value={form.module}
+                  onChange={e => set('module', e.target.value)}
+                />
+                <p className="text-[10px] text-gray-400 mt-1">Domain grouping for routing logic.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Upload policy */}
+          <div className="card p-6 space-y-4">
+            <h2 className="text-sm font-bold text-gray-700 dark:text-gray-200">Upload Policy</h2>
+
+            {/* Allowed file types */}
+            <div>
+              <label className="form-label">Allowed File Types</label>
+              {/* Quick-add chips */}
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {COMMON_FILE_TYPES.map(type => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => addFileType(type)}
+                    disabled={form.allowedFileTypes.includes(type)}
+                    className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold transition-all
+                      ${form.allowedFileTypes.includes(type)
+                        ? 'bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-700 cursor-default'
+                        : 'border-gray-200 text-gray-500 hover:border-indigo-300 hover:text-indigo-600 dark:border-gray-700 dark:text-gray-400'
+                      }`}
+                  >
+                    {form.allowedFileTypes.includes(type) ? `✓ ${type}` : `+ ${type}`}
+                  </button>
+                ))}
+              </div>
+              {/* Custom type input */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  className="form-input flex-1"
+                  placeholder="Custom type (e.g. heic)"
+                  value={fileTypeInput}
+                  onChange={e => setFileTypeInput(e.target.value)}
+                  onKeyDown={handleFileTypeKeyDown}
+                />
+                <button
+                  type="button"
+                  onClick={() => addFileType(fileTypeInput)}
+                  className="btn btn-secondary text-sm px-3"
+                >
+                  Add
+                </button>
+              </div>
+              {/* Selected types */}
+              {form.allowedFileTypes.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {form.allowedFileTypes.map(type => (
+                    <span key={type}
+                      className="flex items-center gap-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-full">
+                      .{type}
+                      <button
+                        type="button"
+                        onClick={() => removeFileType(type)}
+                        className="text-gray-400 hover:text-red-500 transition-colors ml-0.5"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              {form.allowedFileTypes.length === 0 && (
+                <p className="text-[11px] text-gray-400 mt-1">No restriction — all file types accepted.</p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="form-label">Max Upload Size (MB)</label>
+                <input
+                  type="number"
+                  min="1"
+                  className="form-input"
+                  placeholder="10"
+                  value={form.maxUploadSizeMb}
+                  onChange={e => set('maxUploadSizeMb', e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="form-label">Retention (Days)</label>
+                <input
+                  type="number"
+                  min="1"
+                  className="form-input"
+                  placeholder="365"
+                  value={form.retentionDays}
+                  onChange={e => set('retentionDays', e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="form-label">Pre-signed URL Expiry (Minutes)</label>
+              <input
+                type="number"
+                min="1"
+                className="form-input"
+                placeholder="15"
+                value={form.presignedUrlExpiration}
+                onChange={e => set('presignedUrlExpiration', e.target.value)}
+              />
+              <p className="text-[11px] text-gray-400 mt-1">
+                How long generated download/upload URLs stay valid.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Config summary */}
+      {(form.cloud || form.bucket) && (
+        <div className="bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-xl p-5">
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Configuration Summary</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {[
+              { label: 'Provider',      value: form.cloud || '—' },
+              { label: 'Bucket',        value: form.bucket || '—' },
+              { label: 'Region',        value: form.awsRegion || (form.cloud === 'AWS' ? '—' : 'N/A') },
+              { label: 'Max Upload',    value: form.maxUploadSizeMb ? `${form.maxUploadSizeMb} MB` : '—' },
+              { label: 'Retention',     value: form.retentionDays ? `${form.retentionDays} days` : '—' },
+              { label: 'URL Expiry',    value: form.presignedUrlExpiration ? `${form.presignedUrlExpiration} min` : '—' },
+            ].map(item => (
+              <div key={item.label}>
+                <p className="text-[10px] text-gray-400 font-semibold uppercase">{item.label}</p>
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mt-0.5">{item.value}</p>
+              </div>
+            ))}
+          </div>
+          {form.allowedFileTypes.length > 0 && (
+            <div className="mt-3">
+              <p className="text-[10px] text-gray-400 font-semibold uppercase mb-1">Allowed Types</p>
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                {form.allowedFileTypes.map(t => `.${t}`).join(', ')}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      <SaveBar saving={saving} onSave={onSave} />
     </div>
   )
 }

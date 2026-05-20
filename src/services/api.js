@@ -183,6 +183,10 @@ export const getUsageHistory   = (orgId)          => http.get(`/organizations/${
 export const getBranding    = (orgId)           => http.get(`/organizations/${orgId}/branding`).then(r => r.data)
 export const updateBranding = (orgId, payload)  => http.put(`/organizations/${orgId}/branding`, payload).then(r => r.data)
 
+// ── Org Cloud Config ────────────────────────────────────────
+export const getCloudConfig    = (orgId)          => http.get(`/organizations/${orgId}/cloud-config`).then(r => r.data)
+export const updateCloudConfig = (orgId, payload) => http.put(`/organizations/${orgId}/cloud-config`, payload).then(r => r.data)
+
 // ── Template Sharing ────────────────────────────────────────
 export const shareTemplate        = (payload)     => http.post('/sharing', payload).then(r => r.data)
 export const revokeShare          = (id)          => http.delete(`/sharing/${id}`)
@@ -226,3 +230,39 @@ export const getApiKeyUsage = (orgId)          => http.get(`/organizations/${org
 // ── Org users (admin view via /users/search with orgId filter) ─
 export const getUsersByOrg = (orgId) =>
   http.get('/users/search', { params: { q: '', orgId } }).then(r => r.data)
+
+// ── File Storage ───────────────────────────────────────────────
+/**
+ * Upload a file to the org's configured cloud storage.
+ * @param {string} orgId - Organisation ID
+ * @param {File}   file  - File object from an <input type="file">
+ * @param {object} meta  - Optional: { folder, documentType, documentExpiryDate, description, tags }
+ */
+export const uploadFile = (orgId, file, meta = {}) => {
+  const form = new FormData()
+  form.append('file', file)
+  if (meta.folder)              form.append('folder', meta.folder)
+  if (meta.documentType)        form.append('documentType', meta.documentType)
+  if (meta.documentExpiryDate)  form.append('documentExpiryDate', meta.documentExpiryDate)
+  if (meta.description)         form.append('description', meta.description)
+  if (meta.tags?.length)        meta.tags.forEach(t => form.append('tags', t))
+  return http.post(`/organizations/${orgId}/files/upload`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then(r => r.data)
+}
+
+export const getFileDownloadUrl = (orgId, fileId) =>
+  http.get(`/organizations/${orgId}/files/${fileId}/download`).then(r => r.data)
+
+export const listFiles = (orgId, params = {}) =>
+  http.get(`/organizations/${orgId}/files`, { params }).then(r => r.data)
+
+export const getFile = (orgId, fileId) =>
+  http.get(`/organizations/${orgId}/files/${fileId}`).then(r => r.data)
+
+export const deleteFile = (orgId, fileId) =>
+  http.delete(`/organizations/${orgId}/files/${fileId}`)
+
+/** Platform Admin — cross-org file list with per-org storage stats. */
+export const listAllFiles = (params = {}) =>
+  http.get('/admin/files', { params }).then(r => r.data)
