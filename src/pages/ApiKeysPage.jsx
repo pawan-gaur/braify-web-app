@@ -14,9 +14,10 @@ const CRUMBS = [
 ]
 
 const ALL_FEATURES = [
-  { key: 'PDF_TEMPLATES',   label: 'PDF Templates',   cls: 'bg-indigo-100 text-indigo-700' },
-  { key: 'EMAIL_TEMPLATES', label: 'Email Templates', cls: 'bg-sky-100 text-sky-700'       },
+  { key: 'PDF_TEMPLATES',   label: 'PDF Templates',   cls: 'bg-indigo-100 text-indigo-700'  },
+  { key: 'EMAIL_TEMPLATES', label: 'Email Templates', cls: 'bg-sky-100 text-sky-700'        },
   { key: 'E_SIGN',          label: 'E-Sign',          cls: 'bg-emerald-100 text-emerald-700' },
+  { key: 'FILE_STORAGE',    label: 'File Storage',    cls: 'bg-amber-100 text-amber-700'    },
 ]
 
 /* ─────────────────────────────────────────────────────────────── */
@@ -640,11 +641,11 @@ function ApiReferenceTab() {
           All external API requests must include your API key in the{' '}
           <code className="text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded text-xs font-mono">X-API-Key</code>{' '}
           header. Keys are prefixed with <code className="font-mono text-xs bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">brfy_</code> and are shown only once at creation time.
+          E-Sign creator endpoints use <code className="font-mono text-xs bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">Authorization: Bearer &lt;jwt&gt;</code> — client signing and verify are public.
         </p>
         <CodeBlock
           lang="bash"
-          code={`curl https://your-domain.com/api/external/pdf/templates \\
-  -H "X-API-Key: brfy_your_api_key_here"`}
+          code={`# API Key (PDF, Email, File Storage)\ncurl https://your-domain.com/api/external/pdf/templates \\\n  -H "X-API-Key: brfy_your_api_key_here"\n\n# JWT Bearer (E-Sign creator endpoints)\ncurl https://your-domain.com/api/esign/documents \\\n  -H "Authorization: Bearer <your_jwt_token>"`}
         />
         <div className="mt-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl px-4 py-3">
           <p className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-1">Keep your keys secure</p>
@@ -720,7 +721,7 @@ function ApiReferenceTab() {
         </div>
       </section>
 
-      {/* E-Sign coming soon */}
+      {/* E-Sign */}
       <section>
         <SectionHeading
           icon="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
@@ -728,15 +729,169 @@ function ApiReferenceTab() {
         >
           E-Sign
         </SectionHeading>
-        <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800 border border-dashed border-gray-300 dark:border-gray-600 rounded-xl px-5 py-4">
-          <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+
+        {/* Auth note */}
+        <div className="mb-4 flex items-start gap-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-xl px-4 py-3">
+          <svg className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
-          <div>
-            <p className="text-sm font-semibold text-gray-600 dark:text-gray-300">Coming soon</p>
-            <p className="text-xs text-gray-400 mt-0.5">E-Sign external API endpoints are under development.</p>
+          <div className="text-xs text-emerald-700 dark:text-emerald-300 space-y-0.5">
+            <p><strong>Creator endpoints</strong> — require <code className="bg-emerald-100 dark:bg-emerald-800 px-1 rounded">Authorization: Bearer &lt;jwt&gt;</code> (JWT token from POST /api/auth/login).</p>
+            <p><strong>Client signing &amp; Verify</strong> — public, no auth header needed.</p>
           </div>
+        </div>
+
+        {/* Sub-section: Creator (JWT) */}
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 mt-5">Document Management — JWT Bearer Auth</p>
+        <div className="space-y-3 mb-6">
+          <EndpointDoc
+            method="POST" path="/api/esign/documents" title="Create e-sign document"
+            description="Creates a new e-sign document by uploading a PDF. Returns the document object with a DRAFT status."
+            requestBody={`// multipart/form-data\nfile: <PDF binary>\ntitle: "Contract Q2-2026"\nmessage: "Please sign the attached contract."\nsigners: [\n  { "name": "Jane Smith", "email": "jane@example.com", "role": "SIGNER" }\n]`}
+            responseBody={`{\n  "id": "68x2a1b3c9e1234567890abc",\n  "title": "Contract Q2-2026",\n  "status": "DRAFT",\n  "signers": [\n    { "name": "Jane Smith", "email": "jane@example.com", "role": "SIGNER" }\n  ],\n  "createdAt": "2026-05-20T10:00:00Z"\n}`}
+            curlExample={`curl -X POST https://your-domain.com/api/esign/documents \\\n  -H "Authorization: Bearer <jwt>" \\\n  -F "file=@contract.pdf" \\\n  -F 'title=Contract Q2-2026' \\\n  -F 'signers=[{"name":"Jane Smith","email":"jane@example.com","role":"SIGNER"}]'`}
+            fetchExample={`const form = new FormData()\nform.append('file', pdfFile)\nform.append('title', 'Contract Q2-2026')\nform.append('signers', JSON.stringify([\n  { name: 'Jane Smith', email: 'jane@example.com', role: 'SIGNER' }\n]))\n\nconst res = await fetch('https://your-domain.com/api/esign/documents', {\n  method: 'POST',\n  headers: { 'Authorization': 'Bearer ' + jwtToken },\n  body: form,\n})\nconst doc = await res.json()`}
+          />
+          <EndpointDoc
+            method="GET" path="/api/esign/documents" title="List e-sign documents"
+            description="Returns a paginated list of your organisation's e-sign documents."
+            requestBody={null}
+            responseBody={`{\n  "content": [\n    {\n      "id": "68x2a1b3c9e1234567890abc",\n      "title": "Contract Q2-2026",\n      "status": "PENDING",\n      "signerCount": 1,\n      "signedCount": 0,\n      "createdAt": "2026-05-20T10:00:00Z"\n    }\n  ],\n  "totalElements": 1,\n  "totalPages": 1\n}`}
+            curlExample={`curl "https://your-domain.com/api/esign/documents?page=0&size=20" \\\n  -H "Authorization: Bearer <jwt>"`}
+            fetchExample={`const res = await fetch('https://your-domain.com/api/esign/documents?page=0&size=20', {\n  headers: { 'Authorization': 'Bearer ' + jwtToken }\n})\nconst list = await res.json()`}
+          />
+          <EndpointDoc
+            method="GET" path="/api/esign/documents/{id}" title="Get document detail"
+            description="Returns full details of a single e-sign document including signer status and field placements."
+            requestBody={null}
+            responseBody={`{\n  "id": "68x2a1b3c9e1234567890abc",\n  "title": "Contract Q2-2026",\n  "status": "PENDING",\n  "fields": [\n    { "id": "field_1", "type": "SIGNATURE", "page": 1, "x": 100, "y": 400, "width": 200, "height": 60, "signerEmail": "jane@example.com" }\n  ],\n  "signers": [\n    { "name": "Jane Smith", "email": "jane@example.com", "status": "PENDING", "token": "tok_abc123" }\n  ]\n}`}
+            curlExample={`curl "https://your-domain.com/api/esign/documents/68x2a1b3c9e1234567890abc" \\\n  -H "Authorization: Bearer <jwt>"`}
+            fetchExample={`const res = await fetch(\`https://your-domain.com/api/esign/documents/\${docId}\`, {\n  headers: { 'Authorization': 'Bearer ' + jwtToken }\n})\nconst doc = await res.json()`}
+          />
+          <EndpointDoc
+            method="POST" path="/api/esign/documents/{id}/send" title="Send signing invitation"
+            description="Sends email invitations to all signers and transitions the document from DRAFT → PENDING."
+            requestBody={null}
+            responseBody={`{\n  "id": "68x2a1b3c9e1234567890abc",\n  "status": "PENDING",\n  "sentAt": "2026-05-20T10:05:00Z"\n}`}
+            curlExample={`curl -X POST "https://your-domain.com/api/esign/documents/68x2a1b3c9e1234567890abc/send" \\\n  -H "Authorization: Bearer <jwt>"`}
+            fetchExample={`const res = await fetch(\`https://your-domain.com/api/esign/documents/\${docId}/send\`, {\n  method: 'POST',\n  headers: { 'Authorization': 'Bearer ' + jwtToken }\n})\nconst doc = await res.json()`}
+          />
+          <EndpointDoc
+            method="GET" path="/api/esign/documents/{id}/signed-pdf" title="Download signed PDF"
+            description="Returns the completed, signed PDF as a binary stream. Only available when document status is COMPLETED."
+            requestBody={null}
+            responseBody={`// Binary PDF stream\n// Content-Type: application/pdf\n// Content-Disposition: attachment; filename="signed_Contract_Q2-2026.pdf"`}
+            curlExample={`curl "https://your-domain.com/api/esign/documents/68x2a1b3c9e1234567890abc/signed-pdf" \\\n  -H "Authorization: Bearer <jwt>" \\\n  --output signed_contract.pdf`}
+            fetchExample={`const res = await fetch(\`https://your-domain.com/api/esign/documents/\${docId}/signed-pdf\`, {\n  headers: { 'Authorization': 'Bearer ' + jwtToken }\n})\nconst blob = await res.blob()\nconst url = URL.createObjectURL(blob)\nwindow.open(url)`}
+          />
+          <EndpointDoc
+            method="GET" path="/api/esign/documents/{id}/audit" title="Get audit trail"
+            description="Returns the full audit trail of actions taken on an e-sign document (views, signatures, submissions)."
+            requestBody={null}
+            responseBody={`[\n  { "action": "DOCUMENT_CREATED", "actor": "admin@company.com", "timestamp": "2026-05-20T10:00:00Z" },\n  { "action": "INVITATION_SENT",  "actor": "admin@company.com", "timestamp": "2026-05-20T10:05:00Z" },\n  { "action": "DOCUMENT_VIEWED",  "actor": "jane@example.com",  "timestamp": "2026-05-20T11:00:00Z" },\n  { "action": "DOCUMENT_SIGNED",  "actor": "jane@example.com",  "timestamp": "2026-05-20T11:10:00Z" }\n]`}
+            curlExample={`curl "https://your-domain.com/api/esign/documents/68x2a1b3c9e1234567890abc/audit" \\\n  -H "Authorization: Bearer <jwt>"`}
+            fetchExample={`const res = await fetch(\`https://your-domain.com/api/esign/documents/\${docId}/audit\`, {\n  headers: { 'Authorization': 'Bearer ' + jwtToken }\n})\nconst trail = await res.json()`}
+          />
+          <EndpointDoc
+            method="POST" path="/api/esign/documents/{id}/cancel" title="Cancel document"
+            description="Cancels an in-progress document. Signers are notified by email. Document transitions to CANCELLED status."
+            requestBody={null}
+            responseBody={`{\n  "id": "68x2a1b3c9e1234567890abc",\n  "status": "CANCELLED",\n  "cancelledAt": "2026-05-20T12:00:00Z"\n}`}
+            curlExample={`curl -X POST "https://your-domain.com/api/esign/documents/68x2a1b3c9e1234567890abc/cancel" \\\n  -H "Authorization: Bearer <jwt>"`}
+            fetchExample={`await fetch(\`https://your-domain.com/api/esign/documents/\${docId}/cancel\`, {\n  method: 'POST',\n  headers: { 'Authorization': 'Bearer ' + jwtToken }\n})`}
+          />
+        </div>
+
+        {/* Sub-section: Client Signing (public) */}
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 mt-2">Client Signing — Public (token-based, no auth header)</p>
+        <div className="space-y-3 mb-6">
+          <EndpointDoc
+            method="GET" path="/api/esign/sign/{token}" title="Open document for signing"
+            description="Returns the document and all unsigned fields for the signer identified by their unique token. Token is included in the invitation email."
+            requestBody={null}
+            responseBody={`{\n  "documentId": "68x2a1b3c9e1234567890abc",\n  "title": "Contract Q2-2026",\n  "signerName": "Jane Smith",\n  "fields": [\n    { "id": "field_1", "type": "SIGNATURE", "page": 1, "x": 100, "y": 400, "width": 200, "height": 60 }\n  ],\n  "pdfUrl": "https://...presigned-url..."\n}`}
+            curlExample={`curl "https://your-domain.com/api/esign/sign/tok_abc123"`}
+            fetchExample={`const res = await fetch(\`https://your-domain.com/api/esign/sign/\${token}\`)\nconst doc = await res.json()`}
+          />
+          <EndpointDoc
+            method="PUT" path="/api/esign/sign/{token}/fields/{fieldId}" title="Sign a field"
+            description="Submits a signature or initials value for a single field. Repeat for each required field before submitting."
+            requestBody={`{\n  "value": "Jane Smith",\n  "signatureDataUrl": "data:image/png;base64,iVBORw0KGgo..."\n}`}
+            responseBody={`{\n  "fieldId": "field_1",\n  "signed": true,\n  "signedAt": "2026-05-20T11:10:00Z"\n}`}
+            curlExample={`curl -X PUT "https://your-domain.com/api/esign/sign/tok_abc123/fields/field_1" \\\n  -H "Content-Type: application/json" \\\n  -d '{"value":"Jane Smith","signatureDataUrl":"data:image/png;base64,..."}'`}
+            fetchExample={`await fetch(\`https://your-domain.com/api/esign/sign/\${token}/fields/\${fieldId}\`, {\n  method: 'PUT',\n  headers: { 'Content-Type': 'application/json' },\n  body: JSON.stringify({ value: 'Jane Smith', signatureDataUrl: dataUrl }),\n})`}
+          />
+          <EndpointDoc
+            method="POST" path="/api/esign/sign/{token}/submit" title="Submit completed document"
+            description="Finalises signing for this signer. If all signers have signed, the document moves to COMPLETED and the signed PDF is generated."
+            requestBody={null}
+            responseBody={`{\n  "documentId": "68x2a1b3c9e1234567890abc",\n  "status": "COMPLETED",\n  "message": "Document signed successfully. All parties have been notified."\n}`}
+            curlExample={`curl -X POST "https://your-domain.com/api/esign/sign/tok_abc123/submit"`}
+            fetchExample={`const res = await fetch(\`https://your-domain.com/api/esign/sign/\${token}/submit\`, {\n  method: 'POST',\n})\nconst result = await res.json()`}
+          />
+        </div>
+
+        {/* Sub-section: Verify (public) */}
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 mt-2">Verification — Public</p>
+        <div className="space-y-3">
+          <EndpointDoc
+            method="GET" path="/api/esign/verify/{id}" title="Verify signed document"
+            description="Returns a public integrity summary of a completed e-sign document. Use this for third-party verification without exposing private data."
+            requestBody={null}
+            responseBody={`{\n  "documentId": "68x2a1b3c9e1234567890abc",\n  "title": "Contract Q2-2026",\n  "status": "COMPLETED",\n  "completedAt": "2026-05-20T11:15:00Z",\n  "signers": [\n    { "name": "Jane Smith", "signedAt": "2026-05-20T11:10:00Z" }\n  ],\n  "valid": true\n}`}
+            curlExample={`curl "https://your-domain.com/api/esign/verify/68x2a1b3c9e1234567890abc"`}
+            fetchExample={`const res = await fetch(\`https://your-domain.com/api/esign/verify/\${docId}\`)\nconst summary = await res.json()\nif (summary.valid) {\n  console.log('Document is legitimately signed.')\n}`}
+          />
+        </div>
+      </section>
+
+      {/* File Storage */}
+      <section>
+        <SectionHeading
+          icon="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+          badge={{ label: 'FILE_STORAGE', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' }}
+        >
+          File Storage
+        </SectionHeading>
+
+        {/* Auth note */}
+        <div className="mb-4 flex items-start gap-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl px-4 py-3">
+          <svg className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <div className="text-xs text-amber-700 dark:text-amber-300 space-y-0.5">
+            <p>All File Storage endpoints use <code className="bg-amber-100 dark:bg-amber-800 px-1 rounded">X-API-Key: brfy_…</code> authentication.</p>
+            <p>The organisation must have cloud storage configured (AWS S3, Azure Blob, or GCP) before files can be uploaded.</p>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <EndpointDoc
+            method="POST" path="/api/external/files/{orgId}/upload" title="Upload file"
+            description={`Uploads a file to the organisation's configured cloud storage (AWS S3 / Azure Blob / GCP).
+Returns file metadata including the assigned fileId (format: F<yyyyMMdd><8-digit-seq>, e.g. F2026052000000001).
+Accepted form parts: file (required), folder, documentType, documentExpiryDate (yyyy-MM-dd), description, tags (repeatable).`}
+            requestBody={`// multipart/form-data\nfile:               <binary>        (required)\nfolder:             invoices/2026   (optional)\ndocumentType:       INVOICE         (optional)\n                    CONTRACT | INVOICE | REPORT | RECEIPT\n                    CERTIFICATE | IDENTITY | POLICY | AGREEMENT\n                    PRESENTATION | SPREADSHEET | IMAGE | VIDEO | AUDIO | OTHER\ndocumentExpiryDate: 2027-12-31      (optional, yyyy-MM-dd)\ndescription:        Q2 invoice      (optional)\ntags:               legal           (optional, repeatable)`}
+            responseBody={`{\n  "fileId":           "F2026052000000001",\n  "organizationId":   "69fa81208b72f556b921e10e",\n  "uploadedBy":       "api-key:brfy_abc1",\n  "originalFilename": "invoice_q2.pdf",\n  "storageKey":       "braify/69fa81/F2026052000000001/invoice_q2.pdf",\n  "bucket":           "my-org-bucket",\n  "cloudProvider":    "AWS",\n  "contentType":      "application/pdf",\n  "fileSizeBytes":    245760,\n  "fileSizeMb":       0.234,\n  "folder":           "invoices/2026",\n  "documentType":     "INVOICE",\n  "description":      "Q2 invoice",\n  "tags":             ["legal"],\n  "status":           "ACTIVE",\n  "downloadCount":    0,\n  "createdAt":        "2026-05-20T10:00:00"\n}`}
+            curlExample={`curl -X POST "https://your-domain.com/api/external/files/{orgId}/upload" \\\n  -H "X-API-Key: brfy_your_api_key_here" \\\n  -F "file=@invoice_q2.pdf" \\\n  -F "folder=invoices/2026" \\\n  -F "documentType=INVOICE" \\\n  -F "description=Q2 invoice" \\\n  -F "tags=legal"`}
+            fetchExample={`const form = new FormData()\nform.append('file', file)            // File object\nform.append('folder', 'invoices/2026')\nform.append('documentType', 'INVOICE')\nform.append('description', 'Q2 invoice')\nform.append('tags', 'legal')\n\nconst res = await fetch(\`https://your-domain.com/api/external/files/\${orgId}/upload\`, {\n  method: 'POST',\n  headers: { 'X-API-Key': 'brfy_your_api_key_here' },\n  // do NOT set Content-Type — the browser sets multipart boundary automatically\n  body: form,\n})\nconst meta = await res.json()\nconsole.log(meta.fileId) // "F2026052000000001"`}
+          />
+          <EndpointDoc
+            method="GET" path="/api/external/files/{orgId}/{fileId}/download" title="Get download URL"
+            description="Generates a time-limited pre-signed URL for downloading the specified file directly from cloud storage. The URL is valid for 1 hour and requires no additional authentication."
+            requestBody={null}
+            responseBody={`{\n  "fileId":          "F2026052000000001",\n  "originalFilename":"invoice_q2.pdf",\n  "downloadUrl":     "https://s3.amazonaws.com/my-org-bucket/...?X-Amz-Signature=...",\n  "expiresInSeconds": 3600,\n  "contentType":     "application/pdf"\n}`}
+            curlExample={`curl "https://your-domain.com/api/external/files/{orgId}/F2026052000000001/download" \\\n  -H "X-API-Key: brfy_your_api_key_here"`}
+            fetchExample={`const res = await fetch(\n  \`https://your-domain.com/api/external/files/\${orgId}/\${fileId}/download\`,\n  { headers: { 'X-API-Key': 'brfy_your_api_key_here' } }\n)\nconst { downloadUrl, expiresInSeconds } = await res.json()\n// Open or stream the presigned URL — no extra auth needed\nwindow.open(downloadUrl)`}
+          />
+          <EndpointDoc
+            method="GET" path="/api/external/files/{orgId}" title="List files"
+            description="Returns a paginated list of files for the organisation. Supports filtering by documentType and status, keyword search, and custom sort order."
+            requestBody={null}
+            responseBody={`{\n  "files": [\n    {\n      "fileId":           "F2026052000000001",\n      "originalFilename": "invoice_q2.pdf",\n      "fileSizeBytes":    245760,\n      "documentType":     "INVOICE",\n      "cloudProvider":    "AWS",\n      "status":           "ACTIVE",\n      "uploadedBy":       "api-key:brfy_abc1",\n      "createdAt":        "2026-05-20T10:00:00"\n    }\n  ],\n  "totalElements":   1,\n  "totalPages":      1,\n  "currentPage":     0,\n  "totalActiveFiles":1,\n  "totalStorageMb":  0.234\n}`}
+            curlExample={`# Basic list\ncurl "https://your-domain.com/api/external/files/{orgId}" \\\n  -H "X-API-Key: brfy_your_api_key_here"\n\n# With filters\ncurl "https://your-domain.com/api/external/files/{orgId}?documentType=INVOICE&sortBy=createdAt&sortDir=DESC&page=0&size=20" \\\n  -H "X-API-Key: brfy_your_api_key_here"`}
+            fetchExample={`const params = new URLSearchParams({\n  page: 0, size: 20,\n  documentType: 'INVOICE',\n  sortBy: 'createdAt',\n  sortDir: 'DESC',\n})\nconst res = await fetch(\n  \`https://your-domain.com/api/external/files/\${orgId}?\${params}\`,\n  { headers: { 'X-API-Key': 'brfy_your_api_key_here' } }\n)\nconst { files, totalElements, totalStorageMb } = await res.json()`}
+          />
         </div>
       </section>
 
@@ -756,17 +911,19 @@ function ApiReferenceTab() {
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {[
-                { s: '400', c: 'Bad Request',          m: 'Missing or invalid parameters (e.g. missing templateId or to).' },
-                { s: '401', c: 'Unauthorized',         m: 'No X-API-Key header, or the key is invalid / revoked.' },
-                { s: '403', c: 'Forbidden',            m: 'Key lacks permission for this feature, or the org feature is disabled.' },
-                { s: '404', c: 'Not Found',            m: 'Template not found or does not belong to your organisation.' },
-                { s: '429', c: 'Too Many Requests',    m: 'Organisation has exceeded its monthly usage quota.' },
-                { s: '500', c: 'Internal Server Error',m: 'Unexpected server error. Retry or contact support.' },
-                { s: '501', c: 'Not Implemented',      m: 'Endpoint not yet available (e.g. E-Sign external API).' },
+                { s: '400', c: 'Bad Request',           m: 'Missing or invalid parameters (e.g. missing templateId, to, or file part).' },
+                { s: '401', c: 'Unauthorized',          m: 'No X-API-Key header, or the key is invalid / revoked.' },
+                { s: '403', c: 'Forbidden',             m: 'Key lacks permission for this feature, or the org feature is disabled.' },
+                { s: '404', c: 'Not Found',             m: 'Resource not found or does not belong to your organisation.' },
+                { s: '413', c: 'Payload Too Large',     m: 'Uploaded file exceeds the maximum size configured for your org.' },
+                { s: '415', c: 'Unsupported Media Type',m: 'File type is not permitted by your org\'s cloud storage configuration.' },
+                { s: '422', c: 'Unprocessable Entity',  m: 'Cloud storage is not configured for this organisation.' },
+                { s: '429', c: 'Too Many Requests',     m: 'Organisation has exceeded its monthly usage or storage quota.' },
+                { s: '500', c: 'Internal Server Error', m: 'Unexpected server error. Retry or contact support.' },
               ].map(row => (
                 <tr key={row.s} className="bg-white dark:bg-gray-800/60 hover:bg-gray-50 dark:hover:bg-gray-800">
                   <td className="px-4 py-3 font-mono text-sm font-semibold text-rose-600 dark:text-rose-400">{row.s}</td>
-                  <td className="px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300">{row.c}</td>
+                  <td className="px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">{row.c}</td>
                   <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{row.m}</td>
                 </tr>
               ))}
@@ -776,7 +933,7 @@ function ApiReferenceTab() {
       </section>
 
       <div className="rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 px-5 py-4 text-sm text-indigo-700 dark:text-indigo-300">
-        <strong>Need help?</strong> Every API request is logged. Visit the <strong>Usage</strong> tab on your organisation dashboard to monitor call counts and per-key statistics.
+        <strong>Need help?</strong> Every API request is logged. Visit the <strong>Usage</strong> tab on your organisation dashboard to monitor call counts, storage usage, and per-key statistics.
       </div>
     </div>
   )

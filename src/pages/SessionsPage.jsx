@@ -4,6 +4,7 @@ import useDocumentTitle from '../hooks/useDocumentTitle'
 import { useToast } from '../context/ToastContext'
 import { useAuth, ROLES } from '../context/AuthContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
+import ViewToggle, { useView } from '../components/ui/ViewToggle'
 
 const CRUMBS = [
   { label: 'Dashboard', to: '/' },
@@ -81,6 +82,7 @@ export default function SessionsPage() {
 
   /* Group filter (for Platform Admin / Org Admin) */
   const [filter, setFilter] = useState('all')  // 'all' | 'mine'
+  const [view, setView] = useView('braify-sessions-view')
 
   const load = useCallback(() => {
     setLoading(true)
@@ -143,24 +145,27 @@ export default function SessionsPage() {
           </p>
         </div>
 
-        {/* "Sign out everywhere else" button — shown for all roles */}
-        {hasOthers && (
-          <button
-            onClick={handleRevokeAll}
-            disabled={revokeAll}
-            className="btn btn-outline gap-2 text-amber-600 border-amber-300 hover:bg-amber-50"
-          >
-            {revokeAll ? (
-              <Spinner />
-            ) : (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-              </svg>
-            )}
-            Sign out everywhere else
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          <ViewToggle view={view} onChange={setView} />
+          {/* "Sign out everywhere else" button — shown for all roles */}
+          {hasOthers && (
+            <button
+              onClick={handleRevokeAll}
+              disabled={revokeAll}
+              className="btn btn-outline gap-2 text-amber-600 border-amber-300 hover:bg-amber-50"
+            >
+              {revokeAll ? (
+                <Spinner />
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                </svg>
+              )}
+              Sign out everywhere else
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Stats bar */}
@@ -197,21 +202,90 @@ export default function SessionsPage() {
       )}
 
       {/* Session list */}
-      <div className="card p-0 overflow-hidden">
-        {loading ? (
-          <div className="flex items-center justify-center py-20 text-gray-400 gap-3">
-            <Spinner className="h-5 w-5 text-primary" />
-            Loading sessions…
-          </div>
-        ) : displayed.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-            <svg className="w-10 h-10 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-            <p className="text-sm">No active sessions found.</p>
-          </div>
-        ) : (
+      {loading ? (
+        <div className="card flex items-center justify-center py-20 text-gray-400 gap-3">
+          <Spinner className="h-5 w-5 text-primary" />
+          Loading sessions…
+        </div>
+      ) : displayed.length === 0 ? (
+        <div className="card flex flex-col items-center justify-center py-20 text-gray-400">
+          <svg className="w-10 h-10 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+              d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <p className="text-sm">No active sessions found.</p>
+        </div>
+      ) : view === 'grid' ? (
+        /* ── Grid view ── */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {displayed.map(s => (
+            <div key={s.id}
+              className={`card p-5 flex flex-col gap-3
+                ${s.current ? 'ring-2 ring-indigo-400 dark:ring-indigo-600' : ''}`}>
+              <div className="flex items-start gap-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0
+                  ${s.current
+                    ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-500'}`}>
+                  <DeviceIcon ua={s.deviceInfo} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-800 dark:text-gray-200 text-sm truncate">
+                    {parseDevice(s.deviceInfo)}
+                  </p>
+                  {s.current && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"/>
+                      Current session
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {!isUser && (
+                <div className="flex items-center gap-2">
+                  <Avatar name={s.userName} email={s.userEmail} size="sm" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{s.userName}</p>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${ROLE_BADGE[s.userRole] || 'bg-gray-100 text-gray-600'}`}>
+                      {s.userRole?.replace('_', ' ')}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1 text-xs text-gray-500">
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-400 w-20 shrink-0">IP</span>
+                  <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-gray-600 dark:text-gray-300">
+                    {s.ipAddress || '—'}
+                  </code>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-400 w-20 shrink-0">Last active</span>
+                  <span title={fmtDateTime(s.lastUsedAt)}>{timeSince(s.lastUsedAt)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-400 w-20 shrink-0">Signed in</span>
+                  <span>{fmtDateTime(s.createdAt)}</span>
+                </div>
+              </div>
+
+              {!s.current && (
+                <button
+                  onClick={() => handleRevoke(s.id)}
+                  disabled={revoking === s.id}
+                  className="mt-auto text-xs px-3 py-1.5 rounded-lg border border-red-200 text-red-400 hover:bg-red-50 hover:border-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {revoking === s.id ? <Spinner /> : 'Revoke'}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        /* ── Table view ── */
+        <div className="card p-0 overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
@@ -324,8 +398,8 @@ export default function SessionsPage() {
               ))}
             </tbody>
           </table>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Legend */}
       <p className="text-xs text-gray-400 mt-4 text-center">

@@ -8,6 +8,7 @@ export const FEATURES = {
   PDF_TEMPLATES:   'PDF_TEMPLATES',
   EMAIL_TEMPLATES: 'EMAIL_TEMPLATES',
   E_SIGN:          'E_SIGN',
+  FILE_STORAGE:    'FILE_STORAGE',
 }
 
 export const FEATURE_META = {
@@ -38,6 +39,15 @@ export const FEATURE_META = {
     bg:          '#ecfdf5',
     routes:      ['/esign'],
   },
+  FILE_STORAGE: {
+    key:         'FILE_STORAGE',
+    label:       'File Storage',
+    description: 'Upload, organise and securely store files in your connected cloud storage (AWS S3, Azure Blob, or GCP).',
+    icon:        '🗂️',
+    color:       '#d97706',
+    bg:          '#fffbeb',
+    routes:      ['/files'],
+  },
 }
 
 /** Ordered list of all features for consistent display. */
@@ -45,4 +55,5 @@ export const ALL_FEATURES = [
   FEATURE_META.PDF_TEMPLATES,
   FEATURE_META.EMAIL_TEMPLATES,
   FEATURE_META.E_SIGN,
+  FEATURE_META.FILE_STORAGE,
 ]

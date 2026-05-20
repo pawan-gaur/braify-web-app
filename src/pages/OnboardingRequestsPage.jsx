@@ -3,6 +3,7 @@ import { getOnboardingRequests, reviewOnboardingRequest, getPendingOnboardingCou
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
+import ViewToggle, { useView } from '../components/ui/ViewToggle'
 import { ALL_FEATURES, FEATURE_META } from '../config/features'
 
 const CRUMBS = [
@@ -312,6 +313,7 @@ export default function OnboardingRequestsPage() {
   const [activeTab,   setActiveTab]   = useState(null)   // null = All
   const [reviewing,   setReviewing]   = useState(null)   // request being reviewed
   const [pendingCount,setPendingCount] = useState(0)
+  const [view, setView] = useView('braify-onboarding-requests-view')
 
   const load = useCallback(async (statusFilter) => {
     setLoading(true)
@@ -346,7 +348,7 @@ export default function OnboardingRequestsPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      <Breadcrumbs crumbs={CRUMBS} />
+      <Breadcrumbs items={CRUMBS} />
 
       {/* Header */}
       <div className="flex items-start justify-between mb-6 mt-4">
@@ -364,6 +366,7 @@ export default function OnboardingRequestsPage() {
             Review and approve organizations requesting access to the platform.
           </p>
         </div>
+        <ViewToggle view={view} onChange={setView} />
       </div>
 
       {/* Tabs */}
@@ -408,7 +411,59 @@ export default function OnboardingRequestsPage() {
             {activeTab ? `No ${STATUS_STYLE[activeTab]?.label ?? activeTab} requests at the moment.` : 'No onboarding requests have been submitted yet.'}
           </p>
         </div>
+      ) : view === 'grid' ? (
+        /* ── Grid view ── */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {requests.map(req => (
+            <div key={req.id} className="card p-5 flex flex-col gap-3">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-white text-sm font-bold"
+                  style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>
+                  {req.organizationName?.charAt(0).toUpperCase() || '?'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-gray-900 dark:text-white truncate">{req.organizationName}</p>
+                  {req.country && (
+                    <p className="text-[11px] text-gray-400 mt-0.5">
+                      {[req.state, req.country].filter(Boolean).join(', ')}
+                    </p>
+                  )}
+                </div>
+                <StatusBadge status={req.status} />
+              </div>
+
+              <div className="text-xs text-gray-600 dark:text-gray-400">
+                <p className="font-medium text-gray-800 dark:text-gray-200">{req.applicantName}</p>
+                <p className="truncate">{req.applicantEmail}</p>
+              </div>
+
+              {(req.requestedFeatures ?? []).length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {req.requestedFeatures.map(f => <FeaturePill key={f} featureKey={f} />)}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between pt-1 mt-auto">
+                <p className="text-[11px] text-gray-400">{fmtDate(req.submittedAt)}</p>
+                {(req.status === 'PENDING' || req.status === 'INFO_REQUIRED') ? (
+                  <button
+                    onClick={() => setReviewing(req)}
+                    className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-white transition-all hover:shadow-md active:scale-95"
+                    style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}
+                  >
+                    Review
+                  </button>
+                ) : req.status === 'APPROVED' ? (
+                  <span className="text-[11px] text-green-600 dark:text-green-400 font-semibold">✓ Done</span>
+                ) : req.status === 'REJECTED' ? (
+                  <span className="text-[11px] text-red-500 dark:text-red-400 font-semibold">✗ Closed</span>
+                ) : null}
+              </div>
+            </div>
+          ))}
+        </div>
       ) : (
+        /* ── Table view ── */
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
           <table className="w-full text-sm">
             <thead>

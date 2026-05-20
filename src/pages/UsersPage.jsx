@@ -5,6 +5,7 @@ import useDocumentTitle from '../hooks/useDocumentTitle'
 import { useToast } from '../context/ToastContext'
 import { useAuth, ROLES } from '../context/AuthContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
+import ViewToggle, { useView } from '../components/ui/ViewToggle'
 
 const CRUMBS = [
   { label: 'Dashboard', to: '/' },
@@ -70,6 +71,7 @@ export default function UsersPage() {
   }, [isPlatformAdmin])
 
   const [statusFilter, setStatusFilter] = useState('all')  // 'all' | 'active' | 'inactive'
+  const [view, setView] = useView('braify-users-view')
 
   const load = useCallback((q = '', orgId = '') => {
     setLoading(true)
@@ -171,12 +173,15 @@ export default function UsersPage() {
           <h1 className="text-2xl font-bold text-navy dark:text-white">Users</h1>
           <p className="text-sm text-gray-500 mt-1">Manage platform users and their roles.</p>
         </div>
-        <button onClick={openCreate} className="btn btn-primary gap-2">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/>
-          </svg>
-          Invite User
-        </button>
+        <div className="flex items-center gap-3">
+          <ViewToggle view={view} onChange={setView} />
+          <button onClick={openCreate} className="btn btn-primary gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/>
+            </svg>
+            Invite User
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -202,25 +207,82 @@ export default function UsersPage() {
         </select>
       </div>
 
-      {/* Table */}
-      <div className="card p-0 overflow-hidden">
-        {loading ? (
-          <div className="flex items-center justify-center py-20 text-gray-400 gap-3">
-            <svg className="animate-spin h-5 w-5 text-primary" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-            </svg>
-            Loading…
-          </div>
-        ) : filteredUsers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-            <svg className="w-10 h-10 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
-            </svg>
-            <p className="text-sm">{query ? `No users match "${query}".` : 'No users found.'}</p>
-          </div>
-        ) : (
+      {/* User list */}
+      {loading ? (
+        <div className="card flex items-center justify-center py-20 text-gray-400 gap-3">
+          <svg className="animate-spin h-5 w-5 text-primary" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+          </svg>
+          Loading…
+        </div>
+      ) : filteredUsers.length === 0 ? (
+        <div className="card flex flex-col items-center justify-center py-20 text-gray-400">
+          <svg className="w-10 h-10 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          <p className="text-sm">{query ? `No users match "${query}".` : 'No users found.'}</p>
+        </div>
+      ) : view === 'grid' ? (
+        /* ── Grid view ── */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredUsers.map(u => (
+            <div key={u.id} className="card p-5 flex flex-col gap-3">
+              <div className="flex items-start gap-3">
+                <Avatar user={u} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-800 dark:text-gray-200 truncate">
+                    {u.firstName} {u.lastName}
+                    {u.mustChangePassword && (
+                      <span className="ml-2 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-bold">
+                        INVITE PENDING
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-xs text-gray-400 truncate">{u.email}</p>
+                </div>
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold shrink-0
+                  ${u.active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${u.active ? 'bg-emerald-500' : 'bg-gray-400'}`}/>
+                  {u.active ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${ROLE_BADGE[u.role] || 'bg-gray-100 text-gray-600'}`}>
+                  {u.role.replace('_', ' ')}
+                </span>
+                {isPlatformAdmin && (u.organizationName || orgName(u.organizationId)) && (
+                  <span className="text-xs text-gray-400">{u.organizationName || orgName(u.organizationId)}</span>
+                )}
+              </div>
+
+              <p className="text-[11px] text-gray-400 mt-auto">Joined {fmtDate(u.createdAt)}</p>
+
+              <div className="flex items-center gap-1 pt-1 border-t border-gray-100 dark:border-gray-700">
+                <button onClick={() => openEdit(u)}
+                  className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 hover:border-primary hover:text-primary transition-colors">
+                  Edit
+                </button>
+                {u.active ? (
+                  <button onClick={() => handleDisable(u)}
+                    className="text-xs px-2.5 py-1 rounded-lg border border-red-200 text-red-400 hover:bg-red-50 hover:border-red-400 transition-colors">
+                    Disable
+                  </button>
+                ) : (
+                  <button onClick={() => handleEnable(u)}
+                    className="text-xs px-2.5 py-1 rounded-lg border border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-400 transition-colors">
+                    Enable
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        /* ── Table view ── */
+        <div className="card p-0 overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
@@ -295,8 +357,8 @@ export default function UsersPage() {
               ))}
             </tbody>
           </table>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Create / Edit Modal */}
       {showForm && (

@@ -1,97 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
-
-/* ─── Brand logo ────────────────────────────────────────────────────────── */
-function BraiLogo({ size = 28 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 40 40" fill="none">
-      <circle cx="20" cy="20" r="20" fill="url(#brai-lg)" />
-      <path d="M13 20c0-3.866 3.134-7 7-7s7 3.134 7 7-3.134 7-7 7"
-            stroke="white" strokeWidth="2.2" strokeLinecap="round" />
-      <circle cx="20" cy="20" r="2.5" fill="white" />
-      <path d="M20 13v-3M20 30v-3M13 20h-3M30 20h-3"
-            stroke="white" strokeWidth="2" strokeLinecap="round" />
-      <path d="M15.1 15.1l-2.1-2.1M24.9 24.9l2.1 2.1M24.9 15.1l2.1-2.1M15.1 24.9l-2.1 2.1"
-            stroke="white" strokeWidth="1.6" strokeLinecap="round" />
-      <defs>
-        <linearGradient id="brai-lg" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#6366f1" />
-          <stop offset="1" stopColor="#8b5cf6" />
-        </linearGradient>
-      </defs>
-    </svg>
-  )
-}
-
-/* ─── Nav dropdown data ─────────────────────────────────────────────────── */
-const DROPDOWNS = {
-  Features: {
-    brand: { title: 'Braify Platform', sub: 'PDF, email & e-signature automation — all in one.' },
-    links: [
-      { icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9v11a2 2 0 01-2 2z', label: 'PDF Builder',     desc: 'Drag-and-drop PDF template designer with starter gallery.' },
-      { icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', label: 'Email Templates', desc: 'Build and send branded emails with one click.' },
-      { icon: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z', label: 'E-Sign',          desc: 'Collect legally binding signatures from any device.' },
-      { icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4',                                                               label: 'API Access',      desc: 'Integrate Braify into any workflow via REST.' },
-    ],
-  },
-  Solutions: {
-    brand: { title: 'By Team', sub: 'Workflows tailored to how your team works.' },
-    links: [
-      { icon: 'M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z', label: 'Marketing Teams', desc: 'Campaign briefs, proposals and branded reports.' },
-      { icon: 'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z', label: 'Finance Teams',   desc: 'Invoices, statements and client contracts.' },
-      { icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z', label: 'HR & Ops',        desc: 'Offer letters, handbooks and onboarding docs.' },
-    ],
-  },
-  Resources: {
-    brand: { title: 'Learn Braify', sub: 'Guides, docs and community.' },
-    links: [
-      { icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253', label: 'Documentation',   desc: 'Full API and platform reference.' },
-      { icon: 'M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z',                                                                                   label: 'Blog',            desc: 'Tips, releases and best practices.' },
-      { icon: 'M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z',                                                          label: 'Community',       desc: 'Join the Braify developer forum.' },
-    ],
-  },
-}
-
-/* ─── Nav dropdown panel ────────────────────────────────────────────────── */
-function NavDropdown({ item, open }) {
-  const d = DROPDOWNS[item]
-  if (!d) return null
-  return (
-    <div className={`absolute top-full left-1/2 -translate-x-1/2 mt-1 w-[520px]
-                     bg-white rounded-2xl shadow-2xl border border-gray-100
-                     transition-all duration-200 z-50 overflow-hidden
-                     ${open ? 'opacity-100 translate-y-0 pointer-events-auto'
-                            : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
-      <div className="flex">
-        <div className="w-44 bg-gray-50 p-5 flex flex-col gap-3 shrink-0">
-          <BraiLogo size={36} />
-          <div>
-            <p className="font-bold text-gray-900 text-sm leading-snug">{d.brand.title}</p>
-            <p className="mt-1 text-xs text-gray-500 leading-relaxed">{d.brand.sub}</p>
-          </div>
-        </div>
-        <div className="flex-1 p-3 space-y-0.5">
-          {d.links.map(l => (
-            <button key={l.label}
-              className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors group flex items-start gap-3">
-              {l.icon && (
-                <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-indigo-100 transition-colors">
-                  <svg className="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={l.icon}/>
-                  </svg>
-                </div>
-              )}
-              <div>
-                <p className="text-sm font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">{l.label}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{l.desc}</p>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import PublicNavbar, { BraiLogo } from '../components/layout/PublicNavbar'
 
 /* ─── Hero floating mock cards ──────────────────────────────────────────── */
 function CardPDF() {
@@ -127,9 +36,7 @@ function CardESign() {
           </svg>
         </div>
         <span className="font-bold text-gray-800">E-Sign Workflow</span>
-        <span className="ml-auto text-[9px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
-          PENDING SIGNATURE
-        </span>
+        <span className="ml-auto text-[9px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">PENDING SIGNATURE</span>
       </div>
       <div className="border border-gray-100 rounded-xl p-3 mb-3 bg-gray-50">
         <div className="h-2 bg-gray-200 rounded w-3/4 mb-1.5" />
@@ -144,9 +51,9 @@ function CardESign() {
         </div>
       </div>
       {[
-        { label: 'Document sent',      done: true },
-        { label: 'Link opened by client', done: true },
-        { label: 'Awaiting signature', done: false },
+        { label: 'Document sent',         done: true  },
+        { label: 'Link opened by client', done: true  },
+        { label: 'Awaiting signature',    done: false },
       ].map(item => (
         <div key={item.label} className="flex items-center gap-2 mb-1.5">
           <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0
@@ -164,34 +71,31 @@ function CardESign() {
   )
 }
 
-function CardAudit() {
+function CardAnalytics() {
   return (
     <div className="bg-white rounded-2xl shadow-xl p-4 w-52 text-xs select-none">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-5 h-5 rounded bg-violet-500 flex items-center justify-center shrink-0">
+        <div className="w-5 h-5 rounded bg-indigo-500 flex items-center justify-center shrink-0">
           <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
           </svg>
         </div>
-        <span className="font-bold text-gray-800">Audit Log</span>
+        <span className="font-bold text-gray-800">E-Sign Funnel</span>
+        <span className="ml-auto w-2 h-2 rounded-full bg-emerald-400 animate-pulse"/>
       </div>
-      {[
-        { action: 'FEATURES UPDATED', type: 'Organization', color: 'bg-purple-100 text-purple-700' },
-        { action: 'SENT',             type: 'E-Sign',       color: 'bg-teal-100 text-teal-700' },
-        { action: 'CREATED',          type: 'PDF Template', color: 'bg-emerald-100 text-emerald-700' },
-      ].map(e => (
-        <div key={e.action} className="flex items-center gap-2 mb-2 last:mb-0">
-          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${e.color}`}>
-            {e.action}
-          </span>
-          <span className="text-gray-400 text-[10px] truncate">{e.type}</span>
+      {[['Sent', '#6366f1', 100], ['Viewed', '#0ea5e9', 82], ['Signed', '#10b981', 64]].map(([label, color, w]) => (
+        <div key={label} className="mb-2">
+          <div className="flex justify-between text-[10px] text-gray-400 mb-0.5">
+            <span>{label}</span><span>{w}%</span>
+          </div>
+          <div className="h-5 bg-gray-100 rounded-lg overflow-hidden">
+            <div className="h-full rounded-lg flex items-center px-2" style={{ width: `${w}%`, background: color }}>
+              <span className="text-white text-[9px] font-bold">{w}</span>
+            </div>
+          </div>
         </div>
       ))}
-      <div className="mt-3 flex items-center gap-1.5 border-t border-gray-100 pt-2">
-        <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
-        <span className="text-gray-400 text-[10px]">Role-scoped visibility</span>
-      </div>
     </div>
   )
 }
@@ -235,26 +139,41 @@ const TABS = [
     color: '#0d9488',
   },
   {
-    label: 'Feature Access',
-    heading: 'Assign the right features to each organisation',
-    desc: 'Platform Admins can assign one or more feature modules (PDF Templates, Email Templates, E-Sign) to each organisation during onboarding or at any time afterwards. Users only see what their org is licensed for — sidebar and routes are gated automatically.',
+    label: 'Analytics',
+    heading: 'Full reporting & analytics dashboard',
+    desc: 'Get deep visibility into how your team uses Braify. Custom date ranges, E-Sign conversion funnels, template usage rankings, per-user activity breakdowns, scheduled email reports and exportable PNG/PDF charts — all in one Analytics tab.',
     points: [
-      'Per-org feature flags: PDF · Email · E-Sign',
-      'Instant toggle — no re-login required for admins',
-      'Sidebar & routes auto-hide for unlicensed features',
-      'All feature changes logged in the audit trail',
+      'Custom date range (7d / 30d / 90d / custom)',
+      'E-Sign funnel: Sent → Viewed → Signed drop-off',
+      'Template usage analytics (most & least used)',
+      'Per-user / per-org activity breakdown',
+      'Scheduled weekly/monthly PDF reports by email',
+      'Export charts as PNG or print to PDF',
+      'Real-time activity feed with 30-second live polling',
     ],
     color: '#f59e0b',
   },
   {
-    label: 'Audit Log',
-    heading: 'Complete, role-scoped audit trail for everything',
-    desc: 'Every action across templates, emails, e-sign, users and organisation features is logged with before/after details. Visibility is automatically scoped to your role — Platform Admins can filter by any organisation.',
+    label: 'File Storage',
+    heading: 'Secure cloud file management per organisation',
+    desc: 'Upload, organise and manage files scoped to your organisation. Store supporting documents, images, assets and raw PDFs alongside your templates — all accessible via the platform and REST API.',
     points: [
-      'Covers PDF, Email, E-Sign, Users & Org features',
-      'Expandable diff: which features were added/removed',
-      'PLATFORM_ADMIN org filter · resource type filter',
-      'ADMIN sees ADMIN+USER · USER sees own actions only',
+      'Org-scoped file storage with role-based access',
+      'Upload & manage files directly from the UI',
+      'Link files to templates and E-Sign documents',
+      'Full file access logged in the audit trail',
+    ],
+    color: '#0891b2',
+  },
+  {
+    label: 'Feature Access',
+    heading: 'Assign the right features to each organisation',
+    desc: 'Platform Admins can assign one or more feature modules (PDF Templates, Email Templates, E-Sign, File Storage) to each organisation during onboarding or at any time afterwards. Users only see what their org is licensed for.',
+    points: [
+      'Per-org feature flags: PDF · Email · E-Sign · Files',
+      'Instant toggle — no re-login required for admins',
+      'Sidebar & routes auto-hide for unlicensed features',
+      'All feature changes logged in the audit trail',
     ],
     color: '#ef4444',
   },
@@ -268,7 +187,19 @@ const TABS = [
       'Per-org feature entitlements',
       'Platform-level admin console',
     ],
-    color: '#0891b2',
+    color: '#06b6d4',
+  },
+  {
+    label: 'Audit Log',
+    heading: 'Complete, role-scoped audit trail for everything',
+    desc: 'Every action across templates, emails, e-sign, users and organisation features is logged with before/after details. Visibility is automatically scoped to your role.',
+    points: [
+      'Covers PDF, Email, E-Sign, Files, Users & Org features',
+      'Expandable diff: which features were added/removed',
+      'PLATFORM_ADMIN org filter · resource type filter',
+      'ADMIN sees ADMIN+USER · USER sees own actions only',
+    ],
+    color: '#6366f1',
   },
   {
     label: 'Version History',
@@ -284,181 +215,134 @@ const TABS = [
   },
 ]
 
-/* ─── Features grid data ─────────────────────────────────────────────────── */
+/* ─── Features grid ──────────────────────────────────────────────────────── */
 const FEATURE_GRID = [
+  { icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9v11a2 2 0 01-2 2z', title: 'PDF Templates',        desc: 'Drag-and-drop builder, 7 starter categories, live preview and Handlebars placeholders.', color: '#6366f1' },
+  { icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', title: 'Email Templates',      desc: 'Rich HTML editor, Resend integration, placeholder fill and automatic version snapshots.', color: '#8b5cf6' },
+  { icon: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z', title: 'E-Sign',                desc: 'Upload or generate PDFs, place signature fields, send a secure link and track completion.', color: '#0d9488' },
+  { icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', title: 'Analytics & Reporting', desc: 'Custom date range, E-Sign funnel, template usage rankings, scheduled email reports and chart exports.', color: '#f59e0b' },
+  { icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z', title: 'File Storage',          desc: 'Org-scoped cloud file management. Upload, organise and link files to templates and documents.', color: '#0891b2' },
+  { icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z', title: 'Feature Access Control', desc: 'Assign PDF, Email, E-Sign and File Storage per org. Sidebar and routes auto-gate to licensed modules.', color: '#f43f5e' },
+  { icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z', title: 'Multi-Org & Roles',      desc: 'Isolated workspaces per organisation. Four-tier hierarchy: Platform Admin › Org Admin › Admin › User.', color: '#7c3aed' },
+  { icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', title: 'Audit Log',            desc: 'Role-scoped trail covering PDF, Email, E-Sign, Files, Users & Org features — expandable before/after diffs.', color: '#ef4444' },
+  { icon: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15', title: 'Version History',       desc: 'Every save snapshots the template. Restore any version in one click for both PDF and email templates.', color: '#10b981' },
+  { icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4', title: 'REST API',              desc: 'JWT-secured endpoints for generating PDFs and sending emails programmatically from any system.', color: '#06b6d4' },
+  { icon: 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z', title: 'API Keys',              desc: 'Generate and manage org-scoped API keys with usage logs, key prefix display and one-click revoke.', color: '#f97316' },
+  { icon: 'M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z', title: 'Template Sharing',     desc: 'Share templates across organisations for collaboration. Controlled visibility with org-level permissions.', color: '#6366f1' },
+]
+
+/* ─── Pricing plans ─────────────────────────────────────────────────────── */
+const PLANS = [
   {
-    icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9v11a2 2 0 01-2 2z',
-    title: 'PDF Templates',
-    desc:  'Design once, generate hundreds. Drag-and-drop builder with starter gallery across 7 document categories.',
-    color: '#6366f1',
+    name: 'Starter',
+    badge: 'Free',
+    badgeColor: 'bg-emerald-100 text-emerald-700',
+    price: '$0',
+    period: 'forever',
+    highlight: false,
+    desc: 'Everything you need to get started with document automation.',
+    cta: 'Get started free',
+    ctaStyle: 'bg-gray-900 text-white hover:bg-gray-800',
+    features: [
+      { text: 'PDF template builder', included: true },
+      { text: 'Email template builder', included: true },
+      { text: 'E-Sign — up to 10 docs/month', included: true },
+      { text: 'File storage (1 GB)', included: true },
+      { text: 'Version history (last 10 snapshots)', included: true },
+      { text: 'Audit log (30-day retention)', included: true },
+      { text: 'REST API access', included: true },
+      { text: '3 team members', included: true },
+      { text: 'Basic analytics', included: true },
+      { text: 'Advanced analytics & funnels', included: false },
+      { text: 'Scheduled email reports', included: false },
+      { text: 'Custom date range analytics', included: false },
+      { text: 'Priority support', included: false },
+    ],
   },
   {
-    icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
-    title: 'Email Templates',
-    desc:  'Rich HTML editor, Resend integration and placeholder substitution — send polished emails in one click.',
-    color: '#8b5cf6',
+    name: 'Pro',
+    badge: 'Free during beta',
+    badgeColor: 'bg-indigo-100 text-indigo-700',
+    price: '$29',
+    period: '/month',
+    highlight: true,
+    desc: 'Full analytics, unlimited E-Sign and advanced reporting for growing teams.',
+    cta: 'Start for free',
+    ctaStyle: 'bg-indigo-600 text-white hover:bg-indigo-700',
+    features: [
+      { text: 'Everything in Starter', included: true },
+      { text: 'Unlimited E-Sign documents', included: true },
+      { text: 'File storage (25 GB)', included: true },
+      { text: 'Unlimited version history', included: true },
+      { text: 'Audit log (1-year retention)', included: true },
+      { text: 'Advanced analytics & funnels', included: true },
+      { text: 'Scheduled email reports (weekly/monthly)', included: true },
+      { text: 'Custom date range analytics', included: true },
+      { text: 'Exportable charts (PNG/PDF)', included: true },
+      { text: 'Up to 25 team members', included: true },
+      { text: 'API key management & usage logs', included: true },
+      { text: 'Priority support', included: false },
+    ],
   },
   {
-    icon: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z',
-    title: 'E-Sign',
-    desc:  'Upload or generate PDFs, place signature fields, send a secure link and collect legally binding signatures.',
-    color: '#0d9488',
-  },
-  {
-    icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z',
-    title: 'Feature Access Control',
-    desc:  'Assign PDF, Email and E-Sign modules per organisation. Sidebar and routes auto-gate to what each org is licensed for.',
-    color: '#f59e0b',
-  },
-  {
-    icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
-    title: 'Multi-Org & Roles',
-    desc:  'Isolated workspaces per organisation. Four-tier hierarchy: Platform Admin › Org Admin › Admin › User.',
-    color: '#0891b2',
-  },
-  {
-    icon: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15',
-    title: 'Version History',
-    desc:  'Every save snapshots the template. Restore any version in one click — for both PDF and email templates.',
-    color: '#10b981',
-  },
-  {
-    icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
-    title: 'Audit Log',
-    desc:  'Role-scoped audit trail covering PDF, Email, E-Sign, Users & Org features — with expandable before/after diffs.',
-    color: '#ef4444',
-  },
-  {
-    icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4',
-    title: 'REST API',
-    desc:  'JWT-secured endpoints for generating PDFs and sending emails programmatically from any system.',
-    color: '#06b6d4',
+    name: 'Enterprise',
+    badge: 'Custom',
+    badgeColor: 'bg-violet-100 text-violet-700',
+    price: 'Custom',
+    period: 'pricing',
+    highlight: false,
+    desc: 'Multi-org management, dedicated support and custom SLAs for large organisations.',
+    cta: 'Contact sales',
+    ctaStyle: 'bg-white text-gray-900 border border-gray-300 hover:bg-gray-50',
+    features: [
+      { text: 'Everything in Pro', included: true },
+      { text: 'Unlimited team members', included: true },
+      { text: 'Multi-org platform admin console', included: true },
+      { text: 'Per-org feature access control', included: true },
+      { text: 'Unlimited file storage', included: true },
+      { text: 'Audit log (unlimited retention)', included: true },
+      { text: 'Template sharing across orgs', included: true },
+      { text: 'Real-time activity feed / WebSocket', included: true },
+      { text: 'Custom onboarding & migration', included: true },
+      { text: 'Dedicated account manager', included: true },
+      { text: 'SLA-backed uptime guarantee', included: true },
+      { text: 'SSO / SAML integration', included: true },
+    ],
   },
 ]
 
 /* ═══ MAIN PAGE ════════════════════════════════════════════════════════════ */
 export default function LandingPage() {
-  const navigate = useNavigate()
-  const [scrolled,   setScrolled]   = useState(false)
-  const [openMenu,   setOpenMenu]   = useState(null)
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [activeTab,  setActiveTab]  = useState(0)
-  const navRef = useRef(null)
+  const navigate       = useNavigate()
+  const [searchParams] = useSearchParams()
+  const pricingRef     = useRef(null)
 
-  useEffect(() => {
-    const fn = () => setScrolled(window.scrollY > 10)
-    window.addEventListener('scroll', fn)
-    return () => window.removeEventListener('scroll', fn)
-  }, [])
+  const [activeTab, setActiveTab] = useState(0)
+  const [annual,    setAnnual]    = useState(false)
 
+  const scrollTo = ref => ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+
+  // Scroll to pricing when redirected from feature pages via /?pricing=1
   useEffect(() => {
-    const fn = e => {
-      if (navRef.current && !navRef.current.contains(e.target)) setOpenMenu(null)
+    if (searchParams.get('pricing') === '1') {
+      const t = setTimeout(() => scrollTo(pricingRef), 100)
+      return () => clearTimeout(t)
     }
-    document.addEventListener('mousedown', fn)
-    return () => document.removeEventListener('mousedown', fn)
-  }, [])
-
-  const toggleMenu = label => setOpenMenu(p => (p === label ? null : label))
+  }, [searchParams])
 
   return (
     <div className="min-h-screen bg-[#f5f4f0] font-sans overflow-x-hidden">
 
       {/* ══ NAVBAR ══════════════════════════════════════════════════════════ */}
-      <header
-        ref={navRef}
-        className={`fixed top-0 inset-x-0 z-50 transition-all duration-200 bg-white
-                    ${scrolled ? 'shadow-sm' : 'shadow-none'}`}
-      >
-        <div className="max-w-7xl mx-auto px-6 h-14 flex items-center gap-4">
-          <button onClick={() => navigate('/')}
-            className="flex items-center gap-2 shrink-0 hover:opacity-80 transition-opacity">
-            <BraiLogo size={28} />
-            <span className="font-extrabold text-gray-900 text-lg tracking-tight">Braify</span>
-          </button>
-
-          <nav className="hidden md:flex items-center gap-0.5 flex-1">
-            {Object.keys(DROPDOWNS).map(item => (
-              <div key={item} className="relative">
-                <button
-                  onClick={() => toggleMenu(item)}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
-                              ${openMenu === item ? 'text-gray-900 bg-gray-100' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
-                >
-                  {item}
-                  <svg className={`w-3.5 h-3.5 transition-transform duration-200 ${openMenu === item ? 'rotate-180' : ''}`}
-                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
-                  </svg>
-                </button>
-                <NavDropdown item={item} open={openMenu === item} />
-              </div>
-            ))}
-            {['Enterprise', 'Pricing'].map(item => (
-              <button key={item}
-                className="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors">
-                {item}
-              </button>
-            ))}
-          </nav>
-
-          <div className="hidden md:flex items-center gap-1 ml-auto shrink-0">
-            <div className="w-px h-4 bg-gray-200 mx-1" />
-            <button className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
-              Contact Sales
-            </button>
-            <button onClick={() => navigate('/login')}
-              className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
-              Sign In
-            </button>
-            <button onClick={() => navigate('/get-started')}
-              className="px-4 py-1.5 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-800 transition-colors">
-              Get Started
-            </button>
-          </div>
-
-          <button onClick={() => setMobileOpen(v => !v)}
-            className="md:hidden ml-auto p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {mobileOpen
-                ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
-                : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/>
-              }
-            </svg>
-          </button>
-        </div>
-
-        {mobileOpen && (
-          <div className="md:hidden bg-white border-t border-gray-100 px-6 py-4 space-y-1">
-            {[...Object.keys(DROPDOWNS), 'Enterprise', 'Pricing'].map(item => (
-              <button key={item}
-                className="w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                {item}
-              </button>
-            ))}
-            <div className="pt-3 flex gap-2">
-              <button onClick={() => navigate('/login')}
-                className="flex-1 py-2 text-sm font-semibold text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                Sign In
-              </button>
-              <button onClick={() => navigate('/get-started')}
-                className="flex-1 py-2 text-sm font-semibold text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors">
-                Get Started
-              </button>
-            </div>
-          </div>
-        )}
-      </header>
+      <PublicNavbar onPricingClick={() => scrollTo(pricingRef)} />
 
       {/* ══ HERO ════════════════════════════════════════════════════════════ */}
       <section className="pt-14 bg-[#f5f4f0]">
         <div className="max-w-7xl mx-auto px-6 pt-20 pb-4 text-center">
-
-          {/* Badge */}
           <div className="inline-flex items-center gap-2 bg-white border border-gray-200 rounded-full
                           px-4 py-1.5 text-xs font-semibold text-gray-600 mb-8 shadow-sm">
             <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse shrink-0" />
-            New: E-Sign &amp; per-org feature access now live
+            New: Analytics dashboard, scheduled reports &amp; file storage now live
           </div>
 
           <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 leading-[1.1] tracking-tight max-w-4xl mx-auto">
@@ -472,8 +356,8 @@ export default function LandingPage() {
           </h1>
 
           <p className="mt-6 text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">
-            Design PDF templates, build branded emails, collect e-signatures and track every
-            action in one platform — with feature access tailored per organisation.
+            Design PDF templates, build branded emails, collect e-signatures, analyse your
+            workflow and track every action in one platform — with feature access tailored per organisation.
           </p>
 
           <div className="flex items-center justify-center gap-3 mt-8 flex-wrap">
@@ -482,15 +366,15 @@ export default function LandingPage() {
                          hover:bg-gray-800 transition-all shadow-lg hover:shadow-xl active:scale-95">
               Get Started Free
             </button>
-            <button
+            <button onClick={() => scrollTo(pricingRef)}
               className="px-6 py-3 bg-white text-gray-700 font-semibold rounded-xl
                          border border-gray-300 hover:bg-gray-50 transition-all shadow-sm active:scale-95">
-              See how it works
+              View pricing
             </button>
           </div>
 
           <p className="mt-3 text-xs text-gray-400">
-            No credit card required &nbsp;·&nbsp; Free plan available
+            No credit card required &nbsp;·&nbsp; Free plan available &nbsp;·&nbsp; Pro free during beta
           </p>
         </div>
 
@@ -503,7 +387,7 @@ export default function LandingPage() {
             <CardESign />
           </div>
           <div className="transform translate-y-4 hidden sm:block">
-            <CardAudit />
+            <CardAnalytics />
           </div>
           <div className="absolute bottom-0 inset-x-0 h-20
                           bg-gradient-to-t from-[#f5f4f0] to-transparent pointer-events-none" />
@@ -547,26 +431,20 @@ export default function LandingPage() {
             See how teams use Braify
           </h2>
 
-          {/* Tab strip */}
           <div className="flex justify-center border-b border-gray-200 mb-12 overflow-x-auto gap-0">
             {TABS.map((tab, i) => (
-              <button
-                key={tab.label}
-                onClick={() => setActiveTab(i)}
+              <button key={tab.label} onClick={() => setActiveTab(i)}
                 className={`px-4 py-3 text-sm font-semibold whitespace-nowrap border-b-2 -mb-px transition-all
                             ${activeTab === i
                               ? 'border-gray-900 text-gray-900'
-                              : 'border-transparent text-gray-400 hover:text-gray-700'}`}
-              >
+                              : 'border-transparent text-gray-400 hover:text-gray-700'}`}>
                 {tab.label}
               </button>
             ))}
           </div>
 
-          {/* Tab content */}
           {TABS.map((tab, i) => (
-            <div key={tab.label}
-              className={`transition-opacity duration-300 ${activeTab === i ? 'block' : 'hidden'}`}>
+            <div key={tab.label} className={`transition-opacity duration-300 ${activeTab === i ? 'block' : 'hidden'}`}>
               <div className="flex flex-col md:flex-row gap-12 items-center">
                 <div className="md:w-1/2">
                   <h3 className="text-2xl font-bold text-gray-900 mb-4">{tab.heading}</h3>
@@ -594,7 +472,6 @@ export default function LandingPage() {
                   </button>
                 </div>
 
-                {/* Visual mockup */}
                 <div className="md:w-1/2 flex justify-center">
                   <div className="bg-gray-50 rounded-2xl p-6 w-full max-w-sm border border-gray-100 shadow-lg">
                     <div className="flex items-center gap-1.5 mb-4">
@@ -633,18 +510,9 @@ export default function LandingPage() {
           </h2>
           <div className="grid md:grid-cols-3 gap-6 mb-10">
             {[
-              {
-                title: 'PDF, Email & E-Sign — one platform',
-                desc:  'Stop switching between tools. Create your document, send it for signature, fire the confirmation email — all in one place.',
-              },
-              {
-                title: 'Feature access per organisation',
-                desc:  'Assign exactly the modules each client needs. Users only ever see what their organisation is licensed for, keeping the UI clean.',
-              },
-              {
-                title: 'Full audit trail, role-scoped',
-                desc:  'Every create, update, send and sign is logged with before/after details. Visibility scales automatically to each user\'s role.',
-              },
+              { title: 'PDF, Email, E-Sign & Analytics — one platform', desc: 'Stop switching between tools. Create your document, send it for signature, fire the confirmation email, then track conversion rates — all in one place.' },
+              { title: 'Feature access per organisation', desc: 'Assign exactly the modules each client needs. Users only ever see what their organisation is licensed for, keeping the UI clean and focused.' },
+              { title: 'Full audit trail, role-scoped', desc: 'Every create, update, send and sign is logged with before/after details. Visibility scales automatically to each user\'s role.' },
             ].map(item => (
               <div key={item.title}
                 className="flex gap-4 bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
@@ -680,7 +548,7 @@ export default function LandingPage() {
             Everything you need to automate documents
           </h2>
           <p className="text-gray-500 text-center max-w-2xl mx-auto mb-14">
-            Eight capabilities, one platform — from first draft to signed delivery.
+            Twelve capabilities, one platform — from first draft to analytics dashboard.
           </p>
           <div className="grid md:grid-cols-4 gap-5">
             {FEATURE_GRID.map(f => (
@@ -724,50 +592,17 @@ export default function LandingPage() {
           </p>
           <div className="grid md:grid-cols-3 gap-4">
             {[
-              {
-                role: 'Org Admin',
-                badge: 'bg-violet-100 text-violet-700',
-                ring: 'border-violet-200',
-                icon: '🏢',
-                perms: [
-                  'Manage users in their org',
-                  'Access all org templates',
-                  'View full org audit log',
-                  'All licensed feature access',
-                ],
-              },
-              {
-                role: 'Admin',
-                badge: 'bg-sky-100 text-sky-700',
-                ring: 'border-sky-200',
-                icon: '⚙️',
-                perms: [
-                  'Manage Admin & User members',
-                  'Create / edit / delete templates',
-                  'View Admin + User audit log',
-                  'All licensed feature access',
-                ],
-              },
-              {
-                role: 'User',
-                badge: 'bg-gray-100 text-gray-600',
-                ring: 'border-gray-200',
-                icon: '👤',
-                perms: [
-                  'Create & edit own templates',
-                  'Cannot delete templates',
-                  'View own audit activity only',
-                  'Licensed features only',
-                ],
-              },
+              { role: 'Org Admin', badge: 'bg-violet-100 text-violet-700', ring: 'border-violet-200', icon: '🏢',
+                perms: ['Manage users in their org', 'Access all org templates', 'View full org audit log', 'All licensed feature access'] },
+              { role: 'Admin', badge: 'bg-sky-100 text-sky-700', ring: 'border-sky-200', icon: '⚙️',
+                perms: ['Manage Admin & User members', 'Create / edit / delete templates', 'View Admin + User audit log', 'All licensed feature access'] },
+              { role: 'User', badge: 'bg-gray-100 text-gray-600', ring: 'border-gray-200', icon: '👤',
+                perms: ['Create & edit own templates', 'Cannot delete templates', 'View own audit activity only', 'Licensed features only'] },
             ].map(r => (
-              <div key={r.role}
-                className={`rounded-2xl p-5 border-2 ${r.ring} bg-white hover:shadow-md transition-all`}>
+              <div key={r.role} className={`rounded-2xl p-5 border-2 ${r.ring} bg-white hover:shadow-md transition-all`}>
                 <div className="flex items-center gap-2 mb-4">
                   <span className="text-xl">{r.icon}</span>
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${r.badge}`}>
-                    {r.role}
-                  </span>
+                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${r.badge}`}>{r.role}</span>
                 </div>
                 <ul className="space-y-2">
                   {r.perms.map(p => (
@@ -785,6 +620,144 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ══ PRICING ═══════════════════════════════════════════════════════════ */}
+      <section ref={pricingRef} className="py-24 bg-[#f5f4f0]">
+        <div className="max-w-7xl mx-auto px-6">
+          <p className="text-center text-xs font-bold uppercase tracking-widest text-indigo-500 mb-3">
+            SIMPLE, TRANSPARENT PRICING
+          </p>
+          <h2 className="text-3xl font-extrabold text-gray-900 text-center mb-3">
+            Start free. Scale when you need to.
+          </h2>
+          <p className="text-gray-500 text-center max-w-xl mx-auto mb-4">
+            All plans include core document automation. Pro is free during our beta period.
+          </p>
+
+          {/* Annual / monthly toggle */}
+          <div className="flex items-center justify-center gap-3 mb-10">
+            <span className={`text-sm font-semibold ${!annual ? 'text-gray-900' : 'text-gray-400'}`}>Monthly</span>
+            <button onClick={() => setAnnual(a => !a)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors
+                ${annual ? 'bg-indigo-600' : 'bg-gray-200'}`}>
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform
+                ${annual ? 'translate-x-6' : 'translate-x-1'}`}/>
+            </button>
+            <span className={`text-sm font-semibold ${annual ? 'text-gray-900' : 'text-gray-400'}`}>
+              Annual
+              <span className="ml-1.5 text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">
+                Save 20%
+              </span>
+            </span>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6 items-stretch">
+            {PLANS.map(plan => (
+              <div key={plan.name}
+                className={`relative rounded-2xl p-8 flex flex-col border-2 transition-all
+                  ${plan.highlight
+                    ? 'border-indigo-500 bg-white shadow-2xl shadow-indigo-500/10'
+                    : 'border-gray-200 bg-white shadow-sm hover:shadow-md'}`}>
+
+                {plan.highlight && (
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                    <span className="bg-indigo-600 text-white text-[11px] font-bold px-3 py-1 rounded-full whitespace-nowrap">
+                      Most Popular
+                    </span>
+                  </div>
+                )}
+
+                {/* Plan header */}
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <h3 className="text-lg font-extrabold text-gray-900">{plan.name}</h3>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${plan.badgeColor}`}>
+                      {plan.badge}
+                    </span>
+                  </div>
+
+                  <div className="flex items-end gap-1 mb-2">
+                    <span className="text-4xl font-extrabold text-gray-900">
+                      {plan.price === 'Custom' ? 'Custom' :
+                        plan.price === '$0' ? '$0' :
+                        annual ? `$${Math.round(parseInt(plan.price.replace('$', '')) * 0.8)}` :
+                        plan.price}
+                    </span>
+                    {plan.price !== 'Custom' && plan.price !== '$0' && (
+                      <span className="text-gray-400 text-sm mb-1">{annual ? '/mo, billed annually' : plan.period}</span>
+                    )}
+                    {plan.price === '$0' && (
+                      <span className="text-gray-400 text-sm mb-1">forever</span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-500 leading-relaxed">{plan.desc}</p>
+                </div>
+
+                {/* CTA */}
+                <button onClick={() => navigate(plan.name === 'Enterprise' ? '#' : '/get-started')}
+                  className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all mb-6 ${plan.ctaStyle}`}>
+                  {plan.cta}
+                </button>
+
+                {/* Features list */}
+                <ul className="space-y-3 flex-1">
+                  {plan.features.map(f => (
+                    <li key={f.text} className="flex items-start gap-2.5">
+                      <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 mt-0.5
+                        ${f.included
+                          ? plan.highlight ? 'bg-indigo-600' : 'bg-gray-900'
+                          : 'bg-gray-100'}`}>
+                        {f.included ? (
+                          <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/>
+                          </svg>
+                        ) : (
+                          <svg className="w-2.5 h-2.5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12"/>
+                          </svg>
+                        )}
+                      </div>
+                      <span className={`text-xs ${f.included ? 'text-gray-700' : 'text-gray-400 line-through'}`}>
+                        {f.text}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+
+          {/* Billing note */}
+          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-6 text-xs text-gray-500">
+            {[
+              { icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z', text: 'No credit card required for Starter' },
+              { icon: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15', text: 'Cancel or change plan anytime' },
+              { icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z', text: 'Secure billing via Stripe' },
+            ].map(item => (
+              <div key={item.text} className="flex items-center gap-1.5">
+                <svg className="w-4 h-4 text-indigo-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon}/>
+                </svg>
+                {item.text}
+              </div>
+            ))}
+          </div>
+
+          {/* FAQ-style billing info */}
+          <div className="mt-14 grid md:grid-cols-3 gap-6">
+            {[
+              { q: 'What counts as a document?', a: 'Any E-Sign document you create and send counts toward your monthly limit. Drafts that are never sent do not count.' },
+              { q: 'Can I upgrade or downgrade?', a: 'Yes — upgrades take effect immediately; downgrades take effect at the start of your next billing cycle. Your data is never deleted.' },
+              { q: 'Is there a free trial for Pro?', a: 'Pro is completely free during our beta. After the beta period ends you will be given 30 days notice before any charges begin.' },
+            ].map(item => (
+              <div key={item.q} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                <p className="text-sm font-bold text-gray-900 mb-2">{item.q}</p>
+                <p className="text-xs text-gray-500 leading-relaxed">{item.a}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ══ CTA BANNER ══════════════════════════════════════════════════════ */}
       <section className="py-20 bg-gray-900">
         <div className="max-w-3xl mx-auto px-6 text-center">
@@ -792,10 +765,10 @@ export default function LandingPage() {
             <BraiLogo size={48} />
           </div>
           <h2 className="text-4xl font-extrabold text-white mb-4 leading-tight">
-            The all-in-one platform for PDF, email &amp; e-sign automation
+            The all-in-one platform for PDF, email,<br/>e-sign &amp; analytics
           </h2>
           <p className="text-gray-400 mb-8 text-lg">
-            Start with our free plan — no credit card required.
+            Start with our free plan — no credit card required. Pro is free during beta.
           </p>
           <div className="flex items-center justify-center gap-3 flex-wrap">
             <button onClick={() => navigate('/get-started')}
@@ -803,10 +776,10 @@ export default function LandingPage() {
                          hover:bg-indigo-700 transition-all shadow-lg active:scale-95">
               Get started free
             </button>
-            <button
+            <button onClick={() => scrollTo(pricingRef)}
               className="px-7 py-3 bg-white/10 text-white font-semibold rounded-xl
                          border border-white/20 hover:bg-white/20 transition-all">
-              View demo
+              View pricing
             </button>
           </div>
         </div>
@@ -822,7 +795,7 @@ export default function LandingPage() {
                 <span className="font-extrabold text-white text-base">Braify</span>
               </div>
               <p className="text-xs text-gray-400 leading-relaxed mb-5">
-                Document automation for modern teams — create, send, sign.
+                Document automation for modern teams — create, send, sign and analyse.
               </p>
               <div className="flex gap-2">
                 {[
@@ -840,15 +813,13 @@ export default function LandingPage() {
             </div>
 
             {[
-              { heading: 'Product',   links: ['PDF Builder', 'Email Templates', 'E-Sign', 'Version History', 'Audit Log', 'Feature Access', 'API Access'] },
+              { heading: 'Product',   links: ['PDF Builder', 'Email Templates', 'E-Sign', 'Analytics', 'File Storage', 'API Keys', 'Version History', 'Audit Log', 'REST API'] },
               { heading: 'Solutions', links: ['Marketing', 'Finance', 'HR & Ops', 'Enterprise', 'Agencies'] },
               { heading: 'Resources', links: ['Documentation', 'Blog', 'Community', 'Changelog', 'Status'] },
               { heading: 'Company',   links: ['About Us', 'Careers', 'Privacy Policy', 'Terms of Use', 'Contact'] },
             ].map(col => (
               <div key={col.heading}>
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">
-                  {col.heading}
-                </p>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">{col.heading}</p>
                 <ul className="space-y-2.5">
                   {col.links.map(l => (
                     <li key={l}>
@@ -861,9 +832,7 @@ export default function LandingPage() {
           </div>
 
           <div className="border-t border-white/5 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-xs text-gray-500">
-              © {new Date().getFullYear()} Braify. All rights reserved.
-            </p>
+            <p className="text-xs text-gray-500">© {new Date().getFullYear()} Braify. All rights reserved.</p>
             <div className="flex gap-5">
               {['Privacy', 'Terms', 'Cookies'].map(l => (
                 <a key={l} href="#" className="text-xs text-gray-500 hover:text-gray-300 transition-colors">{l}</a>

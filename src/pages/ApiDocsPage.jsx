@@ -32,7 +32,7 @@ const API_GROUPS = [
   {
     id:    'organizations',
     label: 'Organization Management',
-    desc:  'Organizations · Branding · Quotas · Template Sharing',
+    desc:  'Organizations · Settings · Quotas · Template Sharing',
     url:   `${BACKEND_ORIGIN}/v3/api-docs/organizations`,
     color: 'indigo',
   },
@@ -56,6 +56,13 @@ const API_GROUPS = [
     desc:  'Creator · Client signing · Public verification',
     url:   `${BACKEND_ORIGIN}/v3/api-docs/esign`,
     color: 'emerald',
+  },
+  {
+    id:    'file-storage',
+    label: 'File Storage',
+    desc:  'Upload · Download · List files (API key)',
+    url:   `${BACKEND_ORIGIN}/v3/api-docs/file-storage`,
+    color: 'amber',
   },
   {
     id:    'all',
@@ -86,6 +93,11 @@ const COLOR_MAP = {
     active:   'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300',
     inactive: 'border-gray-200 dark:border-gray-700 hover:border-emerald-300 text-gray-600 dark:text-gray-400',
     dot:      'bg-emerald-500',
+  },
+  amber: {
+    active:   'border-amber-500 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300',
+    inactive: 'border-gray-200 dark:border-gray-700 hover:border-amber-300 text-gray-600 dark:text-gray-400',
+    dot:      'bg-amber-500',
   },
   gray: {
     active:   'border-gray-500 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200',
