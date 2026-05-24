@@ -5,6 +5,7 @@ import { useAuth, ROLES } from '../../context/AuthContext'
 import { FEATURES } from '../../config/features'
 import { getPendingOnboardingCount } from '../../services/api'
 import CommandPalette, { useCommandPalette } from '../ui/CommandPalette'
+import { BraiLogo } from './PublicNavbar'
 
 /* ─────────────────────────────────────────────
    Nav structure — REAL ITEMS ONLY
@@ -183,7 +184,12 @@ export default function Sidebar() {
       >
         {/* ── Brand + collapse ── */}
         {collapsed ? (
-          <div className="flex items-center justify-center py-4 border-b border-ink-7 dark:border-sidebar-border shrink-0">
+          <div className="flex flex-col items-center gap-2 py-3 border-b border-ink-7 dark:border-sidebar-border shrink-0">
+            <Tip label="Home">
+              <button onClick={() => navigate('/')} className="hover:opacity-80 transition-opacity">
+                <BraiLogo size={32} />
+              </button>
+            </Tip>
             <Tip label="Expand sidebar">
               <button
                 onClick={() => setCollapsed(false)}
@@ -204,11 +210,10 @@ export default function Sidebar() {
           <div className="flex items-center gap-2.5 px-4 py-4 border-b border-ink-7 dark:border-sidebar-border shrink-0">
             <button
               onClick={() => navigate('/')}
-              className="w-8 h-8 rounded-input bg-brand flex items-center justify-center shrink-0
-                         hover:bg-brand-hover transition-colors duration-200"
+              className="shrink-0 hover:opacity-80 transition-opacity"
               title="Home"
             >
-              <span className="text-white text-sm font-bold">B</span>
+              <BraiLogo size={30} />
             </button>
             <span className="flex-1 font-semibold text-ink dark:text-white tracking-tight">
               Braify

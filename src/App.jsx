@@ -41,6 +41,7 @@ import ApiKeysPage           from './pages/ApiKeysPage'
 import FilesPage             from './pages/FilesPage'
 import FeatureDetailPage     from './pages/FeatureDetailPage'
 import PageTransition        from './components/ui/PageTransition'
+import TitleManager          from './components/ui/TitleManager'
 
 /**
  * Smart router for /esign/:id
@@ -201,6 +202,7 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
+      <TitleManager />
       <ToastProvider>
         <AuthProvider>
           <AppRoutes />

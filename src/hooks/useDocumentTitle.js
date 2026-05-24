@@ -1,15 +1,14 @@
 import { useEffect } from 'react'
 
-const APP_NAME = 'PDF Builder'
+const APP = 'Braify'
 
 /**
- * Sets document.title to "<section> | PDF Builder"
- * Pass `null` or `undefined` to show just "PDF Builder".
+ * Sets document.title to "<section> — Braify".
+ * Pass `null` or `undefined` to show just "Braify".
  */
 export default function useDocumentTitle(section) {
   useEffect(() => {
-    document.title = section ? `${section} | ${APP_NAME}` : APP_NAME
-    // Restore to app name when the component unmounts
-    return () => { document.title = APP_NAME }
+    document.title = section ? `${section} — ${APP}` : APP
+    return () => { document.title = APP }
   }, [section])
 }
