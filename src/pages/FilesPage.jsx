@@ -537,7 +537,31 @@ function Pagination({ data, page, onPage }) {
 
 // ── Shared: File content grid/table ──────────────────────────────────────────
 
-function FileContent({ data, view, onDownload, onDelete, showOrg, orgNames }) {
+function SortTh({ label, field, sortBy, sortDir, onSort, className = '' }) {
+  const active = sortBy === field
+  return (
+    <th
+      onClick={() => onSort(active && sortDir === 'ASC' ? `${field}_DESC` : `${field}_ASC`)}
+      className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider whitespace-nowrap cursor-pointer select-none
+                  text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors ${className}`}
+    >
+      <span className="flex items-center gap-1.5">
+        {label}
+        {active ? (
+          sortDir === 'ASC'
+            ? <svg className="w-3 h-3 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7"/></svg>
+            : <svg className="w-3 h-3 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7"/></svg>
+        ) : (
+          <svg className="w-3 h-3 opacity-25" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
+          </svg>
+        )}
+      </span>
+    </th>
+  )
+}
+
+function FileContent({ data, view, onDownload, onDelete, showOrg, orgNames, sortBy, sortDir, onSort }) {
   if (!data || data.files.length === 0) return null
 
   if (view === 'grid') {
@@ -550,16 +574,38 @@ function FileContent({ data, view, onDownload, onDelete, showOrg, orgNames }) {
     )
   }
 
-  const headers = ['File', ...(showOrg ? ['Organisation'] : []), 'Size', 'Type', 'Cloud', 'Folder', 'Uploaded by', 'Date', 'Status', '']
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead>
             <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40">
-              {headers.map(h => (
-                <th key={h} className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
-              ))}
+              <th className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                {onSort ? (
+                  <span className="flex items-center gap-1.5 cursor-pointer select-none hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+                    onClick={() => onSort(sortBy === 'originalFilename' && sortDir === 'ASC' ? 'originalFilename_DESC' : 'originalFilename_ASC')}>
+                    File
+                    {sortBy === 'originalFilename' ? (
+                      sortDir === 'ASC'
+                        ? <svg className="w-3 h-3 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7"/></svg>
+                        : <svg className="w-3 h-3 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7"/></svg>
+                    ) : <svg className="w-3 h-3 opacity-25" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>}
+                  </span>
+                ) : 'File'}
+              </th>
+              {showOrg && <th className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Organisation</th>}
+              {onSort ? (
+                <SortTh label="Size"   field="fileSizeBytes"     sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              ) : <th className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Size</th>}
+              <th className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Type</th>
+              <th className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Cloud</th>
+              <th className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Folder</th>
+              <th className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Uploaded by</th>
+              {onSort ? (
+                <SortTh label="Date" field="createdAt" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+              ) : <th className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Date</th>}
+              <th className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Status</th>
+              <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
@@ -795,7 +841,9 @@ function AdminFilesView() {
         </div>
       ) : (
         <FileContent data={data} view={view} showOrg orgNames={orgNames}
-          onDownload={null} onDelete={null} />
+          onDownload={null} onDelete={null}
+          sortBy={sortBy} sortDir={sortDir}
+          onSort={key => { setSortKey(key); setPage(0) }} />
       )}
 
       <Pagination data={data} page={page} onPage={fetchFiles} />
@@ -959,7 +1007,9 @@ function OrgFilesView() {
         </div>
       ) : (
         <FileContent data={data} view={view} showOrg={false}
-          onDownload={handleDownload} onDelete={handleDelete} />
+          onDownload={handleDownload} onDelete={handleDelete}
+          sortBy={sortBy} sortDir={sortDir}
+          onSort={key => { setSortKey(key); setPage(0) }} />
       )}
 
       <Pagination data={data} page={page} onPage={fetchFiles} />

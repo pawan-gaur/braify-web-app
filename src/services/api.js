@@ -152,8 +152,15 @@ export const uploadAvatar    = (avatar)  => http.post('/profile/me/avatar', { av
 export const getMyAuditLog   = ()        => http.get('/profile/me/audit').then(r => r.data)
 
 // ── E-Sign (Creator) ───────────────────────────────────────
+export const esignBulkCreate = (documents, sendImmediately = true, label) =>
+  http.post('/esign/documents/bulk', { documents, sendImmediately, label }).then(r => r.data)
+
 export const esignCreateDocument  = (payload)              => http.post('/esign/documents', payload).then(r => r.data)
-export const esignListDocuments   = ()                     => http.get('/esign/documents').then(r => r.data)
+export const esignListDocuments   = ({ page = 0, size = 20, status } = {}) => {
+  const params = new URLSearchParams({ page, size })
+  if (status) params.set('status', status)
+  return http.get(`/esign/documents?${params}`).then(r => r.data)
+}
 export const esignGetDocument     = (id)                   => http.get(`/esign/documents/${id}`).then(r => r.data)
 export const esignSaveFields      = (id, fields)           => http.put(`/esign/documents/${id}/fields`, fields).then(r => r.data)
 export const esignSendDocument    = (id, days = 7)         => http.post(`/esign/documents/${id}/send?tokenValidDays=${days}`).then(r => r.data)
@@ -161,6 +168,18 @@ export const esignCancelDocument  = (id)                   => http.post(`/esign/
 export const esignResendDocument  = (id, days = 7)         => http.post(`/esign/documents/${id}/resend?tokenValidDays=${days}`).then(r => r.data)
 export const esignGetAudit        = (id)                   => http.get(`/esign/documents/${id}/audit`).then(r => r.data)
 export const esignDownloadSigned  = (id)                   => http.get(`/esign/documents/${id}/signed-pdf`, { responseType: 'blob' }).then(r => r.data)
+
+// ── E-Sign Bulk Batches ────────────────────────────────────
+export const esignListBatches     = ({ page = 0, size = 20 } = {}) =>
+  http.get(`/esign/batches?page=${page}&size=${size}`).then(r => r.data)
+export const esignGetBatch        = (batchId)                       =>
+  http.get(`/esign/batches/${batchId}`).then(r => r.data)
+export const esignGetBatchDocuments = (batchId, { page = 0, size = 20 } = {}) =>
+  http.get(`/esign/batches/${batchId}/documents?page=${page}&size=${size}`).then(r => r.data)
+export const esignInitBatch       = (label, totalRequested)         =>
+  http.post('/esign/batches/init', { label, totalRequested }).then(r => r.data)
+export const esignFinalizeBatch   = (batchId, totalCreated, totalSent, totalFailed) =>
+  http.patch(`/esign/batches/${batchId}/finalize`, { totalCreated, totalSent, totalFailed }).then(r => r.data)
 
 // ── E-Sign (Client — uses signing JWT directly in header) ──
 export const esignOpenDocument    = (token)                => http.get(`/esign/sign/${token}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data)
@@ -217,6 +236,22 @@ export const previewPdfBlob = async (templateId, data) => {
     { responseType: 'blob' }
   )
   return URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }))
+}
+
+/** Same as previewPdfBlob but returns a base64 data-URL instead of an object URL.
+ *  Used by the Bulk E-Sign flow to embed the generated PDF into each document. */
+export const generatePdfAsBase64 = async (templateId, data) => {
+  const response = await http.post(
+    '/preview-pdf',
+    { templateId, data },
+    { responseType: 'blob' }
+  )
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload  = e => resolve(e.target.result)
+    reader.onerror = reject
+    reader.readAsDataURL(response.data)
+  })
 }
 
 // ── API Keys ───────────────────────────────────────────────────

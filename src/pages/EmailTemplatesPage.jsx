@@ -16,6 +16,60 @@ const CRUMBS = [
   { label: 'Email Templates' },
 ]
 
+function CopyIdButton({ id }) {
+  const [copied, setCopied] = useState(false)
+  function handleCopy(e) {
+    e.stopPropagation()
+    navigator.clipboard.writeText(id).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    })
+  }
+  return (
+    <button
+      onClick={handleCopy}
+      title={copied ? 'Copied!' : 'Copy full ID'}
+      className="p-0.5 rounded text-gray-300 hover:text-sky-500 dark:hover:text-sky-400 transition-colors shrink-0"
+    >
+      {copied ? (
+        <svg className="w-3 h-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/>
+        </svg>
+      ) : (
+        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+        </svg>
+      )}
+    </button>
+  )
+}
+
+function SortTh({ label, field, sortKey, onSort }) {
+  const [f, d] = (sortKey || '').split('_')
+  const active = f === field
+  return (
+    <th
+      onClick={() => onSort(active && d === 'asc' ? `${field}_desc` : `${field}_asc`)}
+      className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide cursor-pointer select-none
+                 text-gray-500 dark:text-gray-400 hover:text-sky-600 dark:hover:text-sky-400 transition-colors"
+    >
+      <span className="flex items-center gap-1.5">
+        {label}
+        {active ? (
+          d === 'asc'
+            ? <svg className="w-3 h-3 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7"/></svg>
+            : <svg className="w-3 h-3 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7"/></svg>
+        ) : (
+          <svg className="w-3 h-3 opacity-25" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
+          </svg>
+        )}
+      </span>
+    </th>
+  )
+}
+
 export default function EmailTemplatesPage() {
   useDocumentTitle('Email Templates')
   const navigate = useNavigate()
@@ -32,6 +86,8 @@ export default function EmailTemplatesPage() {
   const [versionTemplate, setVersionTemplate] = useState(null)
   const [previewTemplate, setPreviewTemplate] = useState(null)
   const [sendTemplate,    setSendTemplate]    = useState(null)
+
+  const [tableSortKey, setTableSortKey] = useState('updatedAt_desc')
 
   const load = useCallback(() => {
     setLoading(true)
@@ -85,6 +141,15 @@ export default function EmailTemplatesPage() {
     }
     return true
   })
+
+  const tableSorted = useMemo(() => {
+    const [field, dir] = tableSortKey.split('_')
+    return [...visibleTemplates].sort((a, b) => {
+      const av = field === 'name' ? (a.name || '') : field === 'subject' ? (a.subject || '') : (a.updatedAt || '')
+      const bv = field === 'name' ? (b.name || '') : field === 'subject' ? (b.subject || '') : (b.updatedAt || '')
+      return dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av)
+    })
+  }, [visibleTemplates, tableSortKey])
 
   /* Navigate to builder with a library template pre-loaded */
   const handleLibrarySelect = (libTmpl) => {
@@ -247,21 +312,60 @@ export default function EmailTemplatesPage() {
         </div>
       ) : view === 'table' ? (
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
+
+          {/* ── Table Toolbar ── */}
+          <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-900/30">
+            <select
+              value={tableSortKey}
+              onChange={e => setTableSortKey(e.target.value)}
+              className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-600
+                         bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300
+                         focus:outline-none focus:ring-2 focus:ring-sky-400"
+            >
+              <option value="updatedAt_desc">Updated: Newest</option>
+              <option value="updatedAt_asc">Updated: Oldest</option>
+              <option value="name_asc">Name: A → Z</option>
+              <option value="name_desc">Name: Z → A</option>
+              <option value="subject_asc">Subject: A → Z</option>
+              <option value="subject_desc">Subject: Z → A</option>
+            </select>
+            <span className="ml-auto text-xs text-gray-400">
+              {tableSorted.length} template{tableSorted.length !== 1 ? 's' : ''}
+              {tableSorted.length !== templates.length && ` (filtered from ${templates.length})`}
+            </span>
+          </div>
+
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
               <tr>
-                {['Name', 'Subject', 'From', 'Placeholders', 'Updated', ''].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                    {h}
-                  </th>
-                ))}
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">ID</th>
+                <SortTh label="Name"    field="name"      sortKey={tableSortKey} onSort={setTableSortKey} />
+                <SortTh label="Subject" field="subject"   sortKey={tableSortKey} onSort={setTableSortKey} />
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">From</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Placeholders</th>
+                <SortTh label="Updated" field="updatedAt" sortKey={tableSortKey} onSort={setTableSortKey} />
+                <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-              {visibleTemplates.map(t => {
+              {tableSorted.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="text-center py-12 text-sm text-gray-400 dark:text-gray-500">
+                    No templates match your filters.
+                  </td>
+                </tr>
+              ) : tableSorted.map(t => {
                 const date = fmtDate(t.updatedAt)
                 return (
                   <tr key={t.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-md whitespace-nowrap">
+                          …{t.id.slice(-6)}
+                        </span>
+                        <CopyIdButton id={t.id} />
+                      </div>
+                    </td>
                     <td className="px-4 py-3.5">
                       <p className="font-semibold text-gray-900 dark:text-white text-sm">{t.name}</p>
                     </td>
@@ -333,7 +437,8 @@ export default function EmailTemplatesPage() {
             </tbody>
           </table>
           <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-400">
-            {visibleTemplates.length} template{visibleTemplates.length !== 1 ? 's' : ''}
+            {tableSorted.length} template{tableSorted.length !== 1 ? 's' : ''}
+            {tableSorted.length !== templates.length && ` (filtered from ${templates.length})`}
           </div>
         </div>
       ) : (
@@ -474,6 +579,13 @@ function EmailTemplateCard({ template, onEdit, onDelete = null, onVersions, onPr
               </span>
             )}
           </div>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <span className="font-mono text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-md whitespace-nowrap">
+            …{template.id.slice(-6)}
+          </span>
+          <CopyIdButton id={template.id} />
         </div>
 
         {/* Placeholder chips */}
