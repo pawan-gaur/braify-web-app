@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as XLSX from 'xlsx'
-import { esignCreateDocument, esignSaveFields, esignSendDocument, esignInitBatch, esignFinalizeBatch, getTemplates, generatePdfAsBase64 } from '../services/api'
+import { esignCreateDocument, esignSaveFields, esignSendDocument, esignInitBatch, esignFinalizeBatch, getTemplates, generatePdfAsBase64, getEmailTemplates } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 
@@ -218,6 +218,14 @@ export default function ESignBulkPage() {
   const bulkDragRef    = useRef(null)   // sync ref so mousemove closure is stable
   const didDragRef     = useRef(false)  // prevents canvas click from placing after a drag
 
+  /* ── Email Template (optional — Step 1) ─────────────────────────── */
+  const [emailTemplates,          setEmailTemplates]          = useState([])
+  const [emailTemplatesLoading,   setEmailTemplatesLoading]   = useState(false)
+  const [emailTemplateSearch,     setEmailTemplateSearch]     = useState('')
+  const [selectedEmailTemplateId, setSelectedEmailTemplateId] = useState('')
+  const [selectedEmailTemplate,   setSelectedEmailTemplate]   = useState(null)
+  const [emailPickerOpen,         setEmailPickerOpen]         = useState(false)
+
   /* ── Step 2 — Column mapping ─────────────────────────────────────── */
   const [mapping, setMapping] = useState({ title: '', clientEmail: '', clientName: '', tokenValidDays: '' })
 
@@ -227,7 +235,7 @@ export default function ESignBulkPage() {
   const [processDone, setProcessDone] = useState(false)
   const cancelRef = useRef(false)
 
-  /* ── Load templates when mode switches to 'template' ─────────────── */
+  /* ── Load PDF templates when mode switches to 'template' ────────── */
   useEffect(() => {
     if (!enabledSources.template || templates.length > 0) return
     setTemplatesLoading(true)
@@ -236,6 +244,16 @@ export default function ESignBulkPage() {
       .catch(() => showToast('Failed to load PDF templates', 'error'))
       .finally(() => setTemplatesLoading(false))
   }, [enabledSources.template])
+
+  /* ── Load email templates when the picker is first opened ───────── */
+  useEffect(() => {
+    if (!emailPickerOpen || emailTemplates.length > 0) return
+    setEmailTemplatesLoading(true)
+    getEmailTemplates()
+      .then(setEmailTemplates)
+      .catch(() => showToast('Failed to load email templates', 'error'))
+      .finally(() => setEmailTemplatesLoading(false))
+  }, [emailPickerOpen])
 
   /* ── Computed preview rows (memoised) ────────────────────────────── */
   const previewRows = useMemo(() =>
@@ -540,13 +558,14 @@ export default function ESignBulkPage() {
       try {
         updateStatus(i, { docStatus: 'creating' })
         const doc = await esignCreateDocument({
-          title:          row.title,
-          sourceType:     'UPLOAD',
+          title:           row.title,
+          sourceType:      'UPLOAD',
           pdfBase64,
-          clientEmail:    row.clientEmail,
-          clientName:     row.clientName,
-          tokenValidDays: parseInt(row.tokenValidDays) || 7,
-          bulkBatchId:    batchId,
+          clientEmail:     row.clientEmail,
+          clientName:      row.clientName,
+          tokenValidDays:  parseInt(row.tokenValidDays) || 7,
+          bulkBatchId:     batchId,
+          emailTemplateId: selectedEmailTemplateId || undefined,
         })
         docId = doc.id
         totalCreated++
@@ -1049,6 +1068,124 @@ export default function ESignBulkPage() {
             </div>
           </div>
         )}
+
+        {/* ── Email Template (optional) ────────────────────────────── */}
+        <div className={`rounded-xl border-2 transition-colors
+          ${emailPickerOpen
+            ? 'border-purple-500 bg-purple-50/40 dark:bg-purple-900/10'
+            : 'border-gray-200 dark:border-gray-700'}`}>
+
+          {/* Toggle header */}
+          <button type="button" onClick={() => setEmailPickerOpen(o => !o)}
+            className="w-full flex items-center gap-4 p-4 text-left">
+            <span className="text-2xl">✉️</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                Email Template
+                <span className="ml-2 text-xs font-normal text-gray-400">(optional)</span>
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                {selectedEmailTemplate
+                  ? `Using: ${selectedEmailTemplate.name}`
+                  : 'Use a custom email template for all signing invitations in this batch'}
+              </p>
+            </div>
+            <div className={`w-11 h-6 rounded-full shrink-0 relative transition-colors
+                             ${emailPickerOpen ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-600'}`}>
+              <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform
+                               ${emailPickerOpen ? 'translate-x-5' : 'translate-x-0.5'}`} />
+            </div>
+          </button>
+
+          {/* Picker body */}
+          {emailPickerOpen && (
+            <div className="px-4 pb-5 border-t border-gray-200/70 dark:border-gray-700/60 pt-4 space-y-4">
+              {emailTemplatesLoading ? (
+                <div className="flex items-center justify-center py-10">
+                  <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mr-2"/>
+                  <span className="text-sm text-gray-500">Loading email templates…</span>
+                </div>
+              ) : emailTemplates.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="text-sm">No email templates found.</p>
+                  <a href="/email-templates" className="text-xs text-purple-600 hover:underline mt-1 inline-block">
+                    Create an email template first →
+                  </a>
+                </div>
+              ) : (
+                <>
+                  {/* None (default) option */}
+                  <button type="button"
+                    onClick={() => { setSelectedEmailTemplateId(''); setSelectedEmailTemplate(null) }}
+                    className={`w-full p-3 rounded-lg border-2 text-left transition-colors
+                      ${!selectedEmailTemplateId
+                        ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}`}>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Default invitation email</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Use the built-in invitation template for all rows</p>
+                  </button>
+
+                  <div className="relative">
+                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
+                    </svg>
+                    <input type="text" value={emailTemplateSearch}
+                      onChange={e => setEmailTemplateSearch(e.target.value)}
+                      placeholder="Search email templates…"
+                      className={`${INPUT} pl-9`} />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 max-h-52 overflow-y-auto pr-1">
+                    {emailTemplates
+                      .filter(t => !emailTemplateSearch || t.name?.toLowerCase().includes(emailTemplateSearch.toLowerCase()))
+                      .map(tpl => (
+                        <button key={tpl.id} type="button"
+                          onClick={() => { setSelectedEmailTemplateId(tpl.id); setSelectedEmailTemplate(tpl) }}
+                          className={`p-3 rounded-lg border-2 text-left transition-colors
+                            ${selectedEmailTemplateId === tpl.id
+                              ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
+                              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}`}>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{tpl.name}</p>
+                              <p className="text-xs text-gray-400 mt-0.5">
+                                {tpl.subject ? `Subject: ${tpl.subject}` : 'No subject set'}
+                              </p>
+                            </div>
+                            {selectedEmailTemplateId === tpl.id && (
+                              <svg className="w-4 h-4 text-purple-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/>
+                              </svg>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                  </div>
+
+                  {selectedEmailTemplate && (
+                    <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-2
+                                  bg-green-50 dark:bg-green-900/20 px-3 py-2 rounded-lg">
+                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/>
+                      </svg>
+                      Template "{selectedEmailTemplate.name}" will be used for all {excelRows.length} invitation{excelRows.length !== 1 ? 's' : ''}
+                    </p>
+                  )}
+
+                  <p className="text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20
+                                px-3 py-2 rounded-lg">
+                    Tip: Use <code className="font-mono">{'{{clientName}}'}</code>,{' '}
+                    <code className="font-mono">{'{{documentTitle}}'}</code>,{' '}
+                    <code className="font-mono">{'{{signingLink}}'}</code>, and{' '}
+                    <code className="font-mono">{'{{orgName}}'}</code> in your template.
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* ── Signature Field Placement ────────────────────────────── */}
         {(enabledSources.single || enabledSources.template) && (
