@@ -511,13 +511,14 @@ function DocumentsTab() {
  * `onBack` returns to the batch list.
  */
 function BatchDocumentsView({ batch, onBack }) {
-  const [data, setData]     = useState(null)
+  const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
-  const [page, setPage]     = useState(0)
-  const [size, setSize]     = useState(20)
-  const [search, setSearch] = useState('')
-  const navigate            = useNavigate()
-  const { showToast }       = useToast()
+  const [page, setPage]       = useState(0)
+  const [size, setSize]       = useState(20)
+  const [search, setSearch]   = useState('')
+  const [resending, setResending] = useState(null)   // docId currently being resent
+  const navigate              = useNavigate()
+  const { showToast }         = useToast()
 
   const fetchDocs = useCallback(() => {
     setLoading(true)
@@ -530,6 +531,32 @@ function BatchDocumentsView({ batch, onBack }) {
   useEffect(() => { fetchDocs() }, [fetchDocs])
 
   function applySize(v) { setSize(v); setPage(0) }
+
+  async function handleResend(id, e) {
+    e.stopPropagation()
+    if (!confirm('Resend the signing invitation email to this client?')) return
+    setResending(id)
+    try {
+      await esignResendDocument(id)
+      showToast('Signing invitation resent successfully', 'success')
+    } catch (err) {
+      showToast(err.message, 'error')
+    } finally {
+      setResending(null)
+    }
+  }
+
+  async function handleCancel(id, e) {
+    e.stopPropagation()
+    if (!confirm('Cancel this document? The client will no longer be able to sign it.')) return
+    try {
+      await esignCancelDocument(id)
+      fetchDocs()
+      showToast('Document cancelled', 'success')
+    } catch (err) {
+      showToast(err.message, 'error')
+    }
+  }
 
   const docs = data?.content ?? []
   const filtered = docs.filter(d => {
@@ -600,6 +627,7 @@ function BatchDocumentsView({ batch, onBack }) {
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {filtered.map(doc => {
                   const isTerminal = ['COMPLETED','CANCELLED','EXPIRED'].includes(doc.status)
+                  const canResend  = ['PENDING','IN_REVIEW'].includes(doc.status)
                   const href = isTerminal ? `/esign/${doc.id}/view` : `/esign/${doc.id}`
                   return (
                     <tr key={doc.id} onClick={() => navigate(href)}
@@ -628,14 +656,45 @@ function BatchDocumentsView({ batch, onBack }) {
                       </td>
                       <td className="px-4 py-3.5 text-sm text-gray-500 dark:text-gray-400">{fmtDate(doc.sentAt)}</td>
                       <td className="px-4 py-3.5 text-right">
-                        <button onClick={e => { e.stopPropagation(); navigate(href) }}
-                          className="p-1.5 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/30 text-gray-400 hover:text-purple-600 transition-colors"
-                          title={isTerminal ? 'View' : 'Edit'}>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                          </svg>
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
+                          {/* View / Edit */}
+                          <button onClick={() => navigate(href)}
+                            className="p-1.5 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/30 text-gray-400 hover:text-purple-600 transition-colors"
+                            title={isTerminal ? 'View' : 'Edit'}>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                          </button>
+
+                          {/* Resend — available while PENDING or IN_REVIEW */}
+                          {canResend && (
+                            <button
+                              onClick={e => handleResend(doc.id, e)}
+                              disabled={resending === doc.id}
+                              className="p-1.5 rounded-lg hover:bg-yellow-50 dark:hover:bg-yellow-900/30 text-gray-400 hover:text-yellow-600 transition-colors disabled:opacity-50"
+                              title="Resend signing invitation">
+                              {resending === doc.id
+                                ? <div className="w-4 h-4 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin"/>
+                                : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                  </svg>}
+                            </button>
+                          )}
+
+                          {/* Cancel — available for any non-terminal document */}
+                          {!isTerminal && (
+                            <button
+                              onClick={e => handleCancel(doc.id, e)}
+                              className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500 transition-colors"
+                              title="Cancel document">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
+                              </svg>
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   )
