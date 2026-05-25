@@ -4,137 +4,55 @@ import { useApp } from '../../context/AppContext'
 import { useAuth, ROLES } from '../../context/AuthContext'
 import { FEATURES } from '../../config/features'
 import { getPendingOnboardingCount } from '../../services/api'
+import CommandPalette, { useCommandPalette } from '../ui/CommandPalette'
+import { BraiLogo } from './PublicNavbar'
 
 /* ─────────────────────────────────────────────
-   Nav structure
-   real      → renders as <NavLink>
-   dummy     → renders as <button> with "Soon" chip
-   minRole   → only shown when user role >= this value
-   feature   → only shown when org has this feature enabled
-              (PLATFORM_ADMIN bypasses all feature checks)
+   Nav structure — REAL ITEMS ONLY
+   "Coming Soon" placeholders removed for a calmer sidebar.
 ───────────────────────────────────────────── */
 const NAV_SECTIONS = [
   {
     section: null,
     links: [
       {
-        to: '/', end: true, label: 'Dashboard',
+        to: '/dashboard', end: true, label: 'Dashboard',
         icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',
       },
     ],
   },
   {
-    section: 'PDF Templates',
-    feature: FEATURES.PDF_TEMPLATES,
+    section: 'Documents',
     links: [
       {
-        to: '/templates', end: true, label: 'PDF Templates',
+        to: '/templates', label: 'PDF Templates',
+        feature: FEATURES.PDF_TEMPLATES,
         icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
       },
       {
-        to: '/builder', label: 'New PDF Template',
-        icon: 'M12 4v16m8-8H4',
-      },
-      {
-        dummy: true, label: 'My Templates',
-        icon: 'M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4',
-      },
-      {
-        dummy: true, label: 'Favourites',
-        icon: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z',
-      },
-    ],
-  },
-  {
-    section: 'Email',
-    feature: FEATURES.EMAIL_TEMPLATES,
-    links: [
-      {
         to: '/email-templates', label: 'Email Templates',
+        feature: FEATURES.EMAIL_TEMPLATES,
         icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
       },
       {
-        to: '/email-builder', label: 'New Email',
-        icon: 'M12 4v16m8-8H4',
+        to: '/esign', end: true, label: 'E-Sign',
+        feature: FEATURES.E_SIGN,
+        icon: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z',
       },
       {
-        dummy: true, label: 'Send Email',
-        icon: 'M12 19l9 2-9-18-9 18 9-2zm0 0v-8',
-      },
-      {
-        dummy: true, label: 'Email Analytics',
-        icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
-      },
-    ],
-  },
-  {
-    section: 'E-Sign',
-    feature: FEATURES.E_SIGN,
-    links: [
-      {
-        to: '/esign', end: true, label: 'Documents',
-        icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
-      },
-      {
-        to: '/esign/new', label: 'New Document',
-        icon: 'M12 4v16m8-8H4',
-      },
-    ],
-  },
-  {
-    section: 'File Storage',
-    feature: FEATURES.FILE_STORAGE,
-    links: [
-      {
-        to: '/files', end: true, label: 'My Files',
+        to: '/files', end: true, label: 'Files',
+        feature: FEATURES.FILE_STORAGE,
         icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z',
       },
-    ],
-  },
-  {
-    section: 'Generate',
-    links: [
       {
         to: '/generate', label: 'Generate PDF',
+        feature: FEATURES.PDF_TEMPLATES,
         icon: 'M12 10v6m0 0l-3-3m3 3l3-3M3 15v4a2 2 0 002 2h14a2 2 0 002-2v-4M7 10l5-7 5 7',
       },
-      {
-        dummy: true, label: 'Batch Export',
-        icon: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12',
-      },
-      {
-        dummy: true, label: 'Schedule Export',
-        icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
-      },
     ],
   },
   {
-    section: 'Folders',
-    links: [
-      {
-        dummy: true, label: 'Marketing',
-        icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z',
-        dot: '#f59e0b',
-      },
-      {
-        dummy: true, label: 'Finance',
-        icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z',
-        dot: '#10b981',
-      },
-      {
-        dummy: true, label: 'HR Documents',
-        icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z',
-        dot: '#6366f1',
-      },
-      {
-        dummy: true, label: '+ New Folder',
-        icon: 'M12 4v16m8-8H4',
-        muted: true,
-      },
-    ],
-  },
-  {
-    section: 'Management',
+    section: 'Admin',
     minRole: ROLES.ADMIN,
     links: [
       {
@@ -143,7 +61,7 @@ const NAV_SECTIONS = [
         icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
       },
       {
-        to: '/onboarding-requests', label: 'Onboarding Requests',
+        to: '/onboarding-requests', label: 'Onboarding',
         minRole: ROLES.PLATFORM_ADMIN,
         pendingBadge: true,
         icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 8h6m-6 4h3',
@@ -154,20 +72,15 @@ const NAV_SECTIONS = [
         icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
       },
       {
-        to: '/sessions', label: 'Active Sessions',
+        to: '/sessions', label: 'Sessions',
         icon: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
       },
-    ],
-  },
-  {
-    section: 'Collaboration',
-    links: [
       {
-        to: '/shared-templates', label: 'Shared Templates',
+        to: '/shared-templates', label: 'Shared with us',
         icon: 'M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z',
       },
       {
-        to: '/usage', label: 'Usage & Quotas',
+        to: '/usage', label: 'Usage',
         icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
       },
     ],
@@ -176,7 +89,7 @@ const NAV_SECTIONS = [
     section: 'Settings',
     links: [
       {
-        to: '/settings/org-settings', label: 'Organization Settings',
+        to: '/settings/org-settings', label: 'Organization',
         minRole: ROLES.ADMIN,
         icon: 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01',
       },
@@ -193,14 +106,6 @@ const NAV_SECTIONS = [
       {
         to: '/audit-log', label: 'Audit Log',
         icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01',
-      },
-      {
-        to: '/profile', label: 'My Profile',
-        icon: 'M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zM19.121 17.804A9.001 9.001 0 0112 3a9 9 0 017.121 14.804z',
-      },
-      {
-        dummy: true, label: 'Help & Support',
-        icon: 'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
       },
     ],
   },
@@ -222,8 +127,8 @@ function Tip({ label, children }) {
     <div className="relative group/tip">
       {children}
       <span className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3
-                       whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-semibold
-                       bg-gray-900 text-white shadow-lg
+                       whitespace-nowrap rounded-chip px-2.5 py-1.5 text-xs font-semibold
+                       bg-ink text-white shadow-float
                        opacity-0 group-hover/tip:opacity-100
                        transition-opacity duration-150 z-[100]">
         {label}
@@ -239,6 +144,7 @@ export default function Sidebar() {
   const { user, hasFeature } = useAuth()
   const navigate = useNavigate()
   const [pendingOnboarding, setPendingOnboarding] = useState(0)
+  const palette = useCommandPalette()
 
   // Poll pending onboarding count for PLATFORM_ADMIN
   useEffect(() => {
@@ -253,233 +159,215 @@ export default function Sidebar() {
   }, [user?.role])
 
   const visibleSections = NAV_SECTIONS
-    // Gate by role
+    // Gate section by role
     .filter(s => !s.minRole || (ROLE_RANK[user?.role] ?? 0) >= (ROLE_RANK[s.minRole] ?? 0))
-    // Gate by feature (PLATFORM_ADMIN bypasses via hasFeature returning true)
-    .filter(s => !s.feature || hasFeature(s.feature))
     .map(s => ({
       ...s,
-      links: s.links.filter(l => !l.minRole || (ROLE_RANK[user?.role] ?? 0) >= (ROLE_RANK[l.minRole] ?? 0)),
+      links: s.links
+        // Gate link by role
+        .filter(l => !l.minRole || (ROLE_RANK[user?.role] ?? 0) >= (ROLE_RANK[l.minRole] ?? 0))
+        // Gate link by feature
+        .filter(l => !l.feature || hasFeature(l.feature)),
     }))
     .filter(s => s.links.length > 0)
 
-  const w = collapsed ? 'w-16' : 'w-56'
+  const w = collapsed ? 'w-16' : 'w-60'
 
   return (
-    <aside
-      className={`fixed left-0 top-0 h-screen ${w}
-                  bg-white    dark:bg-sidebar
-                  border-r border-gray-200 dark:border-sidebar-border
-                  flex flex-col z-50 shadow-sidebar
-                  transition-[width] duration-300 overflow-hidden`}
-    >
-      {/* ── Brand row ── */}
-      {collapsed ? (
-        <div className="flex items-center justify-center py-4
-                        border-b border-gray-200 dark:border-sidebar-border shrink-0">
-          <Tip label="Expand sidebar">
-            <button
-              onClick={() => setCollapsed(false)}
-              title="Expand sidebar"
-              className="w-9 h-9 flex items-center justify-center rounded-xl
-                         text-gray-400 dark:text-sidebar-muted
-                         hover:text-indigo-600 dark:hover:text-white
-                         hover:bg-indigo-50 dark:hover:bg-sidebar-hover
-                         transition-colors duration-150"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M13 5l7 7-7 7M5 5l7 7-7 7"/>
-              </svg>
-            </button>
-          </Tip>
-        </div>
-      ) : (
-        <div className="flex items-center gap-2 px-3 py-4
-                        border-b border-gray-200 dark:border-sidebar-border shrink-0">
-          {/* Logo */}
-          <button
-            onClick={() => navigate('/')}
-            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0
-                       shadow-glow-sm hover:shadow-glow hover:scale-105 transition-all duration-200"
-            style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}
-            title="Home"
-          >
-            <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-              <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
-            </svg>
-          </button>
-
-          {/* App name */}
-          <div className="flex-1 min-w-0">
-            <p className="text-gray-900 dark:text-white font-bold text-sm leading-tight truncate">
-              PDF Builder
-            </p>
-            <p className="text-gray-400 dark:text-sidebar-muted text-[10px] mt-0.5 truncate">
-              Template Studio
-            </p>
-          </div>
-
-          {/* Hamburger */}
-          <button
-            onClick={() => setCollapsed(true)}
-            title="Collapse sidebar"
-            className="w-7 h-7 flex items-center justify-center rounded-lg shrink-0
-                       text-gray-400 dark:text-sidebar-muted
-                       hover:text-indigo-600 dark:hover:text-white
-                       hover:bg-indigo-50 dark:hover:bg-sidebar-hover
-                       transition-colors duration-150"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M4 6h16M4 12h16M4 18h16"/>
-            </svg>
-          </button>
-        </div>
-      )}
-
-      {/* ── New Template CTA ── 
-      <div className={`px-3 pt-4 pb-2 shrink-0 ${collapsed ? 'flex justify-center' : ''}`}>
+    <>
+      <aside
+        className={`fixed left-0 top-0 h-screen ${w}
+                    bg-white dark:bg-sidebar
+                    border-r border-ink-7 dark:border-sidebar-border
+                    flex flex-col z-50
+                    transition-[width] duration-300 ease-spring overflow-hidden`}
+      >
+        {/* ── Brand + collapse ── */}
         {collapsed ? (
-          <Tip label="New PDF Template">
+          <div className="flex flex-col items-center gap-2 py-3 border-b border-ink-7 dark:border-sidebar-border shrink-0">
+            <Tip label="Home">
+              <button onClick={() => navigate('/')} className="hover:opacity-80 transition-opacity">
+                <BraiLogo size={32} />
+              </button>
+            </Tip>
+            <Tip label="Expand sidebar">
+              <button
+                onClick={() => setCollapsed(false)}
+                className="w-9 h-9 flex items-center justify-center rounded-input
+                           text-ink-3 dark:text-sidebar-muted
+                           hover:text-brand dark:hover:text-white
+                           hover:bg-brand-50 dark:hover:bg-sidebar-hover
+                           transition-colors duration-150"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M13 5l7 7-7 7M5 5l7 7-7 7"/>
+                </svg>
+              </button>
+            </Tip>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2.5 px-4 py-4 border-b border-ink-7 dark:border-sidebar-border shrink-0">
             <button
-              onClick={() => navigate('/builder')}
-              className="w-9 h-9 rounded-xl flex items-center justify-center
-                         text-white shadow-glow-sm hover:shadow-glow transition-all"
-              style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}
+              onClick={() => navigate('/')}
+              className="shrink-0 hover:opacity-80 transition-opacity"
+              title="Home"
+            >
+              <BraiLogo size={30} />
+            </button>
+            <span className="flex-1 font-semibold text-ink dark:text-white tracking-tight">
+              Braify
+            </span>
+            <button
+              onClick={() => setCollapsed(true)}
+              title="Collapse"
+              className="w-7 h-7 flex items-center justify-center rounded-chip shrink-0
+                         text-ink-4 hover:text-ink hover:bg-ink-8
+                         dark:text-sidebar-muted dark:hover:bg-sidebar-hover
+                         transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4"/>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"/>
               </svg>
             </button>
-          </Tip>
-        ) : (
-          <button
-            onClick={() => navigate('/builder')}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl
-                       text-white text-sm font-bold shadow-glow-sm hover:shadow-glow
-                       transition-all active:scale-95"
-            style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4"/>
-            </svg>
-            New PDF Template
-          </button>
-        )}
-      </div>
-	  */}
-
-      {/* ── Scrollable nav ── */}
-      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-2 px-2 space-y-1 sidebar-scroll">
-        {visibleSections.map(({ section, links }, si) => (
-          <div key={si} className={si > 0 ? 'pt-2' : ''}>
-            {/* Section header */}
-            {section && !collapsed && (
-              <p className="text-gray-400 dark:text-sidebar-label
-                            text-[9px] font-bold uppercase tracking-[0.18em]
-                            px-3 py-1.5 mb-0.5 select-none">
-                {section}
-              </p>
-            )}
-            {section && collapsed && (
-              <div className="my-1.5 mx-2 border-t border-gray-200 dark:border-sidebar-border/60" />
-            )}
-
-            <ul className="list-none m-0 p-0 space-y-0.5">
-              {links.map((link) =>
-                link.dummy
-                  ? <DummyItem key={link.label} link={link} collapsed={collapsed} />
-                  : <RealItem  key={link.to}    link={link} collapsed={collapsed}
-                               badge={link.pendingBadge ? pendingOnboarding : 0} />
-              )}
-            </ul>
           </div>
-        ))}
-      </nav>
+        )}
 
-      {/* ── Footer ── */}
-      <div className="px-3 py-3 border-t border-gray-200 dark:border-sidebar-border shrink-0">
-        {collapsed ? (
-          <Tip label="PDF Builder v1.0 Beta">
-            <div className="flex justify-center">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}>
-                <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" strokeWidth={2}>
-                  <circle cx="12" cy="12" r="3"/>
-                  <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+        {/* ── ⌘K Search trigger ── */}
+        <div className="px-3 pt-3 pb-1 shrink-0">
+          {collapsed ? (
+            <Tip label="Search (⌘K)">
+              <button
+                onClick={palette.openPalette}
+                className="w-9 h-9 mx-auto flex items-center justify-center rounded-input
+                           text-ink-3 hover:text-brand hover:bg-brand-50
+                           dark:text-sidebar-muted dark:hover:bg-sidebar-hover
+                           transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                 </svg>
-              </div>
-            </div>
-          </Tip>
-        ) : (
-          <div className="flex items-center gap-2 px-1">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-              style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' }}>
-              <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" strokeWidth={2}>
-                <circle cx="12" cy="12" r="3"/>
-                <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+              </button>
+            </Tip>
+          ) : (
+            <button
+              onClick={palette.openPalette}
+              className="group w-full flex items-center gap-2 px-2.5 py-2 rounded-input
+                         border border-ink-7 dark:border-sidebar-border
+                         bg-ink-9 dark:bg-sidebar-hover
+                         text-ink-4 dark:text-sidebar-muted
+                         hover:border-ink-6 hover:text-ink-3
+                         transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
               </svg>
+              <span className="flex-1 text-left text-[13px]">Search…</span>
+              <kbd className="kbd">⌘K</kbd>
+            </button>
+          )}
+        </div>
+
+        {/* ── Scrollable nav ── */}
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-2 space-y-2 sidebar-scroll">
+          {visibleSections.map(({ section, links }, si) => (
+            <div key={si}>
+              {section && !collapsed && (
+                <p className="text-ink-4 dark:text-sidebar-label
+                              text-[10px] font-semibold uppercase tracking-[0.12em]
+                              px-3 py-1.5 mb-0.5 select-none">
+                  {section}
+                </p>
+              )}
+              {section && collapsed && si > 0 && (
+                <div className="my-2 mx-3 border-t border-ink-7 dark:border-sidebar-border/60" />
+              )}
+
+              <ul className="list-none m-0 p-0 space-y-0.5">
+                {links.map((link) => (
+                  <RealItem
+                    key={link.to}
+                    link={link}
+                    collapsed={collapsed}
+                    badge={link.pendingBadge ? pendingOnboarding : 0}
+                  />
+                ))}
+              </ul>
             </div>
-            <div>
-              <p className="text-gray-800 dark:text-white text-[11px] font-semibold leading-tight">
-                PDF Builder
-              </p>
-              <p className="text-gray-400 dark:text-sidebar-muted text-[10px]">v1.0.0 Beta</p>
+          ))}
+        </nav>
+
+        {/* ── Footer — Profile pinned to bottom ── */}
+        <div className="border-t border-ink-7 dark:border-sidebar-border shrink-0">
+          <button
+            onClick={() => navigate('/profile')}
+            className={`group w-full flex items-center gap-2.5 px-3 py-3
+                        hover:bg-ink-9 dark:hover:bg-sidebar-hover transition-colors
+                        ${collapsed ? 'justify-center' : ''}`}
+          >
+            <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center shrink-0
+                            text-white text-xs font-bold shadow-soft">
+              {(user?.firstName?.[0] ?? '') + (user?.lastName?.[0] ?? '')}
             </div>
-          </div>
-        )}
-      </div>
-    </aside>
+            {!collapsed && (
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-[13px] font-semibold text-ink dark:text-white truncate leading-tight">
+                  {user?.firstName} {user?.lastName}
+                </p>
+                <p className="text-[11px] text-ink-4 dark:text-sidebar-muted truncate">
+                  {user?.role?.toLowerCase().replace('_', ' ')}
+                </p>
+              </div>
+            )}
+            {!collapsed && (
+              <svg className="w-4 h-4 text-ink-5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
+              </svg>
+            )}
+          </button>
+        </div>
+      </aside>
+
+      {/* ── Command Palette (global) ── */}
+      <CommandPalette open={palette.open} onClose={palette.close} />
+    </>
   )
 }
 
 /* ── Real NavLink item ── */
 function RealItem({ link, collapsed, badge = 0 }) {
-  const { to, end, label, icon, dot } = link
+  const { to, end, label, icon } = link
   const inner = ({ isActive }) => (
-    <span className={`flex items-center gap-3 px-2.5 py-2 rounded-xl text-[13px] font-semibold
-                      transition-all duration-200 w-full
+    <span className={`flex items-center gap-3 px-2.5 py-2 rounded-input text-[13px] font-medium
+                      transition-all duration-200 ease-spring w-full
                       ${isActive
-                        ? 'text-white shadow-glow-sm'
-                        : 'text-gray-600 dark:text-sidebar-muted hover:text-indigo-700 dark:hover:text-white hover:bg-indigo-50 dark:hover:bg-sidebar-hover'
+                        ? 'bg-brand text-white shadow-soft'
+                        : 'text-ink-2 hover:text-ink hover:bg-ink-9 dark:text-sidebar-muted dark:hover:text-white dark:hover:bg-sidebar-hover'
                       }
                       ${collapsed ? 'justify-center' : ''}`}
-      style={isActive ? { background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' } : {}}
     >
       <span className={`shrink-0 w-[18px] h-[18px] relative
-        ${isActive
-          ? 'text-white'
-          : 'text-gray-400 dark:text-sidebar-label group-hover:text-indigo-500 dark:group-hover:text-indigo-400'
-        }`}>
+        ${isActive ? 'text-white' : 'text-ink-4 dark:text-sidebar-label'}`}>
         <Icon d={icon} />
-        {dot && (
-          <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full
-                           border border-white dark:border-sidebar"
-            style={{ background: dot }} />
-        )}
-        {/* Pending count dot (collapsed mode) */}
         {collapsed && badge > 0 && (
           <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] px-0.5 rounded-full
-                           bg-amber-500 text-white text-[9px] font-bold flex items-center justify-center">
+                           bg-warning text-white text-[9px] font-bold flex items-center justify-center">
             {badge > 99 ? '99+' : badge}
           </span>
         )}
       </span>
       {!collapsed && <span className="flex-1 truncate">{label}</span>}
-      {/* Pending count pill (expanded mode) */}
       {!collapsed && badge > 0 && (
         <span className={`min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold
                           flex items-center justify-center shrink-0
-                          ${isActive ? 'bg-white/30 text-white' : 'bg-amber-500 text-white'}`}>
+                          ${isActive ? 'bg-white/30 text-white' : 'bg-warning text-white'}`}>
           {badge > 99 ? '99+' : badge}
         </span>
       )}
-      {!collapsed && isActive && badge === 0 && <span className="w-1.5 h-1.5 rounded-full bg-white/70 shrink-0" />}
     </span>
   )
 
@@ -494,49 +382,7 @@ function RealItem({ link, collapsed, badge = 0 }) {
   }
   return (
     <li>
-      <NavLink to={to} end={end} className="block group">{inner}</NavLink>
+      <NavLink to={to} end={end} className="block">{inner}</NavLink>
     </li>
   )
-}
-
-/* ── Dummy (coming soon) item ── */
-function DummyItem({ link, collapsed }) {
-  const { label, icon, dot, muted } = link
-  const content = (
-    <button
-      disabled
-      className={`flex items-center gap-3 px-2.5 py-2 rounded-xl text-[13px] font-semibold
-                  w-full text-left cursor-not-allowed
-                  text-gray-300 dark:text-sidebar-muted/60
-                  transition-colors
-                  ${collapsed ? 'justify-center' : ''}`}
-    >
-      <span className="shrink-0 w-[18px] h-[18px] relative">
-        <Icon d={icon} />
-        {dot && (
-          <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full
-                           border border-white dark:border-sidebar"
-            style={{ background: dot }} />
-        )}
-      </span>
-      {!collapsed && (
-        <>
-          <span className={`flex-1 truncate ${muted ? 'text-gray-400 dark:text-sidebar-label' : ''}`}>
-            {label}
-          </span>
-          <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5
-                           bg-gray-100 dark:bg-sidebar-hover
-                           text-gray-400 dark:text-sidebar-label
-                           rounded-md shrink-0">
-            Soon
-          </span>
-        </>
-      )}
-    </button>
-  )
-
-  if (collapsed) {
-    return <li><Tip label={`${label} (coming soon)`}>{content}</Tip></li>
-  }
-  return <li>{content}</li>
 }

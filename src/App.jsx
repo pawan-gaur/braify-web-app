@@ -26,6 +26,7 @@ import DashboardPage        from './pages/DashboardPage'
 import LandingPage          from './pages/LandingPage'
 import ESignDocumentsPage   from './pages/ESignDocumentsPage'
 import ESignBuilderPage     from './pages/ESignBuilderPage'
+import ESignBulkPage        from './pages/ESignBulkPage'
 import ESignDetailPage      from './pages/ESignDetailPage'
 import ESignSigningPage     from './pages/ESignSigningPage'
 import ESignVerifyPage      from './pages/ESignVerifyPage'
@@ -39,6 +40,8 @@ import OrgDetailPage         from './pages/OrgDetailPage'
 import ApiKeysPage           from './pages/ApiKeysPage'
 import FilesPage             from './pages/FilesPage'
 import FeatureDetailPage     from './pages/FeatureDetailPage'
+import PageTransition        from './components/ui/PageTransition'
+import TitleManager          from './components/ui/TitleManager'
 
 /**
  * Smart router for /esign/:id
@@ -85,13 +88,14 @@ function FeatureRoute({ feature, children }) {
 /* ── Authenticated shell with sidebar + navbar ─────────────────────────── */
 function Shell() {
   const { collapsed } = useApp()
-  const sideW = collapsed ? 'ml-16' : 'ml-56'
+  const sideW = collapsed ? 'ml-16' : 'ml-60'
 
   return (
     <div className="flex min-h-screen bg-surface dark:bg-gray-900 transition-colors duration-300">
       <Sidebar />
       <Navbar  />
-      <main className={`flex-1 ${sideW} pt-14 transition-[margin-left] duration-300 min-w-0`}>
+      <main className={`flex-1 ${sideW} pt-14 transition-[margin-left] duration-300 ease-spring min-w-0`}>
+        <PageTransition>
         <Routes>
           <Route path="/"        element={<DashboardPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
@@ -108,9 +112,10 @@ function Shell() {
           <Route path="/email-builder/:id" element={<FeatureRoute feature={FEATURES.EMAIL_TEMPLATES}><EmailBuilderPage /></FeatureRoute>} />
 
           {/* ── E-Sign (feature-gated) ── */}
-          <Route path="/esign"        element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignDocumentsPage /></FeatureRoute>} />
-          <Route path="/esign/new"    element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignBuilderPage /></FeatureRoute>} />
-          <Route path="/esign/:id"    element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignDocumentRouter /></FeatureRoute>} />
+          <Route path="/esign"          element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignDocumentsPage /></FeatureRoute>} />
+          <Route path="/esign/new"      element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignBuilderPage /></FeatureRoute>} />
+          <Route path="/esign/bulk"     element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignBulkPage /></FeatureRoute>} />
+          <Route path="/esign/:id"      element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignDocumentRouter /></FeatureRoute>} />
           <Route path="/esign/:id/view" element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignDetailPage /></FeatureRoute>} />
 
           {/* ── File Storage (feature-gated) ── */}
@@ -139,6 +144,7 @@ function Shell() {
           {/* Catch-all inside shell */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </PageTransition>
       </main>
     </div>
   )
@@ -196,6 +202,7 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
+      <TitleManager />
       <ToastProvider>
         <AuthProvider>
           <AppRoutes />

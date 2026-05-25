@@ -19,6 +19,196 @@ function pct(n, total) {
   return Math.round((n / total) * 100)
 }
 
+/* ── useCountUp — animates a number from 0 to target with easing ─────────── */
+function useCountUp(target, { duration = 800 } = {}) {
+  const [value, setValue] = useState(0)
+  useEffect(() => {
+    if (target == null) { setValue(0); return }
+    const start = performance.now()
+    const from = 0
+    const to = Number(target) || 0
+    let raf
+    const tick = (now) => {
+      const elapsed = now - start
+      const t = Math.min(1, elapsed / duration)
+      // ease-out cubic
+      const eased = 1 - Math.pow(1 - t, 3)
+      setValue(Math.round(from + (to - from) * eased))
+      if (t < 1) raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [target, duration])
+  return value
+}
+
+/* ── Hero metric ─────────────────────────────────────────────────────────── */
+function HeroMetric({ value, label, trend, sub, max, onClick }) {
+  const animated = useCountUp(value)
+  const percent = max ? Math.min(100, Math.round((value / max) * 100)) : null
+  const barColor = percent != null && percent > 90 ? 'bg-danger'
+                 : percent != null && percent > 75 ? 'bg-warning'
+                 : 'bg-brand'
+
+  return (
+    <div
+      onClick={onClick}
+      className={`card relative overflow-hidden ${onClick ? 'cursor-pointer card-hover' : ''}`}
+    >
+      <p className="text-eyebrow">{label}</p>
+      <div className="mt-3 flex items-baseline gap-3 flex-wrap">
+        <span className="text-6xl md:text-7xl font-semibold text-ink tracking-tightest tabular-nums leading-none">
+          {animated.toLocaleString()}
+        </span>
+        {trend != null && (
+          <span className={`inline-flex items-center gap-1 text-sm font-semibold px-2.5 py-1 rounded-full
+            ${trend >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+            {trend >= 0 ? '↗' : '↘'} {Math.abs(trend)}%
+          </span>
+        )}
+      </div>
+      {sub && <p className="text-sm text-ink-3 mt-2">{sub}</p>}
+
+      {percent != null && (
+        <div className="mt-5">
+          <div className="flex items-center justify-between text-xs text-ink-3 mb-1.5">
+            <span>{percent}% of monthly quota</span>
+            <span className="tabular-nums">{value?.toLocaleString()} / {max?.toLocaleString()}</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-ink-7 overflow-hidden">
+            <div
+              className={`h-full ${barColor} transition-[width] duration-700 ease-spring`}
+              style={{ width: `${percent}%` }}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ── Metric pill — compact supporting metric (new dashboard design) ─────── */
+function MetricPill({ label, value, sub, onClick, accent = 'brand' }) {
+  const animated = useCountUp(value)
+  const accentMap = {
+    brand:   'text-brand',
+    success: 'text-emerald-600',
+    warning: 'text-amber-600',
+    danger:  'text-rose-600',
+  }
+  return (
+    <div
+      onClick={onClick}
+      className={`card ${onClick ? 'cursor-pointer card-hover' : ''}`}
+    >
+      <p className="text-eyebrow">{label}</p>
+      <p className={`text-3xl font-semibold tracking-tight mt-2 tabular-nums ${accentMap[accent] ?? accentMap.brand}`}>
+        {animated.toLocaleString()}
+      </p>
+      {sub && <p className="text-xs text-ink-3 mt-1">{sub}</p>}
+    </div>
+  )
+}
+
+/* ── Today panel — smart action suggestions based on state ──────────────── */
+function TodayPanel({ stats, isOrgAdmin, onNavigate }) {
+  const items = []
+
+  const esignOverdue = stats?.esignOverdue ?? 0
+  const esignPending = stats?.esignPending ?? 0
+  const pendingInvites = stats?.pendingInvites ?? 0
+  const quotaPct = stats?.docsQuotaPercent ?? null
+
+  if (esignOverdue > 0) {
+    items.push({
+      tone: 'danger',
+      icon: 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+      title: `${esignOverdue} e-sign ${esignOverdue === 1 ? 'document is' : 'documents are'} overdue`,
+      action: 'Review →',
+      to: '/esign',
+    })
+  }
+  if (esignPending > 0) {
+    items.push({
+      tone: 'brand',
+      icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+      title: `${esignPending} ${esignPending === 1 ? 'document is' : 'documents are'} awaiting signature`,
+      action: 'View →',
+      to: '/esign',
+    })
+  }
+  if (pendingInvites > 0 && isOrgAdmin) {
+    items.push({
+      tone: 'warning',
+      icon: 'M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1a3 3 0 006 0v-1a8 8 0 10-3.4 6.6',
+      title: `${pendingInvites} pending team ${pendingInvites === 1 ? 'invite' : 'invites'}`,
+      action: 'Manage →',
+      to: '/users',
+    })
+  }
+  if (quotaPct != null && quotaPct >= 80) {
+    items.push({
+      tone: 'warning',
+      icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+      title: `You're at ${quotaPct}% of your monthly quota`,
+      action: 'Upgrade →',
+      to: '/usage',
+    })
+  }
+
+  // Empty state — first-time delight
+  if (items.length === 0) {
+    return (
+      <div className="card text-center py-10">
+        <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-3 animate-float-bob">
+          <svg className="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+        <p className="text-sm font-semibold text-ink">You're all caught up</p>
+        <p className="text-xs text-ink-3 mt-1">No urgent actions today.</p>
+      </div>
+    )
+  }
+
+  const toneClasses = {
+    danger:  { bg: 'bg-rose-50',    icon: 'text-rose-500',    ring: 'bg-rose-500' },
+    warning: { bg: 'bg-amber-50',   icon: 'text-amber-500',   ring: 'bg-amber-500' },
+    brand:   { bg: 'bg-brand-50',   icon: 'text-brand',       ring: 'bg-brand' },
+  }
+
+  return (
+    <div className="card">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm font-semibold text-ink">Today</h2>
+        <span className="text-eyebrow">{items.length} {items.length === 1 ? 'item' : 'items'}</span>
+      </div>
+      <ul className="space-y-2">
+        {items.map((it, i) => {
+          const t = toneClasses[it.tone]
+          return (
+            <li
+              key={i}
+              className="group flex items-center gap-3 p-3 rounded-input hover:bg-ink-9 transition-colors cursor-pointer"
+              onClick={() => onNavigate(it.to)}
+            >
+              <div className={`w-9 h-9 rounded-input ${t.bg} flex items-center justify-center shrink-0`}>
+                <svg className={`w-4.5 h-4.5 ${t.icon}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={it.icon}/>
+                </svg>
+              </div>
+              <p className="flex-1 text-sm text-ink-2 leading-snug">{it.title}</p>
+              <span className="text-xs font-semibold text-brand opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                {it.action}
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
 /* ── Colour palette ──────────────────────────────────────────────────────── */
 const PALETTE = {
   indigo:  { bg: 'bg-indigo-50  dark:bg-indigo-900/20',  icon: 'text-indigo-500',  bar: 'bg-indigo-500',  ring: 'bg-indigo-500',  hex: '#6366f1' },
@@ -588,17 +778,21 @@ export default function DashboardPage() {
     return () => clearInterval(id)
   }, [tab, loadStats])
 
-  /* ── Skeleton ── */
+  /* ── Skeleton (matches new hero layout shape) ── */
   if (loading) return (
-    <div className="max-w-7xl mx-auto px-6 py-8 animate-pulse space-y-6">
-      <div className="h-8 bg-gray-100 dark:bg-gray-800 rounded w-64"/>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[...Array(4)].map((_, i) => <div key={i} className="card h-24 bg-gray-50 dark:bg-gray-800"/>)}
+    <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+      <div className="space-y-2">
+        <div className="skeleton h-8 w-72"/>
+        <div className="skeleton h-4 w-48"/>
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 card h-64 bg-gray-50 dark:bg-gray-800"/>
-        <div className="card h-64 bg-gray-50 dark:bg-gray-800"/>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 skeleton h-52"/>
+        <div className="skeleton h-52"/>
       </div>
+      <div className="grid grid-cols-3 gap-4">
+        {[...Array(3)].map((_, i) => <div key={i} className="skeleton h-28"/>)}
+      </div>
+      <div className="skeleton h-64"/>
     </div>
   )
 
@@ -651,33 +845,30 @@ export default function DashboardPage() {
     <div className="max-w-7xl mx-auto px-6 py-8">
       <Breadcrumbs items={CRUMBS}/>
 
-      {/* ── Header ── */}
-      <div className="mt-4 mb-6 flex items-end justify-between gap-4 flex-wrap">
+      {/* ── Header — Apple-style large title ── */}
+      <div className="mt-4 mb-8 flex items-end justify-between gap-4 flex-wrap animate-fade-in-up">
         <div>
-          <h1 className="text-2xl font-bold text-navy dark:text-white">
-            {greeting()}, {user?.firstName}! 👋
+          <h1 className="display-2 text-ink dark:text-white">
+            {greeting()}, {user?.firstName}
           </h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-ink-3 mt-1.5">
             {isPlatformAdmin
-              ? 'Platform-wide analytics across all organisations.'
-              : `Analytics for your workspace — ${new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}`
+              ? 'Platform overview across all organisations'
+              : new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
             }
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <button onClick={loadStats}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700
-                       text-xs font-semibold text-gray-500 hover:text-indigo-600 hover:border-indigo-300 transition-colors">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-            </svg>
-            Refresh
-          </button>
-          <span className="text-sm text-gray-400">
-            {new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-          </span>
-        </div>
+        <button
+          onClick={loadStats}
+          className="btn btn-outline btn-sm gap-1.5"
+          title="Refresh"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          Refresh
+        </button>
       </div>
 
       {/* ── Tab bar ── */}
@@ -694,69 +885,100 @@ export default function DashboardPage() {
       </div>
 
       {/* ════════════════════════════════════════
-          ORG — OVERVIEW TAB
+          ORG — OVERVIEW TAB (Apple-style: focus + drilldown)
       ════════════════════════════════════════ */}
       {tab === 'overview' && (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <KpiCard icon="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              label="PDF Templates" value={stats?.totalPdfTemplates}
-              sub={trend(stats?.pdfGrowth) ?? 'No trend yet'} color="indigo"
-              onClick={() => navigate('/templates')}/>
-            <KpiCard icon="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-              label="Email Templates" value={stats?.totalEmailTemplates}
-              sub={trend(stats?.emailGrowth) ?? 'No trend yet'} color="emerald"
-              onClick={() => navigate('/email-templates')}/>
-            <KpiCard icon="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-              label="Docs Sent" value={esignSent}
-              sub={trend(stats?.esignGrowth) ?? 'No trend yet'} color="sky"
-              onClick={() => navigate('/esign')}/>
-            <KpiCard icon="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              label="Docs Signed" value={stats?.esignCompleted}
-              sub={`${stats?.esignPending ?? 0} pending · ${stats?.esignOverdue ?? 0} overdue`} color="teal"
-              onClick={() => navigate('/esign')}/>
+        <div className="space-y-6 animate-fade-in-up">
+
+          {/* ─── Hero: single big KPI + Today panel ─── */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2">
+              <HeroMetric
+                label="Documents this month"
+                value={stats?.docsThisMonth ?? esignSent ?? 0}
+                max={stats?.docsQuotaLimit}
+                trend={(() => {
+                  const arr = stats?.esignGrowth
+                  if (!arr || arr.length < 2) return null
+                  const last = arr.at(-1)?.count ?? 0, prev = arr.at(-2)?.count ?? 0
+                  if (prev === 0) return null
+                  return Math.round(((last - prev) / prev) * 100)
+                })()}
+                sub={(() => {
+                  const pending = stats?.esignPending ?? 0
+                  const completed = stats?.esignCompleted ?? 0
+                  return `${completed.toLocaleString()} completed · ${pending.toLocaleString()} in progress`
+                })()}
+                onClick={() => navigate('/esign')}
+              />
+            </div>
+            <TodayPanel stats={stats} isOrgAdmin={isOrgAdmin} onNavigate={navigate}/>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            <div className="lg:col-span-2 card">
-              <SectionHeader title="Template Growth" sub="PDF & Email templates created per month"/>
-              <div className="flex items-center gap-4 text-xs font-medium mb-3">
-                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-indigo-500 inline-block"/>PDF</span>
-                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-emerald-500 inline-block"/>Email</span>
-              </div>
-              <GroupedBarChart pdfData={stats?.pdfGrowth ?? []} emailData={stats?.emailGrowth ?? []}/>
-            </div>
-            <div className="card">
-              <SectionHeader title="User Growth" sub="New users per month"/>
-              <BarChart data={stats?.userGrowth ?? []} color="#8b5cf6"/>
-            </div>
+          {/* ─── Compact supporting metrics ─── */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <MetricPill
+              label="PDF Templates"
+              value={stats?.totalPdfTemplates ?? 0}
+              sub={trend(stats?.pdfGrowth) ?? '—'}
+              onClick={() => navigate('/templates')}
+            />
+            <MetricPill
+              label="Email Templates"
+              value={stats?.totalEmailTemplates ?? 0}
+              sub={trend(stats?.emailGrowth) ?? '—'}
+              accent="success"
+              onClick={() => navigate('/email-templates')}
+            />
+            <MetricPill
+              label="E-Sign sent"
+              value={esignSent}
+              sub={`${stats?.esignCompleted ?? 0} signed`}
+              onClick={() => navigate('/esign')}
+            />
+            <MetricPill
+              label="Team members"
+              value={stats?.totalUsers ?? 0}
+              sub={isOrgAdmin && stats?.pendingInvites ? `${stats.pendingInvites} pending` : 'active'}
+              accent={stats?.pendingInvites ? 'warning' : 'brand'}
+              onClick={() => isOrgAdmin && navigate('/users')}
+            />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          {/* ─── Two-up: Recent activity + Quick actions ─── */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2">
               <LiveActivityFeed stats={stats} onNavigate={navigate}/>
             </div>
             <div className="card">
-              <SectionHeader title="Quick Actions"/>
-              <div className="space-y-2">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-ink">Create</h2>
+                <span className="kbd">N</span>
+              </div>
+              <div className="space-y-1">
                 {[
-                  { label: 'New PDF Template',   to: '/builder',       icon: 'M12 4v16m8-8H4',         color: 'text-indigo-500' },
-                  { label: 'New Email Template', to: '/email-builder', icon: 'M12 4v16m8-8H4',         color: 'text-emerald-500' },
-                  { label: 'Generate PDF',       to: '/generate',      icon: 'M12 10v6m0 0l-3-3m3 3l3-3M3 15v4a2 2 0 002 2h14a2 2 0 002-2v-4M7 10l5-7 5 7', color: 'text-sky-500' },
-                  { label: 'New E-Sign Doc',     to: '/esign/new',     icon: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z', color: 'text-teal-500' },
-                  ...(isOrgAdmin ? [{ label: 'Invite User', to: '/users', icon: 'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z', color: 'text-violet-500' }] : []),
+                  { label: 'PDF Template',   to: '/builder',       icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9v11a2 2 0 01-2 2z' },
+                  { label: 'Email Template', to: '/email-builder', icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
+                  { label: 'Generate PDF',   to: '/generate',      icon: 'M12 10v6m0 0l-3-3m3 3l3-3M3 15v4a2 2 0 002 2h14a2 2 0 002-2v-4M7 10l5-7 5 7' },
+                  { label: 'E-Sign document', to: '/esign/new',    icon: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' },
+                  ...(isOrgAdmin ? [{ label: 'Invite team member', to: '/users', icon: 'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z' }] : []),
                 ].map(a => (
-                  <button key={a.label} onClick={() => navigate(a.to)}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
-                               hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors text-left group">
-                    <div className="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center
-                                    group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/30 transition-colors">
-                      <svg className={`w-4 h-4 ${a.color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={a.icon}/>
+                  <button
+                    key={a.label}
+                    onClick={() => navigate(a.to)}
+                    className="group w-full flex items-center gap-3 px-3 py-2.5 rounded-input
+                               hover:bg-ink-9 transition-all duration-200 ease-spring text-left active:scale-[0.98]"
+                  >
+                    <div className="w-8 h-8 rounded-input bg-ink-8 flex items-center justify-center
+                                    group-hover:bg-brand-50 transition-colors">
+                      <svg className="w-4 h-4 text-ink-3 group-hover:text-brand transition-colors"
+                           fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={a.icon}/>
                       </svg>
                     </div>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex-1">{a.label}</span>
-                    <svg className="w-4 h-4 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <span className="text-sm font-medium text-ink flex-1">{a.label}</span>
+                    <svg className="w-4 h-4 text-ink-5 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all"
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
                     </svg>
                   </button>
@@ -765,26 +987,22 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {(stats?.pendingInvites ?? 0) > 0 && isOrgAdmin && (
-            <div className="card border-amber-200 dark:border-amber-800/50 bg-amber-50/40 dark:bg-amber-900/10 mb-6">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
-                  <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-amber-800 dark:text-amber-400">
-                    {stats.pendingInvites} pending invite{stats.pendingInvites !== 1 ? 's' : ''}
-                  </p>
-                  <p className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">These users haven't set their password yet.</p>
-                  <button onClick={() => navigate('/users')} className="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-400 hover:underline">View Users →</button>
-                </div>
+          {/* ─── Growth chart — secondary, below the fold ─── */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2 card">
+              <SectionHeader title="Template growth" sub="PDF & Email templates created per month"/>
+              <div className="flex items-center gap-4 text-xs font-medium mb-3">
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-brand inline-block"/>PDF</span>
+                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block"/>Email</span>
               </div>
+              <GroupedBarChart pdfData={stats?.pdfGrowth ?? []} emailData={stats?.emailGrowth ?? []}/>
             </div>
-          )}
-        </>
+            <div className="card">
+              <SectionHeader title="New users" sub="Sign-ups per month"/>
+              <BarChart data={stats?.userGrowth ?? []} color="#0066FF"/>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ════════════════════════════════════════

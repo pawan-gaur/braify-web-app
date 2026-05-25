@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getTemplates, deleteTemplate } from '../services/api'
 import useDocumentTitle from '../hooks/useDocumentTitle'
@@ -16,6 +16,60 @@ const CRUMBS = [
   { label: 'PDF Templates' },
 ]
 
+function CopyIdButton({ id }) {
+  const [copied, setCopied] = useState(false)
+  function handleCopy(e) {
+    e.stopPropagation()
+    navigator.clipboard.writeText(id).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    })
+  }
+  return (
+    <button
+      onClick={handleCopy}
+      title={copied ? 'Copied!' : 'Copy full ID'}
+      className="p-0.5 rounded text-gray-300 hover:text-primary dark:hover:text-primary transition-colors shrink-0"
+    >
+      {copied ? (
+        <svg className="w-3 h-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/>
+        </svg>
+      ) : (
+        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+        </svg>
+      )}
+    </button>
+  )
+}
+
+function SortTh({ label, field, sortKey, onSort }) {
+  const [f, d] = (sortKey || '').split('_')
+  const active = f === field
+  return (
+    <th
+      onClick={() => onSort(active && d === 'asc' ? `${field}_desc` : `${field}_asc`)}
+      className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide cursor-pointer select-none
+                 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+    >
+      <span className="flex items-center gap-1.5">
+        {label}
+        {active ? (
+          d === 'asc'
+            ? <svg className="w-3 h-3 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7"/></svg>
+            : <svg className="w-3 h-3 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7"/></svg>
+        ) : (
+          <svg className="w-3 h-3 opacity-25" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
+          </svg>
+        )}
+      </span>
+    </th>
+  )
+}
+
 const PAGE_TABS = [
   { id: 'mine',    label: 'My Templates' },
   { id: 'samples', label: 'Sample Gallery' },
@@ -32,6 +86,37 @@ export default function TemplatesPage() {
   const [versionTemplate,  setVersionTemplate]  = useState(null)
   const [previewTemplate,  setPreviewTemplate]  = useState(null)
   const [loading,   setLoading]   = useState(true)
+
+  const [tableSearch,    setTableSearch]    = useState('')
+  const [pageSizeFilter, setPageSizeFilter] = useState('')
+  const [tableSortKey,   setTableSortKey]   = useState('updatedAt_desc')
+
+  const tableVisible = useMemo(() => {
+    let list = [...templates]
+    if (tableSearch.trim()) {
+      const q = tableSearch.toLowerCase()
+      list = list.filter(t =>
+        t.name?.toLowerCase().includes(q) ||
+        t.description?.toLowerCase().includes(q) ||
+        t.placeholders?.some(p => p.toLowerCase().includes(q))
+      )
+    }
+    if (pageSizeFilter) {
+      list = list.filter(t => (t.pageSize || 'A4') === pageSizeFilter)
+    }
+    const [field, dir] = tableSortKey.split('_')
+    list.sort((a, b) => {
+      const av = field === 'name' ? (a.name || '') : (a.updatedAt || '')
+      const bv = field === 'name' ? (b.name || '') : (b.updatedAt || '')
+      return dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av)
+    })
+    return list
+  }, [templates, tableSearch, pageSizeFilter, tableSortKey])
+
+  const pageSizes = useMemo(
+    () => [...new Set(templates.map(t => t.pageSize || 'A4'))].sort(),
+    [templates]
+  )
 
   const load = useCallback(() => {
     setLoading(true)
@@ -122,21 +207,95 @@ export default function TemplatesPage() {
           <EmptyState onNew={() => navigate('/builder')} onBrowse={() => setPageTab('samples')} />
         ) : view === 'table' ? (
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
+
+            {/* ── Table Toolbar ── */}
+            <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-900/30">
+              <div className="relative flex-1 min-w-[160px] max-w-sm">
+                <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none"
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search templates…"
+                  value={tableSearch}
+                  onChange={e => setTableSearch(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-600
+                             bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400
+                             focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                />
+              </div>
+              <select
+                value={pageSizeFilter}
+                onChange={e => setPageSizeFilter(e.target.value)}
+                className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-600
+                           bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300
+                           focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              >
+                <option value="">All Sizes</option>
+                {pageSizes.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <select
+                value={tableSortKey}
+                onChange={e => setTableSortKey(e.target.value)}
+                className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-600
+                           bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300
+                           focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              >
+                <option value="updatedAt_desc">Updated: Newest</option>
+                <option value="updatedAt_asc">Updated: Oldest</option>
+                <option value="name_asc">Name: A → Z</option>
+                <option value="name_desc">Name: Z → A</option>
+              </select>
+              {(tableSearch || pageSizeFilter) && (
+                <button
+                  onClick={() => { setTableSearch(''); setPageSizeFilter('') }}
+                  className="text-xs text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors flex items-center gap-1"
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                  Clear
+                </button>
+              )}
+              <span className="ml-auto text-xs text-gray-400">
+                {tableVisible.length === templates.length
+                  ? `${templates.length} template${templates.length !== 1 ? 's' : ''}`
+                  : `${tableVisible.length} of ${templates.length}`}
+              </span>
+            </div>
+
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
                 <tr>
-                  {['Name', 'Page Size', 'Placeholders', 'Updated', ''].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                      {h}
-                    </th>
-                  ))}
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">ID</th>
+                  <SortTh label="Name"    field="name"      sortKey={tableSortKey} onSort={setTableSortKey} />
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Page Size</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Placeholders</th>
+                  <SortTh label="Updated" field="updatedAt" sortKey={tableSortKey} onSort={setTableSortKey} />
+                  <th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {templates.map(t => {
+                {tableVisible.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-12 text-sm text-gray-400 dark:text-gray-500">
+                      No templates match your search.
+                    </td>
+                  </tr>
+                ) : tableVisible.map(t => {
                   const date = fmtDate(t.updatedAt)
                   return (
                     <tr key={t.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-md whitespace-nowrap">
+                            …{t.id.slice(-6)}
+                          </span>
+                          <CopyIdButton id={t.id} />
+                        </div>
+                      </td>
                       <td className="px-4 py-3.5">
                         <p className="font-semibold text-gray-900 dark:text-white text-sm">{t.name}</p>
                         {t.description && <p className="text-xs text-gray-400 mt-0.5 truncate max-w-xs">{t.description}</p>}
@@ -209,7 +368,8 @@ export default function TemplatesPage() {
               </tbody>
             </table>
             <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-400">
-              {templates.length} template{templates.length !== 1 ? 's' : ''}
+              {tableVisible.length} template{tableVisible.length !== 1 ? 's' : ''}
+              {tableVisible.length !== templates.length && ` (filtered from ${templates.length})`}
             </div>
           </div>
         ) : (
@@ -509,6 +669,13 @@ function TemplateCard({ template, onEdit, onGenerate, onDelete = null, onVersion
             )}
           </div>
           <span className="badge badge-indigo shrink-0">{template.pageSize || 'A4'}</span>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <span className="font-mono text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-md whitespace-nowrap">
+            …{template.id.slice(-6)}
+          </span>
+          <CopyIdButton id={template.id} />
         </div>
 
         {template.placeholders?.length > 0 && (
