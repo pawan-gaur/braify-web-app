@@ -168,6 +168,8 @@ export const esignCancelDocument  = (id)                   => http.post(`/esign/
 export const esignResendDocument  = (id, days = 7)         => http.post(`/esign/documents/${id}/resend?tokenValidDays=${days}`).then(r => r.data)
 export const esignGetAudit        = (id)                   => http.get(`/esign/documents/${id}/audit`).then(r => r.data)
 export const esignDownloadSigned  = (id)                   => http.get(`/esign/documents/${id}/signed-pdf`, { responseType: 'blob' }).then(r => r.data)
+export const esignListAttachments = (id)                   => http.get(`/esign/documents/${id}/attachments`).then(r => r.data)
+export const esignDownloadAttachment = (id, attachmentId)  => http.get(`/esign/documents/${id}/attachments/${attachmentId}`, { responseType: 'blob' }).then(r => r.data)
 
 // ── E-Sign Bulk Batches ────────────────────────────────────
 export const esignListBatches     = ({ page = 0, size = 20 } = {}) =>
@@ -185,9 +187,25 @@ export const esignFinalizeBatch   = (batchId, totalCreated, totalSent, totalFail
 export const esignOpenDocument    = (token)                => http.get(`/esign/sign/${token}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data)
 export const esignSignField       = (token, fieldId, body) => http.put(`/esign/sign/${token}/fields/${fieldId}`, body, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data)
 export const esignSubmitDocument  = (token)                => http.post(`/esign/sign/${token}/submit`, {}, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data)
+export const esignUploadAttachment = (token, file) => {
+  const fd = new FormData(); fd.append('file', file)
+  return http.post(`/esign/sign/${token}/attachments`, fd, { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' } }).then(r => r.data)
+}
+export const esignDownloadClientAttachment = (token, attachmentId) =>
+  http.get(`/esign/sign/${token}/attachments/${attachmentId}`, { headers: { Authorization: `Bearer ${token}` }, responseType: 'blob' }).then(r => r.data)
 
 // ── E-Sign Verify (public) ─────────────────────────────────
 export const esignVerifyDocument  = (id)                   => http.get(`/esign/verify/${id}`).then(r => r.data)
+
+// ── Bulk Email Jobs ────────────────────────────────────────
+export const bulkEmailCreateJob   = (payload)              => http.post('/bulk-email/jobs', payload).then(r => r.data)
+export const bulkEmailListJobs    = ({ page = 0, size = 20 } = {}) =>
+  http.get(`/bulk-email/jobs?page=${page}&size=${size}`).then(r => r.data)
+export const bulkEmailGetJob      = (id)                   => http.get(`/bulk-email/jobs/${id}`).then(r => r.data)
+export const bulkEmailGetStatus   = (id)                   => http.get(`/bulk-email/jobs/${id}/status`).then(r => r.data)
+export const bulkEmailResend      = (id)                   => http.post(`/bulk-email/jobs/${id}/resend`).then(r => r.data)
+export const bulkEmailCancelJob   = (id)                   => http.post(`/bulk-email/jobs/${id}/cancel`).then(r => r.data)
+export const bulkEmailGetAudit    = (id)                   => http.get(`/bulk-email/jobs/${id}/audit`).then(r => r.data)
 
 // ── Subscription (Platform Admin) ──────────────────────────
 export const getSubscription    = (orgId)           => http.get(`/organizations/${orgId}/subscription`).then(r => r.data)

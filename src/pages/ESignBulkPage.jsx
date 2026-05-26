@@ -1,9 +1,13 @@
 import { useState, useRef, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as XLSX from 'xlsx'
+import * as pdfjsLib from 'pdfjs-dist'
+import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { esignCreateDocument, esignSaveFields, esignSendDocument, esignInitBatch, esignFinalizeBatch, getTemplates, generatePdfAsBase64, getEmailTemplates } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl
 
 const CRUMBS = [
   { label: 'Dashboard', to: '/' },
@@ -23,8 +27,9 @@ const BULK_FIELD_TYPES = [
 // E-sign fields to map from Excel columns (fileIdentifier removed — API mode uses URL substitution)
 const ESIGN_MAP_FIELDS = [
   { key: 'title',          label: 'Document Title',    required: true  },
-  { key: 'clientEmail',    label: 'Client Email',      required: true  },
+  { key: 'clientEmail',    label: 'Client Email (To)', required: true  },
   { key: 'clientName',     label: 'Client Name',       required: true  },
+  { key: 'ccEmails',       label: 'CC Email(s)',        required: false, note: 'Comma-separated' },
   { key: 'tokenValidDays', label: 'Token Valid Days',  required: false, note: 'Default: 7' },
 ]
 
@@ -158,6 +163,56 @@ const STATUS_LABEL = {
 }
 
 /* ─────────────────────────────────────────────────────────────────── */
+/* PdfPageCanvas — renders one PDF page to a <canvas> via pdfjs-dist.  */
+/* Scales to fill container width; reports total page count.           */
+/* ─────────────────────────────────────────────────────────────────── */
+
+function PdfPageCanvas({ base64DataUrl, pageNumber, onPageCountChange }) {
+  const canvasRef = useRef(null)
+
+  useEffect(() => {
+    if (!base64DataUrl || !canvasRef.current) return
+    let cancelled = false
+
+    ;(async () => {
+      try {
+        const b64   = base64DataUrl.includes(',') ? base64DataUrl.split(',')[1] : base64DataUrl
+        const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0))
+        const pdf   = await pdfjsLib.getDocument({ data: bytes }).promise
+        if (cancelled) return
+
+        onPageCountChange?.(pdf.numPages)
+
+        const safePageNum = Math.min(Math.max(pageNumber || 1, 1), pdf.numPages)
+        const page        = await pdf.getPage(safePageNum)
+        if (cancelled) return
+
+        const canvas    = canvasRef.current
+        if (!canvas) return
+        const container = canvas.parentElement
+        const width     = container ? (container.clientWidth || 600) : 600
+        const viewport  = page.getViewport({ scale: 1 })
+        const scale     = width / viewport.width
+        const scaled    = page.getViewport({ scale })
+
+        canvas.width  = scaled.width
+        canvas.height = scaled.height
+
+        const ctx = canvas.getContext('2d')
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        await page.render({ canvasContext: ctx, viewport: scaled }).promise
+      } catch (err) {
+        if (!cancelled) console.error('PDF render error:', err)
+      }
+    })()
+
+    return () => { cancelled = true }
+  }, [base64DataUrl, pageNumber])
+
+  return <canvas ref={canvasRef} className="block w-full" />
+}
+
+/* ─────────────────────────────────────────────────────────────────── */
 /* Shared Tailwind snippets                                              */
 /* ─────────────────────────────────────────────────────────────────── */
 
@@ -170,12 +225,13 @@ export default function ESignBulkPage() {
   const { showToast } = useToast()
   const [step, setStep] = useState(0)
 
-  /* ── Step 0 — Excel ──────────────────────────────────────────────── */
-  const [excelHeaders, setExcelHeaders] = useState([])
-  const [excelRows,    setExcelRows]    = useState([])
+  /* ── Step 0 — Excel + Batch name ────────────────────────────────── */
+  const [excelHeaders,  setExcelHeaders]  = useState([])
+  const [excelRows,     setExcelRows]     = useState([])
   const [excelFileName, setExcelFileName] = useState('')
-  const [excelLoading, setExcelLoading]   = useState(false)
-  const [excelError,   setExcelError]     = useState('')
+  const [excelLoading,  setExcelLoading]  = useState(false)
+  const [excelError,    setExcelError]    = useState('')
+  const [batchName,     setBatchName]     = useState('')   // user-editable; defaults to filename
   const excelRef = useRef()
 
   /* ── Step 1 — PDF Source ─────────────────────────────────────────── */
@@ -210,6 +266,12 @@ export default function ESignBulkPage() {
   // Blob URL for PDF preview in field placement canvas
   const [singlePdfBlobUrl, setSinglePdfBlobUrl] = useState(null)
 
+  // Template PDF preview — generated from the selected template for field placement visualisation
+  const [templatePdfPreview,  setTemplatePdfPreview]  = useState(null)
+  const [templatePdfLoading,  setTemplatePdfLoading]  = useState(false)
+  const [templatePdfError,    setTemplatePdfError]    = useState('')
+  const templatePreviewVer = useRef(0)  // bump on every new request to discard stale responses
+
   /* ── Step 1 — Field placement (shared across Upload / Template modes) */
   const [bulkFields,        setBulkFields]        = useState([])
   const [selectedFieldType, setSelectedFieldType] = useState('SIGNATURE')
@@ -217,6 +279,10 @@ export default function ESignBulkPage() {
   const fieldCanvasRef = useRef(null)
   const bulkDragRef    = useRef(null)   // sync ref so mousemove closure is stable
   const didDragRef     = useRef(false)  // prevents canvas click from placing after a drag
+
+  /* ── PDF page navigation ────────────────────────────────────────── */
+  const [pdfPageCount,   setPdfPageCount]   = useState(0)
+  const [pdfCurrentPage, setPdfCurrentPage] = useState(1)
 
   /* ── Email Template (optional — Step 1) ─────────────────────────── */
   const [emailTemplates,          setEmailTemplates]          = useState([])
@@ -227,7 +293,7 @@ export default function ESignBulkPage() {
   const [emailPickerOpen,         setEmailPickerOpen]         = useState(false)
 
   /* ── Step 2 — Column mapping ─────────────────────────────────────── */
-  const [mapping, setMapping] = useState({ title: '', clientEmail: '', clientName: '', tokenValidDays: '' })
+  const [mapping, setMapping] = useState({ title: '', clientEmail: '', clientName: '', ccEmails: '', tokenValidDays: '' })
 
   /* ── Step 4 — Processing ─────────────────────────────────────────── */
   const [rowStatuses, setRowStatuses] = useState([])
@@ -255,6 +321,50 @@ export default function ESignBulkPage() {
       .finally(() => setEmailTemplatesLoading(false))
   }, [emailPickerOpen])
 
+  /* ── Reset page counter when single PDF changes ─────────────────── */
+  useEffect(() => {
+    setPdfCurrentPage(1)
+    setPdfPageCount(0)
+  }, [singlePdfBase64])
+
+  /* ── Generate template PDF preview for the field-placement canvas ── */
+  useEffect(() => {
+    if (!selectedTemplateId || !enabledSources.template) {
+      setTemplatePdfPreview(null)
+      setTemplatePdfError('')
+      return
+    }
+    const ver = ++templatePreviewVer.current
+    setTemplatePdfLoading(true)
+    setTemplatePdfError('')
+
+    // Build preview data from the first Excel row (or empty values when no rows yet)
+    const data = {}
+    ;(selectedTemplate?.placeholders || []).forEach(p => {
+      const col = placeholderMapping[p]
+      data[p] = col ? (excelRows[0]?.[col] || '') : ''
+    })
+
+    generatePdfAsBase64(selectedTemplateId, data)
+      .then(b64 => {
+        if (ver !== templatePreviewVer.current) return
+        setTemplatePdfPreview(b64)
+        setTemplatePdfLoading(false)
+      })
+      .catch(() => {
+        if (ver !== templatePreviewVer.current) return
+        setTemplatePdfError('Could not generate template preview')
+        setTemplatePdfLoading(false)
+      })
+  }, [selectedTemplateId, placeholderMapping, enabledSources.template])
+
+  /* ── Reset page counter when template preview changes ───────────── */
+  useEffect(() => {
+    if (!templatePdfPreview) return
+    setPdfCurrentPage(1)
+    setPdfPageCount(0)
+  }, [templatePdfPreview])
+
   /* ── Computed preview rows (memoised) ────────────────────────────── */
   const previewRows = useMemo(() =>
     excelRows.map((row, idx) => {
@@ -263,6 +373,11 @@ export default function ESignBulkPage() {
       const clientName     = row[mapping.clientName]     || ''
       const tokenValidDays = mapping.tokenValidDays
         ? (row[mapping.tokenValidDays] || '7') : '7'
+      // CC: comma-separated emails from the mapped column, cleaned and validated
+      const ccRaw    = mapping.ccEmails ? (row[mapping.ccEmails] || '') : ''
+      const ccEmails = ccRaw
+        ? ccRaw.split(',').map(e => e.trim()).filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))
+        : []
 
       const resolvedApiUrl = enabledSources.api && fileApi.url
         ? buildApiUrl(fileApi.url, row) : null
@@ -274,7 +389,7 @@ export default function ESignBulkPage() {
       if (!clientName)  errs.push('Client name missing')
 
       return {
-        idx: idx + 1, title, clientEmail, clientName,
+        idx: idx + 1, title, clientEmail, clientName, ccEmails,
         tokenValidDays, resolvedApiUrl, errs, valid: !errs.length,
         rawRow: row,
       }
@@ -341,7 +456,7 @@ export default function ESignBulkPage() {
     const y = Math.min(Math.max(((e.clientY - rect.top)  / rect.height) * 100 - 2.5, 0), 95)
     const typeDef = BULK_FIELD_TYPES.find(t => t.type === selectedFieldType)
     setBulkFields(prev => [...prev, {
-      id: crypto.randomUUID(), page: 1,
+      id: crypto.randomUUID(), page: pdfCurrentPage,
       x, y, width: 18, height: 5,
       fieldType: selectedFieldType,
       label: typeDef?.label || selectedFieldType,
@@ -380,11 +495,14 @@ export default function ESignBulkPage() {
       setExcelHeaders(headers)
       setExcelRows(rows)
       setExcelFileName(file.name)
+      // Default batch name to the filename (without extension) if not yet set
+      setBatchName(prev => prev.trim() ? prev : file.name.replace(/\.[^.]+$/, ''))
       // Auto-map common header names
       const AUTO = {
         title:          ['title', 'document title', 'doc title', 'document name', 'subject'],
         clientEmail:    ['email', 'client email', 'recipient email', 'to', 'email address'],
         clientName:     ['name', 'client name', 'recipient name', 'full name', 'client'],
+        ccEmails:       ['cc', 'cc email', 'cc emails', 'carbon copy', 'copy to', 'copy email'],
         tokenValidDays: ['days', 'valid days', 'expiry days', 'token days', 'validity'],
       }
       const autoMap = {}
@@ -502,9 +620,12 @@ export default function ESignBulkPage() {
     const validCount = previewRows.filter(r => r.valid).length
 
     // ── 0. Create a batch record so documents appear in Bulk Batches tab ──
+    // Use the user-set batch name, falling back to the uploaded filename (no extension)
+    const resolvedBatchName = batchName.trim()
+      || (excelFileName ? excelFileName.replace(/\.[^.]+$/, '') : null)
     let batchId = null
     try {
-      const batch = await esignInitBatch(null, validCount)
+      const batch = await esignInitBatch(resolvedBatchName, validCount)
       batchId = batch.id
     } catch (err) {
       console.warn('Could not create batch record — documents will still be created:', err.message)
@@ -563,6 +684,7 @@ export default function ESignBulkPage() {
           pdfBase64,
           clientEmail:     row.clientEmail,
           clientName:      row.clientName,
+          ccEmails:        row.ccEmails?.length ? row.ccEmails : undefined,
           tokenValidDays:  parseInt(row.tokenValidDays) || 7,
           bulkBatchId:     batchId,
           emailTemplateId: selectedEmailTemplateId || undefined,
@@ -625,6 +747,38 @@ export default function ESignBulkPage() {
           </p>
         </div>
 
+        {/* ── Batch name ── */}
+        <div>
+          <label className={LABEL}>
+            Batch Name
+            <span className="ml-1.5 text-xs font-normal text-gray-400">(optional — defaults to filename)</span>
+          </label>
+          <div className="relative">
+            <input
+              type="text"
+              value={batchName}
+              onChange={e => setBatchName(e.target.value)}
+              placeholder={excelFileName ? excelFileName.replace(/\.[^.]+$/, '') : 'e.g. May 2026 Contracts'}
+              maxLength={120}
+              className={INPUT}
+            />
+            {batchName && (
+              <button type="button"
+                onClick={() => setBatchName('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                title="Clear">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-gray-400 mt-1">
+            This name appears in the Bulk Batches list. Leave blank to use the uploaded filename.
+          </p>
+        </div>
+
+        {/* ── File upload ── */}
         <button type="button" onClick={() => excelRef.current?.click()}
           className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-10
                      text-center hover:border-purple-400 dark:hover:border-purple-500 transition-colors group">
@@ -1229,57 +1383,120 @@ export default function ESignBulkPage() {
               </span>
             </div>
 
-            {/* PDF canvas */}
-            <div className="relative rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden bg-white"
-                 style={{ paddingBottom: '141.4%' /* A4 aspect ratio 297/210 */ }}>
-              <div className="absolute inset-0">
-                {/* PDF iframe or blank A4 placeholder */}
-                {singlePdfBlobUrl && enabledSources.single
-                  ? <iframe src={singlePdfBlobUrl} title="PDF preview"
-                             className="w-full h-full" style={{ pointerEvents: 'none' }} />
-                  : <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-gray-800/40">
+            {/* ── PDF canvas + field overlay ─────────────────────── */}
+            {/* Decide which base64 to render:
+                1. Single PDF upload (if enabled + uploaded)
+                2. Template preview (if template enabled + generated)
+                3. Blank A4 placeholder                              */}
+            {(() => {
+              const previewB64 = (singlePdfBase64 && enabledSources.single)
+                ? singlePdfBase64
+                : (templatePdfPreview && enabledSources.template)
+                  ? templatePdfPreview
+                  : null
+
+              return (
+                <div className="relative rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden bg-white">
+                  {/* PDF page rendered by pdfjs — OR placeholder */}
+                  {previewB64 ? (
+                    <PdfPageCanvas
+                      base64DataUrl={previewB64}
+                      pageNumber={pdfCurrentPage}
+                      onPageCountChange={setPdfPageCount}
+                    />
+                  ) : templatePdfLoading && enabledSources.template ? (
+                    /* Loading spinner while template PDF is being generated */
+                    <div className="w-full flex flex-col items-center justify-center gap-3 bg-gray-50 dark:bg-gray-800/40"
+                         style={{ aspectRatio: '210 / 297' }}>
+                      <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                      <p className="text-xs text-gray-400 dark:text-gray-500">Generating template preview…</p>
+                    </div>
+                  ) : templatePdfError && enabledSources.template ? (
+                    /* Error state */
+                    <div className="w-full flex flex-col items-center justify-center gap-2 bg-red-50 dark:bg-red-900/10"
+                         style={{ aspectRatio: '210 / 297' }}>
+                      <p className="text-xs text-red-500">{templatePdfError}</p>
+                    </div>
+                  ) : (
+                    /* Blank A4 placeholder */
+                    <div className="w-full flex items-center justify-center bg-gray-50 dark:bg-gray-800/40"
+                         style={{ aspectRatio: '210 / 297' }}>
                       <p className="text-xs text-gray-300 dark:text-gray-600 select-none text-center px-4">
                         {enabledSources.single
-                          ? 'Upload a PDF above to see a preview here'
-                          : 'A4 page — click to place fields at approximate positions'}
+                          ? 'Upload a PDF above to preview it here'
+                          : enabledSources.template
+                            ? 'Select a template above to preview it here'
+                            : 'A4 page — click to place fields at approximate positions'}
                       </p>
                     </div>
-                }
+                  )}
 
-                {/* Click-to-place + drag overlay */}
-                <div ref={fieldCanvasRef}
-                     className={`absolute inset-0 z-10 ${bulkDragging ? 'cursor-grabbing' : 'cursor-crosshair'}`}
-                     onClick={placeField}>
-                  {bulkFields.map(f => {
-                    const typeDef = BULK_FIELD_TYPES.find(t => t.type === f.fieldType)
-                    return (
-                      <div key={f.id}
-                           style={{
-                             position: 'absolute',
-                             left: `${f.x}%`, top: `${f.y}%`,
-                             width: `${f.width}%`, height: `${f.height}%`,
-                             borderColor: typeDef?.color,
-                             backgroundColor: typeDef?.bg + 'cc',
-                           }}
-                           className="border-2 rounded flex items-center justify-between px-1.5 cursor-move select-none"
-                           onMouseDown={e => startFieldDrag(e, f.id)}
-                           onClick={e => e.stopPropagation()}>
-                        <span style={{ color: typeDef?.color }}
-                              className="text-xs font-semibold truncate leading-none">
-                          {f.label}
-                        </span>
-                        <button type="button"
-                          style={{ color: typeDef?.color }}
-                          className="text-xs font-bold ml-0.5 hover:opacity-60 shrink-0 leading-none"
-                          onClick={e => { e.stopPropagation(); removeBulkField(f.id) }}>
-                          ✕
-                        </button>
-                      </div>
-                    )
-                  })}
+                  {/* Click-to-place + drag overlay (always on top) */}
+                  <div ref={fieldCanvasRef}
+                       className={`absolute inset-0 z-10 ${bulkDragging ? 'cursor-grabbing' : 'cursor-crosshair'}`}
+                       onClick={placeField}>
+                    {bulkFields
+                      .filter(f => f.page === pdfCurrentPage)
+                      .map(f => {
+                        const typeDef = BULK_FIELD_TYPES.find(t => t.type === f.fieldType)
+                        return (
+                          <div key={f.id}
+                               style={{
+                                 position: 'absolute',
+                                 left: `${f.x}%`, top: `${f.y}%`,
+                                 width: `${f.width}%`, height: `${f.height}%`,
+                                 borderColor: typeDef?.color,
+                                 backgroundColor: typeDef?.bg + 'cc',
+                               }}
+                               className="border-2 rounded flex items-center justify-between px-1.5 cursor-move select-none"
+                               onMouseDown={e => startFieldDrag(e, f.id)}
+                               onClick={e => e.stopPropagation()}>
+                            <span style={{ color: typeDef?.color }}
+                                  className="text-xs font-semibold truncate leading-none">
+                              {f.label}
+                            </span>
+                            <button type="button"
+                              style={{ color: typeDef?.color }}
+                              className="text-xs font-bold ml-0.5 hover:opacity-60 shrink-0 leading-none"
+                              onClick={e => { e.stopPropagation(); removeBulkField(f.id) }}>
+                              ✕
+                            </button>
+                          </div>
+                        )
+                      })}
+                  </div>
                 </div>
+              )
+            })()}
+
+            {/* Multi-page navigation — shown only for multi-page PDFs */}
+            {pdfPageCount > 1 && (
+              <div className="flex items-center justify-center gap-3">
+                <button type="button"
+                  onClick={() => setPdfCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={pdfCurrentPage <= 1}
+                  className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-600
+                             hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40
+                             disabled:cursor-not-allowed transition-colors">
+                  <svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/>
+                  </svg>
+                </button>
+                <span className="text-xs font-medium text-gray-600 dark:text-gray-300 select-none">
+                  Page {pdfCurrentPage} of {pdfPageCount}
+                </span>
+                <button type="button"
+                  onClick={() => setPdfCurrentPage(p => Math.min(pdfPageCount, p + 1))}
+                  disabled={pdfCurrentPage >= pdfPageCount}
+                  className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-600
+                             hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40
+                             disabled:cursor-not-allowed transition-colors">
+                  <svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
+                  </svg>
+                </button>
               </div>
-            </div>
+            )}
 
             {/* Field list / edit below canvas */}
             {bulkFields.length > 0 && (
@@ -1414,6 +1631,9 @@ export default function ESignBulkPage() {
                 ['Title',        mapping.title,          excelRows[0]?.[mapping.title]],
                 ['Client Email', mapping.clientEmail,    excelRows[0]?.[mapping.clientEmail]],
                 ['Client Name',  mapping.clientName,     excelRows[0]?.[mapping.clientName]],
+                mapping.ccEmails
+                  ? ['CC Email(s)', mapping.ccEmails, excelRows[0]?.[mapping.ccEmails] || '—']
+                  : null,
                 mapping.tokenValidDays
                   ? ['Token Days', mapping.tokenValidDays, excelRows[0]?.[mapping.tokenValidDays] || '7']
                   : null,
@@ -1458,7 +1678,9 @@ export default function ESignBulkPage() {
           <table className="min-w-full text-sm">
             <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
               <tr>
-                {['#', 'Title', 'Client Email', 'Client Name', 'Days',
+                {['#', 'Title', 'To (Email)', 'Client Name',
+                  ...(mapping.ccEmails ? ['CC'] : []),
+                  'Days',
                   ...(enabledSources.api ? ['Resolved PDF URL'] : []),
                   'Status'].map(h => (
                   <th key={h} className="px-3 py-3 text-left text-xs font-semibold text-gray-500
@@ -1479,6 +1701,20 @@ export default function ESignBulkPage() {
                   <td className="px-3 py-2.5 text-sm text-gray-600 dark:text-gray-400">
                     {row.clientName || <span className="text-red-400">—</span>}
                   </td>
+                  {mapping.ccEmails && (
+                    <td className="px-3 py-2.5 text-xs text-gray-500 max-w-[160px]">
+                      {row.ccEmails?.length
+                        ? <span className="flex flex-wrap gap-1">
+                            {row.ccEmails.map((cc, ci) => (
+                              <span key={ci}
+                                className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300
+                                           px-1.5 py-0.5 rounded text-xs truncate max-w-[120px]"
+                                title={cc}>{cc}</span>
+                            ))}
+                          </span>
+                        : <span className="text-gray-300">—</span>}
+                    </td>
+                  )}
                   <td className="px-3 py-2.5 text-xs text-gray-500">{row.tokenValidDays}d</td>
                   {enabledSources.api && (
                     <td className="px-3 py-2.5 text-xs max-w-[200px]">
@@ -1534,9 +1770,16 @@ export default function ESignBulkPage() {
           <div>
             <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-0.5">Process &amp; Track</h3>
             {!processing && !processDone && (
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {validCount} valid document{validCount !== 1 ? 's' : ''} ready to send
-              </p>
+              <>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {validCount} valid document{validCount !== 1 ? 's' : ''} ready to send
+                </p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                  Batch: <span className="font-medium text-gray-600 dark:text-gray-300">
+                    {batchName.trim() || (excelFileName ? excelFileName.replace(/\.[^.]+$/, '') : 'Auto-named')}
+                  </span>
+                </p>
+              </>
             )}
             {processing && (
               <p className="text-sm text-purple-600 dark:text-purple-400 animate-pulse">

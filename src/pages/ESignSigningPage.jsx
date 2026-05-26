@@ -16,7 +16,7 @@
  */
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
-import { esignOpenDocument, esignSignField, esignSubmitDocument } from '../services/api'
+import { esignOpenDocument, esignSignField, esignSubmitDocument, esignUploadAttachment } from '../services/api'
 
 const FIELD_COLORS = {
   SIGNATURE: { border: '#7c3aed', bg: 'rgba(124,58,237,0.12)' },
@@ -57,6 +57,12 @@ export default function ESignSigningPage() {
   const [modalTab,    setModalTab]    = useState('DRAW')   // DRAW | TYPE | UPLOAD
   const [typedText,   setTypedText]   = useState('')
   const [saving,      setSaving]      = useState(false)
+
+  /* post-submission attachment state */
+  const [attachments,  setAttachments]  = useState([])
+  const [uploading,    setUploading]    = useState(false)
+  const [attachError,  setAttachError]  = useState('')
+  const [dragOver,     setDragOver]     = useState(false)
 
   /* canvas refs */
   const canvasRef  = useRef(null)
@@ -216,6 +222,26 @@ export default function ESignSigningPage() {
     }
   }
 
+  /* ── Upload supporting attachment after submission ── */
+  async function handleAttachFiles(fileList) {
+    const files = Array.from(fileList)
+    if (!files.length) return
+    setAttachError('')
+    for (const file of files) {
+      if (attachments.length >= 5) { setAttachError('Maximum of 5 files reached.'); break }
+      if (file.size > 10 * 1024 * 1024) { setAttachError(`"${file.name}" exceeds the 10 MB limit.`); continue }
+      setUploading(true)
+      try {
+        const meta = await esignUploadAttachment(token, file)
+        setAttachments(prev => [...prev, meta])
+      } catch (e) {
+        setAttachError(e.message || 'Upload failed. Please try again.')
+      } finally {
+        setUploading(false)
+      }
+    }
+  }
+
   /* ── Loading / error / success screens ── */
   if (loading) return <Center><Spinner/></Center>
   if (error)   return (
@@ -228,19 +254,99 @@ export default function ESignSigningPage() {
     </Center>
   )
   if (submitted) return (
-    <Center>
-      <div className="text-center max-w-sm">
-        <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-5">
-          <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/>
-          </svg>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+
+        {/* ── Success banner ── */}
+        <div className="text-center mb-8">
+          <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-5">
+            <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/>
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Document Signed!</h1>
+          <p className="text-gray-500 text-sm">
+            Thank you, <strong>{doc?.clientName}</strong>. Your signed document will be emailed to you shortly.
+          </p>
         </div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Document Signed!</h1>
-        <p className="text-gray-500">
-          Thank you, <strong>{doc?.clientName}</strong>. Your signed document will be emailed to you shortly.
+
+        {/* ── Optional attachment upload card ── */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xl">📎</span>
+            <h2 className="text-base font-bold text-gray-800">Upload Supporting Documents</h2>
+            <span className="ml-1 text-xs font-normal text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Optional</span>
+          </div>
+          <p className="text-xs text-gray-500 mb-4">
+            Attach any supporting documents (e.g. ID copy, proof of address). Up to 5 files, 10 MB each.
+          </p>
+
+          {/* Drop zone */}
+          {attachments.length < 5 && (
+            <label
+              className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl p-6 cursor-pointer transition-colors
+                          ${dragOver
+                            ? 'border-purple-400 bg-purple-50'
+                            : 'border-gray-200 bg-gray-50 hover:border-purple-300 hover:bg-purple-50/50'}`}
+              onDragOver={e  => { e.preventDefault(); setDragOver(true) }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={e      => { e.preventDefault(); setDragOver(false); handleAttachFiles(e.dataTransfer.files) }}
+            >
+              <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+              </svg>
+              <p className="text-sm text-gray-500">
+                Drag &amp; drop files here, or{' '}
+                <span className="text-purple-600 font-semibold">browse</span>
+              </p>
+              <p className="text-xs text-gray-400">Any file type · Max 10 MB each</p>
+              <input type="file" className="hidden" multiple
+                onChange={e => { handleAttachFiles(e.target.files); e.target.value = '' }}/>
+            </label>
+          )}
+
+          {attachments.length >= 5 && (
+            <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-2 text-xs text-amber-700">
+              Maximum of 5 attachments reached.
+            </div>
+          )}
+
+          {/* Uploading indicator */}
+          {uploading && (
+            <div className="mt-3 flex items-center gap-2 text-xs text-purple-600">
+              <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin shrink-0"/>
+              Uploading…
+            </div>
+          )}
+
+          {/* Error message */}
+          {attachError && (
+            <p className="mt-3 text-xs text-red-500">{attachError}</p>
+          )}
+
+          {/* Uploaded files list */}
+          {attachments.length > 0 && (
+            <ul className="mt-4 space-y-2">
+              {attachments.map(a => (
+                <li key={a.id} className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5">
+                  <span className="text-xl shrink-0">{attachFileIcon(a.contentType)}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{a.fileName}</p>
+                    <p className="text-xs text-gray-400">{formatBytes(a.fileSize)}</p>
+                  </div>
+                  <span className="text-green-500 text-base shrink-0">✓</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <p className="text-center text-xs text-gray-400 mt-6">
+          You can close this page at any time. Your signature has been recorded.
         </p>
       </div>
-    </Center>
+    </div>
   )
 
   const allRequiredSigned = fields.filter(f => f.required).every(f => f.signed)
@@ -573,4 +679,20 @@ function Center({ children }) {
 
 function Spinner() {
   return <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"/>
+}
+
+function formatBytes(bytes) {
+  if (!bytes) return '0 B'
+  if (bytes < 1024)        return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function attachFileIcon(contentType) {
+  if (!contentType) return '📄'
+  if (contentType.startsWith('image/'))       return '🖼️'
+  if (contentType === 'application/pdf')      return '📑'
+  if (contentType.includes('word') || contentType.includes('document')) return '📝'
+  if (contentType.includes('sheet') || contentType.includes('excel'))   return '📊'
+  return '📄'
 }

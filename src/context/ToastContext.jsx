@@ -29,10 +29,12 @@ export function ToastProvider({ children }) {
   }, [])
 
   const toast = {
-    error:   (msg, dur) => add(msg, 'error',   dur),
-    success: (msg, dur) => add(msg, 'success', dur),
-    warning: (msg, dur) => add(msg, 'warning', dur),
-    info:    (msg, dur) => add(msg, 'info',    dur),
+    error:     (msg, dur)        => add(msg, 'error',   dur),
+    success:   (msg, dur)        => add(msg, 'success', dur),
+    warning:   (msg, dur)        => add(msg, 'warning', dur),
+    info:      (msg, dur)        => add(msg, 'info',    dur),
+    // Backwards-compat shim: showToast(message, type) used across many pages
+    showToast: (msg, type = 'info', dur) => add(msg, type, dur),
   }
 
   return (
