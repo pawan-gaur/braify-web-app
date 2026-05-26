@@ -29,6 +29,9 @@ import ESignBuilderPage     from './pages/ESignBuilderPage'
 import ESignBulkPage        from './pages/ESignBulkPage'
 import ESignDetailPage      from './pages/ESignDetailPage'
 import ESignSigningPage     from './pages/ESignSigningPage'
+import BulkEmailJobsPage    from './pages/BulkEmailJobsPage'
+import BulkEmailSendPage    from './pages/BulkEmailSendPage'
+import BulkEmailDetailPage  from './pages/BulkEmailDetailPage'
 import ESignVerifyPage      from './pages/ESignVerifyPage'
 import GetStartedPage       from './pages/GetStartedPage'
 import OnboardingRequestsPage from './pages/OnboardingRequestsPage'
@@ -110,6 +113,9 @@ function Shell() {
           <Route path="/email-templates"   element={<FeatureRoute feature={FEATURES.EMAIL_TEMPLATES}><EmailTemplatesPage /></FeatureRoute>} />
           <Route path="/email-builder"     element={<FeatureRoute feature={FEATURES.EMAIL_TEMPLATES}><EmailBuilderPage /></FeatureRoute>} />
           <Route path="/email-builder/:id" element={<FeatureRoute feature={FEATURES.EMAIL_TEMPLATES}><EmailBuilderPage /></FeatureRoute>} />
+          <Route path="/bulk-email"        element={<FeatureRoute feature={FEATURES.EMAIL_TEMPLATES}><BulkEmailJobsPage /></FeatureRoute>} />
+          <Route path="/bulk-email/send"   element={<FeatureRoute feature={FEATURES.EMAIL_TEMPLATES}><BulkEmailSendPage /></FeatureRoute>} />
+          <Route path="/bulk-email/:id"    element={<FeatureRoute feature={FEATURES.EMAIL_TEMPLATES}><BulkEmailDetailPage /></FeatureRoute>} />
 
           {/* ── E-Sign (feature-gated) ── */}
           <Route path="/esign"          element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignDocumentsPage /></FeatureRoute>} />

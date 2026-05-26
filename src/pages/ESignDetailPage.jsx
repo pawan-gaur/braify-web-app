@@ -7,7 +7,7 @@
  */
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { esignGetDocument, esignGetAudit, esignDownloadSigned } from '../services/api'
+import { esignGetDocument, esignGetAudit, esignDownloadSigned, esignListAttachments, esignDownloadAttachment } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 
@@ -32,9 +32,10 @@ const EVENT_ICONS = {
   DOCUMENT_SUBMITTED:     { icon: '📬', color: 'text-green-600' },
   PDF_GENERATED:          { icon: '🖨️', color: 'text-teal-500' },
   COMPLETION_EMAIL_SENT:  { icon: '💌', color: 'text-green-500' },
-  DOCUMENT_DOWNLOADED:    { icon: '⬇️', color: 'text-gray-500' },
-  LINK_EXPIRED:           { icon: '⏰', color: 'text-orange-500' },
-  DOCUMENT_CANCELLED:     { icon: '🚫', color: 'text-red-500' },
+  DOCUMENT_DOWNLOADED:        { icon: '⬇️', color: 'text-gray-500' },
+  CLIENT_ATTACHMENT_UPLOADED: { icon: '📎', color: 'text-blue-600' },
+  LINK_EXPIRED:               { icon: '⏰', color: 'text-orange-500' },
+  DOCUMENT_CANCELLED:         { icon: '🚫', color: 'text-red-500' },
 }
 
 import { fmtDateTimeGB as fmtDateTime } from '../utils/date'
@@ -44,20 +45,23 @@ export default function ESignDetailPage() {
   const navigate   = useNavigate()
   const { showToast } = useToast()
 
-  const [doc,     setDoc]     = useState(null)
-  const [audit,   setAudit]   = useState([])
-  const [pdfUrl,  setPdfUrl]  = useState(null)  // signed PDF blob URL
-  const [srcUrl,  setSrcUrl]  = useState(null)  // source PDF blob URL
-  const [loading, setLoading] = useState(true)
-  const [tab,     setTab]     = useState('overview') // overview | pdf | audit
+  const [doc,         setDoc]         = useState(null)
+  const [audit,       setAudit]       = useState([])
+  const [attachments, setAttachments] = useState([])
+  const [pdfUrl,      setPdfUrl]      = useState(null)  // signed PDF blob URL
+  const [srcUrl,      setSrcUrl]      = useState(null)  // source PDF blob URL
+  const [loading,     setLoading]     = useState(true)
+  const [tab,         setTab]         = useState('overview') // overview | pdf | audit | attachments
 
   useEffect(() => {
     Promise.all([
       esignGetDocument(id),
       esignGetAudit(id).catch(() => []),
-    ]).then(([d, a]) => {
+      esignListAttachments(id).catch(() => []),
+    ]).then(([d, a, atts]) => {
       setDoc(d)
       setAudit(a)
+      setAttachments(atts || [])
 
       if (d.signedPdfBase64) {
         const bytes = Uint8Array.from(atob(d.signedPdfBase64), c => c.charCodeAt(0))
@@ -79,6 +83,20 @@ export default function ESignDetailPage() {
       const a    = document.createElement('a')
       a.href     = url
       a.download = (doc?.title || 'document').replace(/[^a-zA-Z0-9\- ]/g, '') + '-signed.pdf'
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      showToast(e.message, 'error')
+    }
+  }
+
+  async function handleDownloadAttachment(att) {
+    try {
+      const blob = await esignDownloadAttachment(id, att.id)
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = att.fileName || 'attachment'
       a.click()
       URL.revokeObjectURL(url)
     } catch (e) {
@@ -183,11 +201,12 @@ export default function ESignDetailPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-5 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 mb-5 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 w-fit flex-wrap">
         {[
-          { key: 'overview', label: 'Overview' },
-          { key: 'pdf',      label: isCompleted ? 'Signed PDF' : 'Source PDF' },
-          { key: 'audit',    label: `Audit Trail (${audit.length})` },
+          { key: 'overview',     label: 'Overview' },
+          { key: 'pdf',          label: isCompleted ? 'Signed PDF' : 'Source PDF' },
+          { key: 'audit',        label: `Audit Trail (${audit.length})` },
+          ...(attachments.length > 0 ? [{ key: 'attachments', label: `Attachments (${attachments.length})` }] : []),
         ].map(t => (
           <button
             key={t.key}
@@ -299,6 +318,46 @@ export default function ESignDetailPage() {
         </div>
       )}
 
+      {/* ── Tab: Client Attachments ── */}
+      {tab === 'attachments' && (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+          {attachments.length === 0 ? (
+            <div className="flex items-center justify-center h-40 text-gray-400">
+              <p className="text-sm">No attachments uploaded</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100 dark:divide-gray-700">
+              {attachments.map(att => (
+                <div key={att.id}
+                     className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                  <span className="text-2xl shrink-0">{attFileIcon(att.contentType)}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{att.fileName}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {attFormatBytes(att.fileSize)}
+                      {att.contentType ? ` · ${att.contentType}` : ''}
+                      {att.uploadedAt ? ` · ${fmtDateTime(att.uploadedAt)}` : ''}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleDownloadAttachment(att)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold
+                               border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300
+                               hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shrink-0"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                    Download
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── Tab: Audit Trail ── */}
       {tab === 'audit' && (
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
@@ -347,4 +406,22 @@ export default function ESignDetailPage() {
       )}
     </div>
   )
+}
+
+// ── Attachment helpers ────────────────────────────────────────────────────────
+
+function attFormatBytes(bytes) {
+  if (!bytes) return '0 B'
+  if (bytes < 1024)        return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function attFileIcon(contentType) {
+  if (!contentType) return '📄'
+  if (contentType.startsWith('image/'))       return '🖼️'
+  if (contentType === 'application/pdf')      return '📑'
+  if (contentType.includes('word') || contentType.includes('document')) return '📝'
+  if (contentType.includes('sheet') || contentType.includes('excel'))   return '📊'
+  return '📄'
 }
