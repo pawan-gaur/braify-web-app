@@ -244,7 +244,7 @@ export default function BulkEmailJobsPage() {
     e.stopPropagation()
     try {
       await bulkEmailResend(jobId)
-      toast.success('Resend job started')
+      toast.success('Resend started — failed emails are being retried')
       loadJobs(true)
     } catch (err) { toast.error(err.message) }
   }

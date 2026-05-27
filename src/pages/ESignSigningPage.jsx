@@ -270,8 +270,8 @@ export default function ESignSigningPage() {
           </p>
         </div>
 
-        {/* ── Optional attachment upload card ── */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+        {/* ── Optional attachment upload card (only shown when creator enabled it) ── */}
+        {doc?.allowClientUpload && <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xl">📎</span>
             <h2 className="text-base font-bold text-gray-800">Upload Supporting Documents</h2>
@@ -340,7 +340,7 @@ export default function ESignSigningPage() {
               ))}
             </ul>
           )}
-        </div>
+        </div>}
 
         <p className="text-center text-xs text-gray-400 mt-6">
           You can close this page at any time. Your signature has been recorded.

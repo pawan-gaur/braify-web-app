@@ -2,7 +2,27 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import grapesjs from 'grapesjs'
 import { EMAIL_EDITOR_CONFIG } from './email-grapes-config'
 import PreviewDataModal from '../ui/PreviewDataModal'
+import { useToast } from '../../context/ToastContext'
 import '../../styles/builder.css'
+
+// ── Image URL helpers ──────────────────────────────────────────────────────────
+
+/** Returns true for src values that will break when an email is opened externally. */
+function isBrokenEmailSrc(src) {
+  if (!src || src.startsWith('data:')) return false   // data URIs are self-contained
+  if (src.startsWith('https://')) return false         // absolute HTTPS — safe
+  return true  // relative, http://, localhost, blob:, etc.
+}
+
+/**
+ * Extracts all image src values from an HTML string and returns the ones that
+ * will not load in a recipient's email client.
+ */
+function findBrokenImages(html) {
+  return [...html.matchAll(/\bsrc="([^"]+)"/gi)]
+    .map(m => m[1])
+    .filter(isBrokenEmailSrc)
+}
 
 const DEVICES = ['Desktop Email', 'Tablet', 'Mobile']
 
@@ -51,6 +71,7 @@ export default function EmailTemplateBuilder({
 }) {
   const editorRef  = useRef(null)
   const mountedRef = useRef(false)
+  const toast      = useToast()
 
   /* ── Panel state ── */
   const [activePanel,  setActivePanel]  = useState('blocks')
@@ -63,6 +84,9 @@ export default function EmailTemplateBuilder({
   /* ── Merge-tag state ── */
   const [placeholders, setPlaceholders] = useState([])
   const [customVar,    setCustomVar]    = useState('')
+
+  /* ── Broken image banner ── */
+  const [brokenImages, setBrokenImages] = useState([])   // list of broken src strings
 
   /* ── Test send modal ── */
   const [showTestModal,   setShowTestModal]   = useState(false)
@@ -99,10 +123,11 @@ export default function EmailTemplateBuilder({
 
   const setField = (key, val) => setMeta(prev => ({ ...prev, [key]: val }))
 
-  /* ── Placeholder extraction ── */
+  /* ── Placeholder extraction + broken-image detection ── */
   const refreshPlaceholders = useCallback((html) => {
     const unique = [...new Set([...html.matchAll(/\{\{([^}]+)\}\}/g)].map(m => m[1].trim()))]
     setPlaceholders(unique)
+    setBrokenImages(findBrokenImages(html))
   }, [])
 
   /* ── GrapesJS init ── */
@@ -113,23 +138,43 @@ export default function EmailTemplateBuilder({
     const editor = grapesjs.init(EMAIL_EDITOR_CONFIG('email-gjs-canvas'))
     editorRef.current = editor
 
+    // ── Register component:add BEFORE loading so every component — whether
+    //    dragged from the block panel or hydrated from saved data — gets
+    //    resize handles, draggable and droppable flags applied immediately.
+    editor.on('component:add', enableResize)
+
+    // ── Load template content ──────────────────────────────────────────────
     if (libraryTemplate?.htmlContent) {
       // New template seeded from the library
       editor.setComponents(libraryTemplate.htmlContent)
       refreshPlaceholders(libraryTemplate.htmlContent)
     } else if (initialTemplate?.gjsData) {
-      try { editor.loadProjectData(JSON.parse(initialTemplate.gjsData)) }
-      catch {
+      try {
+        editor.loadProjectData(JSON.parse(initialTemplate.gjsData))
+        // Run broken-image scan after GrapesJS has loaded the project
+        setTimeout(() => refreshPlaceholders(editor.getHtml()), 200)
+      } catch {
         editor.setComponents(initialTemplate.htmlContent || '')
         editor.setStyle(initialTemplate.cssContent || '')
+        refreshPlaceholders(initialTemplate.htmlContent || '')
       }
+    } else if (initialTemplate?.htmlContent) {
+      editor.setComponents(initialTemplate.htmlContent)
+      editor.setStyle(initialTemplate.cssContent || '')
+      refreshPlaceholders(initialTemplate.htmlContent)
     }
+
+    // ── After the canvas iframe is ready, sweep ALL components to catch any
+    //    that were added before the listener could fire (e.g. default wrapper,
+    //    components already in the model at init time).
+    editor.once('load', () => {
+      editor.getComponents().each(c => enableResize(c))
+    })
 
     editor.on('component:update component:add component:remove', () => {
       refreshPlaceholders(editor.getHtml())
     })
 
-    editor.on('component:add', enableResize)
     editor.on('rte:enable',  () => requestAnimationFrame(() => injectRteExtras(editor)))
     editor.on('rte:disable', () => document.querySelectorAll('.rte-extras').forEach(el => el.remove()))
 
@@ -174,6 +219,16 @@ export default function EmailTemplateBuilder({
     const css     = editor.getCss()
     const gjsData = JSON.stringify(editor.getProjectData())
     refreshPlaceholders(html)
+
+    // Warn about images that won't load in recipients' email clients
+    const broken = findBrokenImages(html)
+    if (broken.length > 0) {
+      toast.warning(
+        `${broken.length} image${broken.length > 1 ? 's' : ''} use non-HTTPS URLs and will appear broken in emails. ` +
+        `Use absolute https:// links for all images.`
+      )
+    }
+
     onSave({ ...meta, htmlContent: html, cssContent: css, gjsData })
   }
 
@@ -465,6 +520,41 @@ ${html}
           </button>
         </div>
       </div>
+
+      {/* ── Broken-image warning banner ──────────────────────────────────────── */}
+      {brokenImages.length > 0 && (
+        <div className="flex items-start gap-2.5 bg-amber-50 dark:bg-amber-900/20 border-b
+                        border-amber-300 dark:border-amber-700 px-4 py-2 shrink-0">
+          <svg className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5"
+            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+          </svg>
+          <div className="flex-1 min-w-0">
+            <span className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+              {brokenImages.length} image{brokenImages.length > 1 ? 's' : ''} will appear broken in emails.&nbsp;
+            </span>
+            <span className="text-xs text-amber-700 dark:text-amber-400">
+              Images must use absolute <code className="font-mono bg-amber-100 dark:bg-amber-900/40 px-1 rounded">https://</code> URLs.
+              Click the image in the canvas → Properties → change&nbsp;<strong>src</strong> to a public HTTPS link.
+            </span>
+            <div className="flex flex-wrap gap-1.5 mt-1">
+              {brokenImages.slice(0, 3).map((src, i) => (
+                <code key={i} className="text-[10px] font-mono bg-amber-100 dark:bg-amber-900/30
+                                         text-amber-800 dark:text-amber-300 px-1.5 py-0.5 rounded
+                                         max-w-[260px] truncate block">
+                  {src}
+                </code>
+              ))}
+              {brokenImages.length > 3 && (
+                <span className="text-[10px] text-amber-600 dark:text-amber-500 self-center">
+                  +{brokenImages.length - 3} more
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Placeholder strip ──────────────────────────────────────────────── */}
       {placeholders.length > 0 && (
@@ -1224,19 +1314,66 @@ function TestSendModal({ meta, testTo, setTestTo, testSending, onSend, onClose, 
   )
 }
 
-/* ── Resize helper ────────────────────────────────────────────────────────── */
+/* ── Resize / drag / drop helper ─────────────────────────────────────────── */
+
+// Every element in this set gets resize handles + can be dragged.
 const RESIZABLE_TAGS = new Set([
-  'div', 'section', 'table', 'td', 'img', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+  // Containers
+  'div', 'section', 'article', 'header', 'footer', 'nav', 'aside', 'main',
+  // Table family — covers every table / cell combination
+  'table', 'thead', 'tbody', 'tfoot', 'colgroup', 'col',
+  'tr', 'th', 'td',
+  // Text blocks
+  'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre',
+  // Inline elements (can still have width / height)
+  'span', 'a', 'strong', 'em', 'label', 'code',
+  // Media
+  'img', 'picture', 'figure', 'video', 'audio', 'iframe', 'svg', 'canvas',
+  // Lists
+  'ul', 'ol', 'li', 'dl', 'dt', 'dd',
+  // Form / interactive
+  'button', 'input', 'textarea', 'select',
+  // Structural
+  'hr', 'details', 'summary',
 ])
+
+// Elements that may also RECEIVE dropped children.
+const DROPPABLE_TAGS = new Set([
+  'div', 'section', 'article', 'header', 'footer', 'nav', 'aside', 'main',
+  'table', 'thead', 'tbody', 'tfoot',
+  'tr', 'td', 'th',
+  'ul', 'ol', 'dl',
+  'figure', 'details',
+])
+
 const RESIZE_CONFIG = {
   handles: ['tl', 'tc', 'tr', 'cl', 'cr', 'bl', 'bc', 'br'],
-  minWidth: 20, minHeight: 10,
-  unitWidth: 'px', unitHeight: 'px', currentUnit: 1, step: 1,
+  minWidth: 10, minHeight: 10,
+  unitWidth: 'px', unitHeight: 'px',
+  currentUnit: 1, step: 1,
+  ratioDefault: false,
 }
+
+/**
+ * Recursively walks the GrapesJS component tree and:
+ *  • Enables resize handles on every recognised tag.
+ *  • Sets draggable = true so any element can be repositioned.
+ *  • Sets droppable = true on container-like tags so they accept drops.
+ */
 function enableResize(component) {
   const tag = component.get('tagName')?.toLowerCase()
-  if (tag && RESIZABLE_TAGS.has(tag) && !component.get('resizable')) {
-    component.set('resizable', RESIZE_CONFIG)
+  if (tag) {
+    if (RESIZABLE_TAGS.has(tag)) {
+      if (!component.get('resizable')) {
+        component.set('resizable', RESIZE_CONFIG)
+      }
+      // Allow every element to be dragged to a new position
+      component.set('draggable', true)
+    }
+    // Allow container elements to receive dragged children
+    if (DROPPABLE_TAGS.has(tag)) {
+      component.set('droppable', true)
+    }
   }
   component.components().each(child => enableResize(child))
 }

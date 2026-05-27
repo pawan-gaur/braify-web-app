@@ -110,9 +110,17 @@ export default function BulkEmailDetailPage() {
   // ── Actions ───────────────────────────────────────────────────────────────
   async function handleResend() {
     try {
-      const newJob = await bulkEmailResend(id)
-      toast.success('Resend job started')
-      navigate(`/bulk-email/${newJob.id}`)
+      await bulkEmailResend(id)
+      // Reload the SAME record (with full rows) so counters and the
+      // Recipients tab reflect the reset state immediately, then the
+      // existing poll loop streams live progress updates automatically.
+      const [j, a] = await Promise.all([
+        bulkEmailGetJob(id),
+        bulkEmailGetAudit(id).catch(() => []),
+      ])
+      setJob(j)
+      setAudit(a || [])
+      toast.success(`Resend started — ${j.pendingCount} failed email(s) are being retried`)
     } catch (e) { toast.error(e.message) }
   }
 

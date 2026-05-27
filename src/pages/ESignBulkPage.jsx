@@ -231,7 +231,8 @@ export default function ESignBulkPage() {
   const [excelFileName, setExcelFileName] = useState('')
   const [excelLoading,  setExcelLoading]  = useState(false)
   const [excelError,    setExcelError]    = useState('')
-  const [batchName,     setBatchName]     = useState('')   // user-editable; defaults to filename
+  const [batchName,          setBatchName]          = useState('')   // user-editable; defaults to filename
+  const [allowClientUpload, setAllowClientUpload] = useState(false) // whether clients may upload after signing
   const excelRef = useRef()
 
   /* ── Step 1 — PDF Source ─────────────────────────────────────────── */
@@ -625,7 +626,7 @@ export default function ESignBulkPage() {
       || (excelFileName ? excelFileName.replace(/\.[^.]+$/, '') : null)
     let batchId = null
     try {
-      const batch = await esignInitBatch(resolvedBatchName, validCount)
+      const batch = await esignInitBatch(resolvedBatchName, validCount, allowClientUpload)
       batchId = batch.id
     } catch (err) {
       console.warn('Could not create batch record — documents will still be created:', err.message)
@@ -776,6 +777,27 @@ export default function ESignBulkPage() {
           <p className="text-xs text-gray-400 mt-1">
             This name appears in the Bulk Batches list. Leave blank to use the uploaded filename.
           </p>
+        </div>
+
+        {/* ── Allow client upload toggle ── */}
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-gray-900 dark:text-white">Allow client to upload supporting documents</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              After signing, clients can optionally attach files (e.g. ID copy, proof of address). Up to 5 files, 10 MB each.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setAllowClientUpload(v => !v)}
+            className={`w-11 h-6 rounded-full shrink-0 relative transition-colors
+                        ${allowClientUpload ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-600'}`}
+            aria-pressed={allowClientUpload}
+            title={allowClientUpload ? 'Disable client upload' : 'Enable client upload'}
+          >
+            <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform
+                             ${allowClientUpload ? 'translate-x-5' : 'translate-x-0.5'}`} />
+          </button>
         </div>
 
         {/* ── File upload ── */}

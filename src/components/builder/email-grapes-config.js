@@ -17,16 +17,18 @@ export const EMAIL_EDITOR_CONFIG = (containerId) => ({
   canvas: {
     styles: [
       `data:text/css,
-        body { background: #c8c8c8; padding: 24px; font-family: Arial, sans-serif; }
+        body { background: #c8c8c8; margin: 0; padding: 0; font-family: Arial, sans-serif; }
         .gjs-frame-wrapper { background: #c8c8c8; }
       `,
     ],
   },
 
   // Email preview widths
+  // Desktop Email uses '' (full canvas width) so the 600-px email table
+  // centres naturally — prevents the 600px frame + body-padding squish.
   deviceManager: {
     devices: [
-      { name: 'Desktop Email', width: '600px'  },
+      { name: 'Desktop Email', width: ''       },
       { name: 'Tablet',        width: '480px'  },
       { name: 'Mobile',        width: '375px'  },
     ],
@@ -72,6 +74,18 @@ export const EMAIL_EDITOR_CONFIG = (containerId) => ({
 
   layerManager: { appendTo: '#email-layers-panel' },
   traitManager: { appendTo: '#email-traits-panel' },
+
+  // ── Asset manager — URL-only; no file upload so images are never
+  //    base64-encoded. Users paste / type the hosted image URL instead.
+  assetManager: {
+    upload:       false,   // hide the "Upload" button entirely
+    multiUpload:  false,
+    showAddButton: true,   // keep the "Add image URL" input
+    assets:       [],
+    // Override the default FileReader upload so a file-drop / file-choose
+    // never encodes the binary to a data: URI.
+    uploadFile:   () => {},
+  },
 })
 
 // ── SVG icon helper ──────────────────────────────────────────────────────────

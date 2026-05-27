@@ -178,8 +178,8 @@ export const esignGetBatch        = (batchId)                       =>
   http.get(`/esign/batches/${batchId}`).then(r => r.data)
 export const esignGetBatchDocuments = (batchId, { page = 0, size = 20 } = {}) =>
   http.get(`/esign/batches/${batchId}/documents?page=${page}&size=${size}`).then(r => r.data)
-export const esignInitBatch       = (label, totalRequested)         =>
-  http.post('/esign/batches/init', { label, totalRequested }).then(r => r.data)
+export const esignInitBatch       = (label, totalRequested, allowClientUpload = false) =>
+  http.post('/esign/batches/init', { label, totalRequested, allowClientUpload }).then(r => r.data)
 export const esignFinalizeBatch   = (batchId, totalCreated, totalSent, totalFailed) =>
   http.patch(`/esign/batches/${batchId}/finalize`, { totalCreated, totalSent, totalFailed }).then(r => r.data)
 
