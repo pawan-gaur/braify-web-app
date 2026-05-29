@@ -51,6 +51,12 @@ const ATT_OPTIONS = [
     desc: 'Fetch PDF from an HTTP endpoint',
     iconPath: 'M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14',
   },
+  {
+    value: 'EXCEL_SHEET',
+    label: 'Excel from Sheet 2',
+    desc: 'Per-recipient rows from 2nd worksheet',
+    iconPath: 'M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+  },
 ]
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -137,6 +143,14 @@ export default function BulkEmailSendPage() {
   const [extApiBody,           setExtApiBody]           = useState('')
   const pdfRef = useRef()
 
+  /* Step 2 — Sheet 2 (EXCEL_SHEET) */
+  const [sheet2Rows,            setSheet2Rows]            = useState([])
+  const [sheet2Columns,         setSheet2Columns]         = useState([])
+  const [sheet2SelectedColumns, setSheet2SelectedColumns] = useState([])  // columns to include in generated Excel
+  const [sheet2IdColumn,        setSheet2IdColumn]        = useState('')   // Sheet 2 col to match on
+  const [mainIdColumn,          setMainIdColumn]          = useState('')   // Sheet 1 col that holds the key
+  const [detailFileName,        setDetailFileName]        = useState('')   // filename template
+
   /* Step 3 — Review & Send */
   const [jobLabel,  setJobLabel]  = useState('')
   const [sending,   setSending]   = useState(false)
@@ -176,6 +190,7 @@ export default function BulkEmailSendPage() {
     attachmentType === 'UPLOAD'       ? !!uploadedPdfB64          // step 2
       : attachmentType === 'PDF_TEMPLATE' ? !!selectedPdfTemplateId
       : attachmentType === 'EXTERNAL_API' ? extApiUrl.trim().length > 0
+      : attachmentType === 'EXCEL_SHEET'  ? sheet2Rows.length > 0 && sheet2IdColumn.length > 0 && mainIdColumn.length > 0 && sheet2SelectedColumns.length > 0
       : true,
     true,                                                          // step 3 (always can review)
   ]
@@ -194,25 +209,76 @@ export default function BulkEmailSendPage() {
         const ws     = wb.Sheets[wb.SheetNames[0]]
         const parsed = XLSX.utils.sheet_to_json(ws, { defval: '' })
         if (!parsed.length) { showToast('XLSX file appears to be empty', 'error'); return }
-        if (parsed.length > MAX_ROWS) {
-          showToast(`File has ${parsed.length} rows — maximum is ${MAX_ROWS}`, 'error')
+
+        // ── Sanitise Sheet 1 rows ──────────────────────────────────────────────
+        // 1. Stringify all values; strip "mailto:" prefixes from email-like cells
+        // 2. Drop rows that have fewer than 2 populated (non-empty) cells — these
+        //    are blank spacer rows or Excel hyperlink artifacts
+        const allRows = parsed.map(r => {
+          const out = {}
+          Object.keys(r).forEach(c => {
+            let v = String(r[c] ?? '')
+            if (v.toLowerCase().startsWith('mailto:')) v = v.slice(7)
+            out[c] = v
+          })
+          return out
+        })
+        const validRows = allRows.filter(r =>
+          Object.values(r).filter(v => v !== '' && v !== 'null' && v !== 'undefined').length >= 2
+        )
+        const skipped = allRows.length - validRows.length
+
+        if (!validRows.length) { showToast('No valid data rows found in the file', 'error'); return }
+        if (validRows.length > MAX_ROWS) {
+          showToast(`File has ${validRows.length} rows — maximum is ${MAX_ROWS}`, 'error')
           return
         }
-        const cols = Object.keys(parsed[0])
-        setXlsxRows(parsed.map(r => {
-          const out = {}
-          cols.forEach(c => { out[c] = String(r[c] ?? '') })
-          return out
-        }))
+        if (skipped > 0)
+          showToast(`${skipped} blank / empty row${skipped > 1 ? 's' : ''} were automatically skipped`, 'info')
+
+        const cols = Object.keys(validRows[0])
+        setXlsxRows(validRows)
         setXlsxColumns(cols)
         setXlsxFileName(file.name)
         setJobLabel(prev =>
           prev.trim() ? prev : file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ')
         )
-        const guess = cols.find(c => /email/i.test(c))
-        if (guess) setEmailColumn(guess)
-        const nameGuess = cols.find(c => /name/i.test(c))
+        const emailGuess = cols.find(c => /email/i.test(c))
+        if (emailGuess) setEmailColumn(emailGuess)
+        const nameGuess = cols.find(c => /\bname\b/i.test(c))
         if (nameGuess) setNameColumn(nameGuess)
+
+        // ── Parse Sheet 2 (if present) ──────────────────────────────────────────
+        if (wb.SheetNames.length > 1) {
+          const ws2     = wb.Sheets[wb.SheetNames[1]]
+          const parsed2 = XLSX.utils.sheet_to_json(ws2, { defval: '' })
+          if (parsed2.length > 0) {
+            const cols2 = Object.keys(parsed2[0])
+            const rows2 = parsed2.map(r => {
+              const out = {}
+              cols2.forEach(c => { out[c] = String(r[c] ?? '') })
+              return out
+            })
+            setSheet2Rows(rows2)
+            setSheet2Columns(cols2)
+            setSheet2SelectedColumns(cols2)   // default: all columns selected
+            // Auto-guess link columns — prefer exact "Account" / "Id" / "ID" match
+            const idGuess2 = cols2.find(c => /account/i.test(c))
+              || cols2.find(c => /^id$/i.test(c))
+              || cols2.find(c => /id/i.test(c))
+            if (idGuess2) setSheet2IdColumn(idGuess2)
+            const idGuess1 = cols.find(c => /account/i.test(c))
+              || cols.find(c => /^id$/i.test(c))
+              || cols.find(c => /id/i.test(c))
+            if (idGuess1) setMainIdColumn(idGuess1)
+          } else {
+            setSheet2Rows([]); setSheet2Columns([]); setSheet2SelectedColumns([])
+            setSheet2IdColumn(''); setMainIdColumn('')
+          }
+        } else {
+          setSheet2Rows([]); setSheet2Columns([]); setSheet2SelectedColumns([])
+          setSheet2IdColumn(''); setMainIdColumn('')
+        }
       } catch (err) { showToast('Could not parse XLSX file: ' + err.message, 'error') }
     }
     reader.readAsBinaryString(file)
@@ -255,6 +321,13 @@ export default function BulkEmailSendPage() {
           externalApiMethod:  extApiMethod,
           externalApiHeaders: extApiHeaders.trim() || undefined,
           externalApiBody:    extApiBody.trim() || undefined,
+        }),
+        ...(attachmentType === 'EXCEL_SHEET' && {
+          detailSheetRows:     sheet2Rows,
+          detailSheetColumns:  sheet2SelectedColumns,
+          detailSheetIdColumn: sheet2IdColumn,
+          mainSheetIdColumn:   mainIdColumn,
+          detailSheetFileName: detailFileName.trim() || undefined,
         }),
       }
       const job = await bulkEmailCreateJob(payload)
@@ -489,7 +562,7 @@ export default function BulkEmailSendPage() {
         <div>
           <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">Attachment</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Optionally attach a PDF to every email. Choose how to source it.
+            Optionally attach a file to every email. Choose the attachment source.
           </p>
         </div>
 
@@ -599,7 +672,7 @@ export default function BulkEmailSendPage() {
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Use{' '}
                 <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded font-mono text-purple-600 dark:text-purple-400">
-                  {'{{'+'column'+'}}'}}
+                  {'{{column}}'}
                 </code>{' '}
                 in URL or body to inject row values. The endpoint must return PDF bytes.
               </p>
@@ -637,6 +710,231 @@ export default function BulkEmailSendPage() {
             </div>
           </div>
         )}
+
+        {/* EXCEL_SHEET */}
+        {attachmentType === 'EXCEL_SHEET' && (
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+              <p className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+                Sheet 2 — Per-Recipient Excel Configuration
+              </p>
+            </div>
+            <div className="p-4 space-y-5">
+              {sheet2Rows.length === 0 ? (
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700">
+                  <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                  </svg>
+                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                    No second worksheet was detected in the uploaded file. Please re-upload an Excel
+                    workbook that contains two worksheets — Sheet 1 with recipient data and Sheet 2
+                    with per-recipient detail rows.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Sheet 2 detected badge */}
+                  <div className="flex items-center gap-2 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700">
+                    <svg className="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <p className="text-xs text-green-700 dark:text-green-400">
+                      Sheet 2 detected — <strong>{sheet2Rows.length} rows</strong> across{' '}
+                      <strong>{sheet2Columns.length} columns</strong>.
+                      Rows will be grouped by ID and sent as individual Excel attachments.
+                    </p>
+                  </div>
+
+                  {/* ── Link / ID column selectors ── */}
+                  <div className="rounded-xl border border-gray-200 dark:border-gray-600 overflow-hidden">
+                    <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700/60 border-b border-gray-200 dark:border-gray-600">
+                      <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                        Link columns — how Sheet 1 and Sheet 2 are joined
+                      </p>
+                    </div>
+                    <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                          Sheet 1 key column <span className="text-red-400">*</span>
+                        </label>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">
+                          Unique ID in the recipient sheet
+                        </p>
+                        <select value={mainIdColumn} onChange={e => setMainIdColumn(e.target.value)} className={INPUT}>
+                          <option value="">Select column…</option>
+                          {xlsxColumns.map(c => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                          Sheet 2 key column <span className="text-red-400">*</span>
+                        </label>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">
+                          The column in Sheet 2 that matches the Sheet 1 ID
+                        </p>
+                        <select value={sheet2IdColumn} onChange={e => setSheet2IdColumn(e.target.value)} className={INPUT}>
+                          <option value="">Select column…</option>
+                          {sheet2Columns.map(c => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Live match preview */}
+                    {mainIdColumn && sheet2IdColumn && xlsxRows.length > 0 && (() => {
+                      const firstRow   = xlsxRows[0]
+                      const idVal      = firstRow[mainIdColumn] || ''
+                      const matchCount = sheet2Rows.filter(r =>
+                        String(r[sheet2IdColumn]).toLowerCase() === idVal.toLowerCase()
+                      ).length
+                      return (
+                        <div className="mx-4 mb-4 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
+                          <p className="text-xs font-semibold text-purple-700 dark:text-purple-400 mb-1 uppercase tracking-wider">
+                            Preview — first recipient
+                          </p>
+                          <p className="text-xs text-gray-700 dark:text-gray-300">
+                            {mainIdColumn} = <code className="font-mono bg-white dark:bg-gray-700 px-1 py-0.5 rounded text-gray-800 dark:text-gray-200">{idVal || '—'}</code>
+                            {' '}→{' '}
+                            <strong className={matchCount === 0 ? 'text-amber-600' : 'text-green-700 dark:text-green-400'}>
+                              {matchCount} matching row{matchCount !== 1 ? 's' : ''}
+                            </strong>
+                            {' '}in Sheet 2
+                            {matchCount === 0 && (
+                              <span className="ml-2 text-amber-600"> — check the key columns match</span>
+                            )}
+                          </p>
+                        </div>
+                      )
+                    })()}
+                  </div>
+
+                  {/* ── Sheet 2 column picker ── */}
+                  <div className="rounded-xl border border-gray-200 dark:border-gray-600 overflow-hidden">
+                    <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700/60 border-b border-gray-200 dark:border-gray-600 flex items-center justify-between">
+                      <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                        Columns to include in the Excel attachment
+                      </p>
+                      <div className="flex gap-2">
+                        <button type="button"
+                          onClick={() => setSheet2SelectedColumns([...sheet2Columns])}
+                          className="text-xs text-purple-600 dark:text-purple-400 hover:underline font-medium">
+                          All
+                        </button>
+                        <span className="text-gray-300 dark:text-gray-600">|</span>
+                        <button type="button"
+                          onClick={() => setSheet2SelectedColumns([])}
+                          className="text-xs text-gray-500 hover:underline font-medium">
+                          None
+                        </button>
+                      </div>
+                    </div>
+                    <div className="p-4">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                        Click columns to toggle them. Selected columns appear in the generated Excel file in this order.
+                        {sheet2SelectedColumns.length > 0 && (
+                          <span className="ml-1 font-medium text-purple-600 dark:text-purple-400">
+                            {sheet2SelectedColumns.length} of {sheet2Columns.length} selected
+                          </span>
+                        )}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {sheet2Columns.map(col => {
+                          const selected = sheet2SelectedColumns.includes(col)
+                          return (
+                            <button
+                              key={col}
+                              type="button"
+                              onClick={() => setSheet2SelectedColumns(prev =>
+                                prev.includes(col)
+                                  ? prev.filter(c => c !== col)
+                                  : [...prev, col]
+                              )}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all
+                                ${selected
+                                  ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+                                  : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:border-purple-400'}`}
+                            >
+                              {selected && (
+                                <svg className="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                                </svg>
+                              )}
+                              {col}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      {sheet2SelectedColumns.length === 0 && (
+                        <p className="mt-3 text-xs text-red-500 dark:text-red-400">
+                          Select at least one column to include in the attachment.
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Column order preview */}
+                    {sheet2SelectedColumns.length > 0 && (
+                      <div className="px-4 pb-4">
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-2 font-medium">
+                          Column order in generated file:
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {sheet2SelectedColumns.map((col, i) => (
+                            <span key={col}
+                              className="flex items-center gap-1 px-2 py-0.5 rounded-md text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                              <span className="text-gray-400 text-[10px]">{i + 1}.</span>
+                              {col}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ── Filename template ── */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
+                      Attachment filename template{' '}
+                      <span className="font-normal text-gray-400">(optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder={`e.g. Claims_{{Provider Name}}_April2026.xlsx`}
+                      value={detailFileName}
+                      onChange={e => setDetailFileName(e.target.value)}
+                      className={INPUT}
+                    />
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">
+                      Use{' '}
+                      <code className="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded font-mono text-purple-600 dark:text-purple-400">
+                        {'{{column}}'}
+                      </code>{' '}
+                      with any Sheet 1 column name to personalise the filename per recipient.
+                      {xlsxColumns.length > 0 && (
+                        <span className="block mt-1">
+                          Available:{' '}
+                          {xlsxColumns.map((c, i) => (
+                            <button key={c} type="button"
+                              onClick={() => setDetailFileName(p =>
+                                (p.endsWith('.xlsx') ? p.slice(0, -5) : p) + `{{${c}}}.xlsx`
+                              )}
+                              className="font-mono text-purple-600 dark:text-purple-400 hover:underline">
+                              {c}{i < xlsxColumns.length - 1 ? ', ' : ''}
+                            </button>
+                          ))}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -667,6 +965,14 @@ export default function BulkEmailSendPage() {
               : []),
             ...(attachmentType === 'EXTERNAL_API' && extApiUrl
               ? [{ label: 'API endpoint', value: extApiUrl.length > 50 ? extApiUrl.slice(0, 50) + '…' : extApiUrl }]
+              : []),
+            ...(attachmentType === 'EXCEL_SHEET' && sheet2Rows.length > 0
+              ? [
+                  { label: 'Sheet 2 detail rows', value: `${sheet2Rows.length} row${sheet2Rows.length !== 1 ? 's' : ''}` },
+                  { label: 'Linked by', value: `${mainIdColumn} → ${sheet2IdColumn}` },
+                  { label: 'Columns in attachment', value: `${sheet2SelectedColumns.length} of ${sheet2Columns.length} columns` },
+                  ...(detailFileName.trim() ? [{ label: 'Filename template', value: detailFileName.trim() }] : []),
+                ]
               : []),
           ].map(({ label, value }) => (
             <div key={label} className="flex items-center justify-between px-4 py-2.5 text-sm">
