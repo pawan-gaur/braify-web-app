@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   getOrganizations, searchOrganizations,
@@ -33,7 +33,9 @@ function FeaturePill({ featureKey, size = 'sm' }) {
       className={`inline-flex items-center gap-1 ${px} rounded-full font-semibold whitespace-nowrap`}
       style={{ background: meta.bg, color: meta.color }}
     >
-      <span>{meta.icon}</span>
+      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={meta.icon}/>
+      </svg>
       {meta.label}
     </span>
   )
@@ -157,7 +159,7 @@ export default function OrganizationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mt-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-navy dark:text-white">Organizations</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Organizations</h1>
           <p className="text-sm text-gray-500 mt-1">Manage all tenant organizations and their feature access.</p>
         </div>
         <div className="flex items-center gap-3">
@@ -534,7 +536,11 @@ function OrgFormModal({ editOrg, form, saving, onClose, onSubmit, onNameChange, 
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-base">{feat.icon}</span>
+                        <div className="w-4 h-4 shrink-0" style={{ color: feat.color }}>
+                          <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={feat.icon}/>
+                          </svg>
+                        </div>
                         <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
                           {feat.label}
                         </span>
@@ -998,7 +1004,11 @@ function ManageFeaturesModal({ org, onClose, onUpdated }) {
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-xl">{feat.icon}</span>
+                        <div className="w-5 h-5 shrink-0" style={{ color: feat.color }}>
+                          <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={feat.icon}/>
+                          </svg>
+                        </div>
                         <div>
                           <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{feat.label}</p>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{feat.description}</p>
@@ -1040,3 +1050,4 @@ function ManageFeaturesModal({ org, onClose, onUpdated }) {
     </div>
   )
 }
+

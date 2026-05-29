@@ -553,20 +553,17 @@ export default function AuditLogPage() {
       {/* ── Header ── */}
       <div className="flex items-start justify-between mt-4 mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-navy dark:text-white">Audit Log</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Audit Log</h1>
           <p className="text-sm text-gray-500 mt-1 max-w-2xl">{scopeLabel(me?.role)}</p>
         </div>
         <button
           onClick={handleExport}
           disabled={exporting}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white
-                     text-sm font-semibold hover:bg-primary/90 transition disabled:opacity-60 shrink-0"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 text-white
+                     text-sm font-semibold hover:bg-purple-700 transition disabled:opacity-60 shrink-0"
         >
           {exporting
-            ? <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-              </svg>
+            ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/>
             : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
@@ -664,8 +661,8 @@ export default function AuditLogPage() {
             onClick={() => setActionFilter(a)}
             className={`text-xs px-3 py-1.5 rounded-full font-semibold border transition-all ${
               actionFilter === a
-                ? 'bg-primary text-white border-primary shadow-sm'
-                : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-primary hover:text-primary'
+                ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+                : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-purple-500 hover:text-purple-600 dark:hover:text-purple-400'
             }`}
           >
             {a.replace(/_/g, ' ')}
@@ -677,10 +674,7 @@ export default function AuditLogPage() {
       <div className="card p-0 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-20 text-gray-400 gap-3">
-            <svg className="animate-spin h-5 w-5 text-primary" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-            </svg>
+            <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"/>
             Loading audit log…
           </div>
         ) : data.content.length === 0 ? (
@@ -850,18 +844,40 @@ export default function AuditLogPage() {
           <p className="text-xs text-gray-400">
             Page {page + 1} of {data.totalPages} · {data.totalElements.toLocaleString()} events
           </p>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-1">
             <button
               disabled={page === 0}
               onClick={() => setPage(p => p - 1)}
-              className="btn btn-ghost btn-sm disabled:opacity-40"
+              className="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700
+                         text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800
+                         hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               ← Previous
             </button>
+            {/* Numbered page pills — show up to 5 around current page */}
+            {Array.from({ length: Math.min(data.totalPages, 5) }, (_, i) => {
+              const start = Math.max(0, Math.min(page - 2, data.totalPages - 5))
+              const p = start + i
+              return (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  className={`w-8 h-8 text-sm font-semibold rounded-lg transition-colors
+                    ${p === page
+                      ? 'bg-purple-600 text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                >
+                  {p + 1}
+                </button>
+              )
+            })}
             <button
               disabled={page >= data.totalPages - 1}
               onClick={() => setPage(p => p + 1)}
-              className="btn btn-ghost btn-sm disabled:opacity-40"
+              className="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700
+                         text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800
+                         hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               Next →
             </button>

@@ -25,10 +25,7 @@ import { fmtDate, fmtDateTime, fmtRelative } from '../utils/date'
 function Spinner() {
   return (
     <div className="flex items-center justify-center py-16 gap-3 text-gray-400">
-      <svg className="animate-spin h-5 w-5 text-indigo-500" viewBox="0 0 24 24" fill="none">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-      </svg>
+      <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"/>
       Loading…
     </div>
   )
@@ -42,9 +39,9 @@ const PLANS = [
 ]
 
 const FEATURE_BADGE = {
-  PDF_TEMPLATES:   { label: 'PDF Templates',   cls: 'bg-indigo-100 text-indigo-700' },
-  EMAIL_TEMPLATES: { label: 'Email Templates', cls: 'bg-sky-100 text-sky-700'       },
-  E_SIGN:          { label: 'E-Sign',          cls: 'bg-emerald-100 text-emerald-700' },
+  PDF_TEMPLATES:   { label: 'PDF Templates',   cls: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' },
+  EMAIL_TEMPLATES: { label: 'Email Templates', cls: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300'       },
+  E_SIGN:          { label: 'E-Sign',          cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' },
 }
 
 const TABS = ['Overview', 'Features', 'API Keys', 'Usage', 'Subscription', 'Users', 'Activity']
@@ -142,7 +139,7 @@ export default function OrgDetailPage() {
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all
               ${activeTab === tab
-                ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-800 dark:text-white'
+                ? 'bg-white dark:bg-gray-700 shadow-sm text-purple-700 dark:text-purple-300'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               }`}
           >
@@ -373,10 +370,12 @@ function FeaturesTab({ org, setOrg, orgId }) {
               onClick={() => toggle(feat.key)}
             >
               <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0"
-                style={{ background: feat.bg }}
+                className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: feat.bg, color: feat.color }}
               >
-                {feat.icon}
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={feat.icon}/>
+                </svg>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-gray-800 dark:text-gray-100">{feat.label}</p>
@@ -539,9 +538,9 @@ function AdminCreateKeyModal({ orgId, orgFeatures, onClose, onCreated }) {
   const [saving,   setSaving]   = useState(false)
 
   const allFeatMeta = [
-    { key: 'PDF_TEMPLATES',   label: 'PDF Templates',   cls: 'bg-indigo-100 text-indigo-700' },
-    { key: 'EMAIL_TEMPLATES', label: 'Email Templates', cls: 'bg-sky-100 text-sky-700'       },
-    { key: 'E_SIGN',          label: 'E-Sign',          cls: 'bg-emerald-100 text-emerald-700' },
+    { key: 'PDF_TEMPLATES',   label: 'PDF Templates',   cls: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' },
+    { key: 'EMAIL_TEMPLATES', label: 'Email Templates', cls: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300'       },
+    { key: 'E_SIGN',          label: 'E-Sign',          cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' },
   ]
   const available = allFeatMeta.filter(f => orgFeatures.includes(f.key))
 

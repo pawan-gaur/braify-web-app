@@ -227,9 +227,21 @@ export default function ESignSigningPage() {
     const files = Array.from(fileList)
     if (!files.length) return
     setAttachError('')
+    const allowedTypes = doc?.allowedClientUploadFileTypes || []
     for (const file of files) {
       if (attachments.length >= 5) { setAttachError('Maximum of 5 files reached.'); break }
       if (file.size > 10 * 1024 * 1024) { setAttachError(`"${file.name}" exceeds the 10 MB limit.`); continue }
+
+      // Client-side file-type validation (mirrors server-side check)
+      if (allowedTypes.length > 0) {
+        const ext = (file.name.split('.').pop() || '').toLowerCase()
+        if (!allowedTypes.some(t => t.toLowerCase() === ext)) {
+          const allowedList = allowedTypes.map(t => '.' + t.toUpperCase()).join(', ')
+          setAttachError(`"${file.name}" is not an allowed file type. Accepted: ${allowedList}`)
+          continue
+        }
+      }
+
       setUploading(true)
       try {
         const meta = await esignUploadAttachment(token, file)
@@ -247,7 +259,11 @@ export default function ESignSigningPage() {
   if (error)   return (
     <Center>
       <div className="text-center max-w-sm">
-        <div className="text-5xl mb-4">🔒</div>
+        <div className="w-14 h-14 mx-auto mb-4 text-gray-400">
+          <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+          </svg>
+        </div>
         <h1 className="text-xl font-bold text-gray-800 mb-2">Unable to open document</h1>
         <p className="text-gray-500 text-sm">{error}</p>
       </div>
@@ -273,12 +289,17 @@ export default function ESignSigningPage() {
         {/* ── Optional attachment upload card (only shown when creator enabled it) ── */}
         {doc?.allowClientUpload && <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-xl">📎</span>
+            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
             <h2 className="text-base font-bold text-gray-800">Upload Supporting Documents</h2>
             <span className="ml-1 text-xs font-normal text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Optional</span>
           </div>
           <p className="text-xs text-gray-500 mb-4">
             Attach any supporting documents (e.g. ID copy, proof of address). Up to 5 files, 10 MB each.
+            {doc?.allowedClientUploadFileTypes?.length > 0 && (
+              <span className="block mt-1 font-semibold text-gray-600">
+                Accepted types: {doc.allowedClientUploadFileTypes.map(t => '.' + t.toUpperCase()).join(', ')}
+              </span>
+            )}
           </p>
 
           {/* Drop zone */}
@@ -300,8 +321,15 @@ export default function ESignSigningPage() {
                 Drag &amp; drop files here, or{' '}
                 <span className="text-purple-600 font-semibold">browse</span>
               </p>
-              <p className="text-xs text-gray-400">Any file type · Max 10 MB each</p>
+              <p className="text-xs text-gray-400">
+                {doc?.allowedClientUploadFileTypes?.length > 0
+                  ? doc.allowedClientUploadFileTypes.map(t => '.' + t.toUpperCase()).join(', ')
+                  : 'Any file type'} · Max 10 MB each
+              </p>
               <input type="file" className="hidden" multiple
+                accept={doc?.allowedClientUploadFileTypes?.length > 0
+                  ? doc.allowedClientUploadFileTypes.map(t => '.' + t).join(',')
+                  : undefined}
                 onChange={e => { handleAttachFiles(e.target.files); e.target.value = '' }}/>
             </label>
           )}
@@ -330,7 +358,11 @@ export default function ESignSigningPage() {
             <ul className="mt-4 space-y-2">
               {attachments.map(a => (
                 <li key={a.id} className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5">
-                  <span className="text-xl shrink-0">{attachFileIcon(a.contentType)}</span>
+                  <div className="w-5 h-5 shrink-0 text-gray-400">
+                    <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={attachFileIcon(a.contentType)}/>
+                    </svg>
+                  </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-800 truncate">{a.fileName}</p>
                     <p className="text-xs text-gray-400">{formatBytes(a.fileSize)}</p>
@@ -560,7 +592,22 @@ export default function ESignSigningPage() {
                                     ? 'bg-purple-600 text-white border-purple-600'
                                     : 'bg-white text-gray-600 border-gray-200 hover:border-purple-300'}`}
                     >
-                      {t === 'DRAW' ? '✏️ Draw' : t === 'TYPE' ? 'Aa Type' : '⬆️ Upload'}
+                      {t === 'DRAW' ? (
+                        <span className="flex items-center justify-center gap-1.5">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                          Draw
+                        </span>
+                      ) : t === 'TYPE' ? (
+                        <span className="flex items-center justify-center gap-1.5">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                          Type
+                        </span>
+                      ) : (
+                        <span className="flex items-center justify-center gap-1.5">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                          Upload
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -689,10 +736,13 @@ function formatBytes(bytes) {
 }
 
 function attachFileIcon(contentType) {
-  if (!contentType) return '📄'
-  if (contentType.startsWith('image/'))       return '🖼️'
-  if (contentType === 'application/pdf')      return '📑'
-  if (contentType.includes('word') || contentType.includes('document')) return '📝'
-  if (contentType.includes('sheet') || contentType.includes('excel'))   return '📊'
-  return '📄'
+  if (contentType?.startsWith('image/'))
+    return 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z'
+  if (contentType === 'application/pdf')
+    return 'M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z'
+  if (contentType?.includes('word') || contentType?.includes('document'))
+    return 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'
+  if (contentType?.includes('sheet') || contentType?.includes('excel'))
+    return 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'
+  return 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'
 }

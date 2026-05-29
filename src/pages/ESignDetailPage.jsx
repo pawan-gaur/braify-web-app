@@ -22,20 +22,20 @@ const STATUS_COLORS = {
 }
 
 const EVENT_ICONS = {
-  DOCUMENT_CREATED:       { icon: '📄', color: 'text-gray-500' },
-  FIELDS_SAVED:           { icon: '📐', color: 'text-blue-500' },
-  DOCUMENT_SENT:          { icon: '📧', color: 'text-purple-500' },
-  LINK_OPENED:            { icon: '🔗', color: 'text-blue-400' },
-  DOCUMENT_VIEWED:        { icon: '👁️', color: 'text-blue-600' },
-  SIGNING_STARTED:        { icon: '✍️', color: 'text-indigo-500' },
-  FIELD_SIGNED:           { icon: '✅', color: 'text-green-500' },
-  DOCUMENT_SUBMITTED:     { icon: '📬', color: 'text-green-600' },
-  PDF_GENERATED:          { icon: '🖨️', color: 'text-teal-500' },
-  COMPLETION_EMAIL_SENT:  { icon: '💌', color: 'text-green-500' },
-  DOCUMENT_DOWNLOADED:        { icon: '⬇️', color: 'text-gray-500' },
-  CLIENT_ATTACHMENT_UPLOADED: { icon: '📎', color: 'text-blue-600' },
-  LINK_EXPIRED:               { icon: '⏰', color: 'text-orange-500' },
-  DOCUMENT_CANCELLED:         { icon: '🚫', color: 'text-red-500' },
+  DOCUMENT_CREATED:       { path: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',                       color: 'text-gray-500'   },
+  FIELDS_SAVED:           { path: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4', color: 'text-blue-500'   },
+  DOCUMENT_SENT:          { path: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',                                        color: 'text-purple-500' },
+  LINK_OPENED:            { path: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1',         color: 'text-blue-400'   },
+  DOCUMENT_VIEWED:        { path: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z', color: 'text-blue-600'   },
+  SIGNING_STARTED:        { path: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',                    color: 'text-indigo-500' },
+  FIELD_SIGNED:           { path: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',                                                                                               color: 'text-green-500'  },
+  DOCUMENT_SUBMITTED:     { path: 'M3 19v-8.93a2 2 0 01.89-1.664l7-4.666a2 2 0 012.22 0l7 4.666A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-1.14.76a2 2 0 01-2.22 0l-1.14-.76', color: 'text-green-600' },
+  PDF_GENERATED:          { path: 'M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z', color: 'text-teal-500'   },
+  COMPLETION_EMAIL_SENT:  { path: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',                                        color: 'text-green-500'  },
+  DOCUMENT_DOWNLOADED:        { path: 'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4',                                                                          color: 'text-gray-500'   },
+  CLIENT_ATTACHMENT_UPLOADED: { path: 'M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13',                   color: 'text-blue-600'   },
+  LINK_EXPIRED:               { path: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',                                                                                             color: 'text-orange-500' },
+  DOCUMENT_CANCELLED:         { path: 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636',                                          color: 'text-red-500'    },
 }
 
 import { fmtDateTimeGB as fmtDateTime } from '../utils/date'
@@ -330,7 +330,11 @@ export default function ESignDetailPage() {
               {attachments.map(att => (
                 <div key={att.id}
                      className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                  <span className="text-2xl shrink-0">{attFileIcon(att.contentType)}</span>
+                  <div className="w-6 h-6 shrink-0 text-gray-400 dark:text-gray-500">
+                    <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={attFileIcon(att.contentType)}/>
+                    </svg>
+                  </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{att.fileName}</p>
                     <p className="text-xs text-gray-400 mt-0.5">
@@ -368,10 +372,14 @@ export default function ESignDetailPage() {
           ) : (
             <div className="divide-y divide-gray-100 dark:divide-gray-700">
               {audit.map((ev, i) => {
-                const { icon, color } = EVENT_ICONS[ev.event] || { icon: '•', color: 'text-gray-400' }
+                const { path, color } = EVENT_ICONS[ev.event] || { path: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z', color: 'text-gray-400' }
                 return (
                   <div key={ev.id || i} className="flex gap-4 px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                    <div className={`text-xl shrink-0 w-8 text-center mt-0.5 ${color}`}>{icon}</div>
+                    <div className={`shrink-0 w-5 h-5 mt-0.5 ${color}`}>
+                      <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={path}/>
+                      </svg>
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
@@ -418,10 +426,13 @@ function attFormatBytes(bytes) {
 }
 
 function attFileIcon(contentType) {
-  if (!contentType) return '📄'
-  if (contentType.startsWith('image/'))       return '🖼️'
-  if (contentType === 'application/pdf')      return '📑'
-  if (contentType.includes('word') || contentType.includes('document')) return '📝'
-  if (contentType.includes('sheet') || contentType.includes('excel'))   return '📊'
-  return '📄'
+  if (contentType?.startsWith('image/'))
+    return 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z'
+  if (contentType === 'application/pdf')
+    return 'M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z'
+  if (contentType?.includes('word') || contentType?.includes('document'))
+    return 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'
+  if (contentType?.includes('sheet') || contentType?.includes('excel'))
+    return 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'
+  return 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'
 }

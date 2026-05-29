@@ -14,10 +14,10 @@ const CRUMBS = [
 ]
 
 const ALL_FEATURES = [
-  { key: 'PDF_TEMPLATES',   label: 'PDF Templates',   cls: 'bg-indigo-100 text-indigo-700'  },
-  { key: 'EMAIL_TEMPLATES', label: 'Email Templates', cls: 'bg-sky-100 text-sky-700'        },
-  { key: 'E_SIGN',          label: 'E-Sign',          cls: 'bg-emerald-100 text-emerald-700' },
-  { key: 'FILE_STORAGE',    label: 'File Storage',    cls: 'bg-amber-100 text-amber-700'    },
+  { key: 'PDF_TEMPLATES',   label: 'PDF Templates',   cls: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'  },
+  { key: 'EMAIL_TEMPLATES', label: 'Email Templates', cls: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300'        },
+  { key: 'E_SIGN',          label: 'E-Sign',          cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' },
+  { key: 'FILE_STORAGE',    label: 'File Storage',    cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'    },
 ]
 
 /* ─────────────────────────────────────────────────────────────── */
@@ -143,7 +143,7 @@ function AdminApiKeysView() {
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all
               ${activeTab === tab.id
-                ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                ? 'bg-white dark:bg-gray-700 text-purple-700 dark:text-purple-300 shadow-sm'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               }`}
           >
@@ -208,10 +208,7 @@ function AdminApiKeysView() {
 
           {loading ? (
             <div className="flex items-center justify-center py-24 gap-3 text-gray-400">
-              <svg className="animate-spin h-5 w-5 text-indigo-500" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-              </svg>
+              <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"/>
               Loading API keys…
             </div>
           ) : grouped.length === 0 ? (
@@ -406,7 +403,7 @@ function OrgApiKeysView() {
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all
               ${activeTab === tab.id
-                ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                ? 'bg-white dark:bg-gray-700 text-purple-700 dark:text-purple-300 shadow-sm'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               }`}
           >
@@ -591,7 +588,7 @@ function EndpointDoc({ method, path, title, description, requestBody, responseBo
                   onClick={() => setCodeTab(id)}
                   className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-all
                     ${codeTab === id
-                      ? 'bg-indigo-600 text-white'
+                      ? 'bg-purple-600 text-white'
                       : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
                     }`}
                 >

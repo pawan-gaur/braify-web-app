@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '../context/ToastContext'
 import { getReceivedShares, getSentShares, revokeShare } from '../services/api'
@@ -196,7 +196,7 @@ export default function SharedTemplatesPage() {
       <Breadcrumbs items={CRUMBS} />
 
       <div className="mt-4 mb-8">
-        <h1 className="text-2xl font-bold text-navy dark:text-white">Shared Templates</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Shared Templates</h1>
         <p className="text-sm text-gray-500 mt-1">
           Templates shared between organisations for cross-team collaboration.
         </p>
@@ -291,3 +291,4 @@ export default function SharedTemplatesPage() {
     </div>
   )
 }
+

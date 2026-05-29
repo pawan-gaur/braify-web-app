@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+﻿import { useEffect, useState, useCallback } from 'react'
 import SwaggerUI from 'swagger-ui-react'
 import 'swagger-ui-react/swagger-ui.css'
 import useDocumentTitle from '../hooks/useDocumentTitle'
@@ -207,7 +207,7 @@ export default function ApiDocsPage() {
       {/* ── Header ── */}
       <div className="flex items-start justify-between mt-4 mb-6 gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-navy dark:text-white">API Documentation</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">API Documentation</h1>
           <p className="text-sm text-gray-500 mt-1">
             Live reference generated from the running backend. Updates automatically when controllers change.
           </p>
@@ -341,3 +341,4 @@ export default function ApiDocsPage() {
     </div>
   )
 }
+

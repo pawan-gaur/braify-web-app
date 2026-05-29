@@ -20,9 +20,9 @@ const FIELD_TYPES = [
 ]
 
 const SOURCE_META = {
-  single:   { emoji: '📄', title: 'Upload PDF',   desc: 'Upload a PDF file directly' },
-  template: { emoji: '🎨', title: 'PDF Template', desc: 'Generate PDF from a designed template' },
-  api:      { emoji: '🌐', title: 'External API', desc: 'Fetch the PDF from an external URL' },
+  single:   { path: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', title: 'Upload PDF',   desc: 'Upload a PDF file directly' },
+  template: { path: 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01', title: 'PDF Template', desc: 'Generate PDF from a designed template' },
+  api:      { path: 'M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z', title: 'External API', desc: 'Fetch the PDF from an external URL' },
 }
 
 const DEFAULT_FIELD_SIZE = { width: 18, height: 5 }
@@ -444,7 +444,11 @@ export default function ESignBuilderPage({ initialDocStatus }) {
               {/* Header / toggle */}
               <button type="button" onClick={() => toggleSource(src)}
                 className="w-full flex items-center gap-3 p-3 text-left">
-                <span className="text-xl">{meta.emoji}</span>
+                <div className="w-5 h-5 shrink-0 text-gray-500 dark:text-gray-400">
+                  <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={meta.path}/>
+                  </svg>
+                </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-900 dark:text-white">{meta.title}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">{meta.desc}</p>
@@ -679,8 +683,11 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                                 border border-indigo-100 dark:border-indigo-800/40">
                   <span className="w-5 h-5 bg-indigo-600 text-white rounded-full text-xs font-bold
                                    flex items-center justify-center shrink-0">{idx + 1}</span>
-                  <span className="text-xs font-medium text-gray-800 dark:text-gray-200 flex-1">
-                    {SOURCE_META[src].emoji} {SOURCE_META[src].title}
+                  <span className="flex items-center gap-1.5 text-xs font-medium text-gray-800 dark:text-gray-200 flex-1">
+                    <svg className="w-3.5 h-3.5 shrink-0 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={SOURCE_META[src].path}/>
+                    </svg>
+                    {SOURCE_META[src].title}
                   </span>
                   <div className="flex flex-col gap-0.5">
                     <button type="button" onClick={() => movePriorityInActive(src, -1)}
@@ -780,7 +787,11 @@ export default function ESignBuilderPage({ initialDocStatus }) {
               {/* Toggle header */}
               <button type="button" onClick={() => setEmailPickerOpen(o => !o)}
                 className="w-full flex items-center gap-3 p-3 text-left">
-                <span className="text-xl">✉️</span>
+                <div className="w-5 h-5 shrink-0 text-gray-500 dark:text-gray-400">
+                  <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                  </svg>
+                </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-900 dark:text-white">
                     Email Template
@@ -1127,7 +1138,14 @@ export default function ESignBuilderPage({ initialDocStatus }) {
             className="w-full py-3 rounded-xl text-white font-semibold transition-all
                        disabled:opacity-60 hover:opacity-90 active:scale-95"
             style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)' }}>
-            {sending ? 'Sending…' : '📧 Send Signing Invitation'}
+            {sending ? 'Sending…' : (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+                Send Signing Invitation
+              </span>
+            )}
           </button>
           <button onClick={() => setStep(1)}
             className="mt-3 w-full py-2.5 rounded-xl text-sm text-gray-500 hover:text-gray-700

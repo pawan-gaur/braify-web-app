@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { getBranding, updateBranding, getCloudConfig, updateCloudConfig } from '../services/api'
@@ -18,9 +18,9 @@ const DEFAULT_ACCENT  = '#818cf8'
 
 /* ── Feature / role meta ─────────────────────────────────────── */
 const FEATURES = [
-  { key: 'PDF_TEMPLATES',   label: 'PDF Templates',   icon: '📄', description: 'Create and generate PDF documents' },
-  { key: 'EMAIL_TEMPLATES', label: 'Email Templates', icon: '✉️',  description: 'Send branded email campaigns' },
-  { key: 'E_SIGN',          label: 'E-Sign',          icon: '✍️',  description: 'Electronic signature workflow' },
+  { key: 'PDF_TEMPLATES',   label: 'PDF Templates',   path: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', description: 'Create and generate PDF documents' },
+  { key: 'EMAIL_TEMPLATES', label: 'Email Templates', path: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',               description: 'Send branded email campaigns'  },
+  { key: 'E_SIGN',          label: 'E-Sign',          path: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z', description: 'Electronic signature workflow'  },
 ]
 
 const ROLES = [
@@ -211,7 +211,7 @@ export default function OrgSettingsPage() {
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all
               ${activeTab === tab.id
-                ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                ? 'bg-white dark:bg-gray-700 text-purple-700 dark:text-purple-300 shadow-sm'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               }`}
           >
@@ -507,7 +507,11 @@ function AccessControlTab({ form, set, saving, onSave, orgFeatures }) {
                 <tr key={feature.key} className="hover:bg-gray-50/80 dark:hover:bg-gray-800/40 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <span className="text-xl">{feature.icon}</span>
+                      <div className="w-5 h-5 text-gray-500 dark:text-gray-400 shrink-0">
+                        <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={feature.path}/>
+                        </svg>
+                      </div>
                       <div>
                         <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{feature.label}</p>
                         <p className="text-xs text-gray-400 mt-0.5">{feature.description}</p>
@@ -566,7 +570,11 @@ function AccessControlTab({ form, set, saving, onSave, orgFeatures }) {
               return (
                 <div key={feature.key}
                   className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2">
-                  <span className="text-sm">{feature.icon}</span>
+                  <div className="w-4 h-4 text-gray-500 dark:text-gray-400 shrink-0">
+                    <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={feature.path}/>
+                    </svg>
+                  </div>
                   <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{feature.label}</span>
                   <span className="text-xs text-gray-400">→</span>
                   <span className={`text-xs font-semibold px-2 py-0.5 rounded-full
@@ -1152,3 +1160,4 @@ function buildDefaultAccess(orgFeatures) {
   const allRoles = ROLES.map(r => r.key)
   return Object.fromEntries(orgFeatures.map(f => [f, allRoles]))
 }
+

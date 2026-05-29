@@ -152,8 +152,8 @@ export const uploadAvatar    = (avatar)  => http.post('/profile/me/avatar', { av
 export const getMyAuditLog   = ()        => http.get('/profile/me/audit').then(r => r.data)
 
 // ── E-Sign (Creator) ───────────────────────────────────────
-export const esignBulkCreate = (documents, sendImmediately = true, label) =>
-  http.post('/esign/documents/bulk', { documents, sendImmediately, label }).then(r => r.data)
+export const esignBulkCreate = (documents, sendImmediately = true, label, allowClientUpload = false, allowedClientUploadFileTypes = []) =>
+  http.post('/esign/documents/bulk', { documents, sendImmediately, label, allowClientUpload, allowedClientUploadFileTypes }).then(r => r.data)
 
 export const esignCreateDocument  = (payload)              => http.post('/esign/documents', payload).then(r => r.data)
 export const esignListDocuments   = ({ page = 0, size = 20, status } = {}) => {
@@ -178,8 +178,8 @@ export const esignGetBatch        = (batchId)                       =>
   http.get(`/esign/batches/${batchId}`).then(r => r.data)
 export const esignGetBatchDocuments = (batchId, { page = 0, size = 20 } = {}) =>
   http.get(`/esign/batches/${batchId}/documents?page=${page}&size=${size}`).then(r => r.data)
-export const esignInitBatch       = (label, totalRequested, allowClientUpload = false) =>
-  http.post('/esign/batches/init', { label, totalRequested, allowClientUpload }).then(r => r.data)
+export const esignInitBatch       = (label, totalRequested, allowClientUpload = false, allowedClientUploadFileTypes = []) =>
+  http.post('/esign/batches/init', { label, totalRequested, allowClientUpload, allowedClientUploadFileTypes }).then(r => r.data)
 export const esignFinalizeBatch   = (batchId, totalCreated, totalSent, totalFailed) =>
   http.patch(`/esign/batches/${batchId}/finalize`, { totalCreated, totalSent, totalFailed }).then(r => r.data)
 

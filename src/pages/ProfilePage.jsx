@@ -11,15 +11,15 @@ const CRUMBS = [
 ]
 
 const ACTION_BADGE = {
-  CREATED:          'bg-emerald-100 text-emerald-700',
-  UPDATED:          'bg-blue-100   text-blue-700',
-  DELETED:          'bg-rose-100   text-rose-700',
-  RESTORED:         'bg-violet-100 text-violet-700',
-  PASSWORD_CHANGED: 'bg-amber-100  text-amber-700',
-  AVATAR_UPDATED:   'bg-indigo-100 text-indigo-700',
-  DEACTIVATED:      'bg-red-100    text-red-700',
-  ACTIVATED:        'bg-emerald-100 text-emerald-700',
-  SESSION_REVOKED:  'bg-orange-100 text-orange-700',
+  CREATED:          'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  UPDATED:          'bg-blue-100   text-blue-700   dark:bg-blue-900/30   dark:text-blue-400',
+  DELETED:          'bg-rose-100   text-rose-700   dark:bg-rose-900/30   dark:text-rose-400',
+  RESTORED:         'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400',
+  PASSWORD_CHANGED: 'bg-amber-100  text-amber-700  dark:bg-amber-900/30  dark:text-amber-400',
+  AVATAR_UPDATED:   'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+  DEACTIVATED:      'bg-red-100    text-red-700    dark:bg-red-900/30    dark:text-red-400',
+  ACTIVATED:        'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  SESSION_REVOKED:  'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
 }
 
 import { fmtDateTime as fmtDate } from '../utils/date'
@@ -162,7 +162,7 @@ export default function ProfilePage() {
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">
             {user?.firstName} {user?.lastName}
           </h1>
-          <p className="text-sm text-gray-500">{user?.email}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{user?.email}</p>
           <div className="flex items-center gap-2 mt-2">
             <span className="badge badge-indigo text-[11px]">{ROLE_LABEL[user?.role] || user?.role}</span>
             {user?.organizationName && (
@@ -178,7 +178,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6 gap-1">
+      <div className="flex gap-1 p-1 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 mb-6 w-fit">
         {[
           { id: 'info',     label: 'Personal Info' },
           { id: 'password', label: 'Change Password' },
@@ -187,10 +187,10 @@ export default function ProfilePage() {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors -mb-px
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all
               ${tab === t.id
-                ? 'border-primary text-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                ? 'bg-white dark:bg-gray-700 text-purple-700 dark:text-purple-300 shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
           >
             {t.label}
           </button>
@@ -285,10 +285,7 @@ export default function ProfilePage() {
         <div className="card p-0 overflow-hidden">
           {loadingLogs ? (
             <div className="flex items-center justify-center py-16 text-gray-400 gap-3">
-              <svg className="animate-spin h-5 w-5 text-primary" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-              </svg>
+              <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"/>
               Loading activity…
             </div>
           ) : auditLogs.length === 0 ? (

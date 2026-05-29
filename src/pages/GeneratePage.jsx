@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getTemplates, getTemplate, generatePdf, previewPdfBlob } from '../services/api'
 import useDocumentTitle from '../hooks/useDocumentTitle'
@@ -78,7 +78,7 @@ export default function GeneratePage() {
 
       {/* Page header */}
       <div className="mt-4 mb-8">
-        <h1 className="text-2xl font-bold text-navy dark:text-white">Generate PDF</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Generate PDF</h1>
         <p className="text-sm text-gray-500 mt-1">
           Select a template, fill in the data, then download or preview.
         </p>
@@ -154,7 +154,7 @@ export default function GeneratePage() {
 
             {template && (
               <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-700 text-sm">
-                <p className="font-semibold text-navy dark:text-white">{template.name}</p>
+                <p className="font-semibold text-gray-900 dark:text-white">{template.name}</p>
                 {template.description && <p className="text-gray-400 text-xs mt-0.5">{template.description}</p>}
                 <div className="flex gap-2 mt-2 flex-wrap">
                   <span className="badge badge-indigo">{template.pageSize}</span>
@@ -307,3 +307,4 @@ function setNestedHint(obj, parts) {
     setNestedHint(obj[key], rest)
   }
 }
+

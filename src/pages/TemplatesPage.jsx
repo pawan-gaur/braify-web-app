@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+﻿import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getTemplates, deleteTemplate } from '../services/api'
 import useDocumentTitle from '../hooks/useDocumentTitle'
@@ -158,7 +158,7 @@ export default function TemplatesPage() {
       {/* Header */}
       <div className="flex items-center justify-between mt-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-navy dark:text-white">PDF Templates</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">PDF Templates</h1>
           <p className="text-sm text-gray-500 mt-1">
             {templates.length} template{templates.length !== 1 ? 's' : ''} saved
           </p>
@@ -179,7 +179,7 @@ export default function TemplatesPage() {
             onClick={() => setPageTab(tab.id)}
             className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
               pageTab === tab.id
-                ? 'bg-white dark:bg-gray-700 text-navy dark:text-white shadow-sm'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
             }`}
           >
@@ -518,7 +518,7 @@ function SampleGallery({ view, onOpen }) {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-navy dark:text-white text-base">{cat.label}</span>
+                  <span className="font-bold text-gray-900 dark:text-white text-base">{cat.label}</span>
                   <span
                     className="text-[10px] font-bold px-2 py-0.5 rounded-full"
                     style={{ background: cat.bg, color: cat.color }}
@@ -577,7 +577,7 @@ function StarterCard({ template, category, onOpen }) {
       {/* Body */}
       <div className="p-4 flex flex-col flex-1 gap-2">
         <div>
-          <h3 className="font-bold text-navy dark:text-white text-sm leading-snug">{template.name}</h3>
+          <h3 className="font-bold text-gray-900 dark:text-white text-sm leading-snug">{template.name}</h3>
           <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{template.description}</p>
         </div>
 
@@ -661,7 +661,7 @@ function TemplateCard({ template, onEdit, onGenerate, onDelete = null, onVersion
       <div className="p-5 flex flex-col flex-1 gap-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-navy dark:text-gray-100 truncate text-base leading-snug">
+            <h3 className="font-bold text-gray-900 dark:text-gray-100 truncate text-base leading-snug">
               {template.name}
             </h3>
             {template.description && (
@@ -773,3 +773,4 @@ function EmptyState({ onNew, onBrowse }) {
     </div>
   )
 }
+

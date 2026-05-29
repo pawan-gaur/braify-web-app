@@ -292,7 +292,7 @@ function MiniStat({ label, value, color = 'gray', icon }) {
   }
   return (
     <div className="bg-gray-50 dark:bg-gray-900/40 rounded-xl p-4 text-center">
-      {icon && <div className="text-xl mb-1">{icon}</div>}
+      {icon && <div className="flex justify-center mb-2">{icon}</div>}
       <p className={`text-2xl font-bold ${colorMap[color] ?? colorMap.gray}`}>
         {value ?? <span className="inline-block w-10 h-6 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"/>}
       </p>
@@ -807,16 +807,16 @@ export default function DashboardPage() {
   }
 
   const TABS_ORG = [
-    { id: 'overview',  label: '📊 Overview'  },
-    { id: 'analytics', label: '📈 Analytics' },
-    { id: 'esign',     label: '✍️ E-Sign'    },
-    { id: 'team',      label: '👥 Team'      },
+    { id: 'overview',  label: 'Overview',  icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg> },
+    { id: 'analytics', label: 'Analytics', icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg> },
+    { id: 'esign',     label: 'E-Sign',    icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> },
+    { id: 'team',      label: 'Team',      icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg> },
   ]
   const TABS_PA = [
-    { id: 'platform',  label: '🌐 Platform'  },
-    { id: 'tenants',   label: '🏢 Tenants'   },
-    { id: 'analytics', label: '📈 Analytics' },
-    { id: 'activity',  label: '📋 Activity'  },
+    { id: 'platform',  label: 'Platform',  icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> },
+    { id: 'tenants',   label: 'Tenants',   icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg> },
+    { id: 'analytics', label: 'Analytics', icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg> },
+    { id: 'activity',  label: 'Activity',  icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg> },
   ]
   const TABS = isPlatformAdmin ? TABS_PA : TABS_ORG
 
@@ -875,10 +875,11 @@ export default function DashboardPage() {
       <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 mb-6 w-fit overflow-x-auto">
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap
               ${tab === t.id
-                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                ? 'bg-white dark:bg-gray-700 text-purple-700 dark:text-purple-300 shadow-sm'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}>
+            {t.icon}
             {t.label}
           </button>
         ))}
@@ -1178,12 +1179,12 @@ export default function DashboardPage() {
       {tab === 'esign' && (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-            <MiniStat label="Total Docs"  value={stats?.esignTotal}     color="indigo"  icon="📄"/>
-            <MiniStat label="Sent"        value={esignSent}             color="sky"     icon="📤"/>
-            <MiniStat label="Completed"   value={stats?.esignCompleted} color="emerald" icon="✅"/>
-            <MiniStat label="Pending"     value={stats?.esignPending}   color="amber"   icon="⏳"/>
-            <MiniStat label="Overdue"     value={stats?.esignOverdue}   color="rose"    icon="⚠️"/>
-            <MiniStat label="Cancelled"   value={stats?.esignCancelled} color="gray"    icon="❌"/>
+            <MiniStat label="Total Docs"  value={stats?.esignTotal}     color="indigo"  icon={<svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>}/>
+            <MiniStat label="Sent"        value={esignSent}             color="sky"     icon={<svg className="w-5 h-5 text-sky-400"    fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>}/>
+            <MiniStat label="Completed"   value={stats?.esignCompleted} color="emerald" icon={<svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}/>
+            <MiniStat label="Pending"     value={stats?.esignPending}   color="amber"   icon={<svg className="w-5 h-5 text-amber-400"   fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}/>
+            <MiniStat label="Overdue"     value={stats?.esignOverdue}   color="rose"    icon={<svg className="w-5 h-5 text-rose-400"    fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>}/>
+            <MiniStat label="Cancelled"   value={stats?.esignCancelled} color="gray"    icon={<svg className="w-5 h-5 text-gray-400"    fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}/>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -1267,7 +1268,11 @@ export default function DashboardPage() {
           {(stats?.esignOverdue ?? 0) > 0 && (
             <div className="card border-rose-200 dark:border-rose-800/50 bg-rose-50/40 dark:bg-rose-900/10 mb-6">
               <div className="flex items-center gap-3">
-                <span className="text-2xl">⚠️</span>
+                <div className="w-6 h-6 shrink-0 text-rose-500">
+                  <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                  </svg>
+                </div>
                 <div className="flex-1">
                   <p className="text-sm font-bold text-rose-800 dark:text-rose-400">
                     {stats.esignOverdue} overdue document{stats.esignOverdue !== 1 ? 's' : ''}
@@ -1325,8 +1330,8 @@ export default function DashboardPage() {
             <div className="card">
               <SectionHeader title="Team Summary" sub="Current member status"/>
               <div className="grid grid-cols-2 gap-3 mb-6">
-                <MiniStat label="Total Members" value={stats?.totalUsers}     color="indigo" icon="👥"/>
-                <MiniStat label="Pending Setup" value={stats?.pendingInvites} color="amber"  icon="📧"/>
+                <MiniStat label="Total Members" value={stats?.totalUsers}     color="indigo" icon={<svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>}/>
+                <MiniStat label="Pending Setup" value={stats?.pendingInvites} color="amber"  icon={<svg className="w-5 h-5 text-amber-400"   fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>}/>
               </div>
               <SectionHeader title="User Growth" sub="New members per month"/>
               <BarChart data={stats?.userGrowth ?? []} color="#8b5cf6"/>
@@ -1412,7 +1417,11 @@ export default function DashboardPage() {
                       return (
                         <div key={key}>
                           <div className="flex items-center gap-2 mb-1.5">
-                            <span className="text-base">{meta?.icon ?? '📦'}</span>
+                            <div className="w-4 h-4 shrink-0" style={{ color: meta?.color ?? '#6366f1' }}>
+                              <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={meta?.icon ?? 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4'}/>
+                              </svg>
+                            </div>
                             <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex-1">{meta?.label ?? key}</span>
                             <span className="text-xs font-bold text-gray-500">{count} / {total} orgs</span>
                           </div>
@@ -1493,9 +1502,9 @@ export default function DashboardPage() {
       {tab === 'tenants' && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <MiniStat label="Active Tenants"     value={stats?.activeOrganizations}   color="emerald" icon="✅"/>
-            <MiniStat label="Inactive Tenants"   value={stats?.inactiveOrganizations} color="gray"    icon="💤"/>
-            <MiniStat label="Pending Onboarding" value={stats?.pendingOnboarding}     color="amber"   icon="⏳"/>
+            <MiniStat label="Active Tenants"     value={stats?.activeOrganizations}   color="emerald" icon={<svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}/>
+            <MiniStat label="Inactive Tenants"   value={stats?.inactiveOrganizations} color="gray"    icon={<svg className="w-5 h-5 text-gray-400"    fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}/>
+            <MiniStat label="Pending Onboarding" value={stats?.pendingOnboarding}     color="amber"   icon={<svg className="w-5 h-5 text-amber-400"   fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}/>
           </div>
 
           {stats?.orgBreakdown?.length > 0 && (
@@ -1536,7 +1545,9 @@ export default function DashboardPage() {
                                 <span key={f} title={m.label}
                                   className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
                                   style={{ background: m.bg, color: m.color }}>
-                                  {m.icon}
+                                  <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={m.icon}/>
+                                  </svg>
                                 </span>
                               ) : null
                             })}

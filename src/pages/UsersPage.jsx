@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getUsers, searchUsers, getOrganizations, createUser, updateUser, enableUser, disableUser } from '../services/api'
 import useDocumentTitle from '../hooks/useDocumentTitle'
@@ -170,7 +170,7 @@ export default function UsersPage() {
       {/* Header */}
       <div className="flex items-center justify-between mt-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-navy dark:text-white">Users</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Users</h1>
           <p className="text-sm text-gray-500 mt-1">Manage platform users and their roles.</p>
         </div>
         <div className="flex items-center gap-3">
@@ -437,3 +437,4 @@ export default function UsersPage() {
     </div>
   )
 }
+

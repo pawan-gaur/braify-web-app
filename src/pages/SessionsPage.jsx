@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+﻿import { useState, useEffect, useCallback } from 'react'
 import { getSessions, revokeSession, revokeOtherSessions } from '../services/api'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import { useToast } from '../context/ToastContext'
@@ -137,7 +137,7 @@ export default function SessionsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mt-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-navy dark:text-white">Active Sessions</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Active Sessions</h1>
           <p className="text-sm text-gray-500 mt-1">
             {isUser
               ? 'Manage your active login sessions.'
@@ -434,3 +434,4 @@ function Spinner({ className = 'h-4 w-4' }) {
     </svg>
   )
 }
+

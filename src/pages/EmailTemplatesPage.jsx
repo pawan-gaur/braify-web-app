@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+﻿import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getEmailTemplates, deleteEmailTemplate, sendEmailTemplate } from '../services/api'
 import useDocumentTitle from '../hooks/useDocumentTitle'
@@ -164,7 +164,7 @@ export default function EmailTemplatesPage() {
       {/* Header */}
       <div className="flex items-center justify-between mt-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-navy dark:text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             {/* Mail icon */}
             <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -860,3 +860,4 @@ function EmptyState({ onNew }) {
     </div>
   )
 }
+

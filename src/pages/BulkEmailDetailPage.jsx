@@ -32,20 +32,20 @@ const STATUS_COLORS = {
 }
 
 const ATT_LABELS = {
-  NONE:         { icon: '✉️',  text: 'Email only'   },
-  UPLOAD:       { icon: '📤', text: 'Uploaded PDF'  },
-  PDF_TEMPLATE: { icon: '📄', text: 'PDF Template'  },
-  EXTERNAL_API: { icon: '🌐', text: 'External API'  },
+  NONE:         { path: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',  text: 'Email only'   },
+  UPLOAD:       { path: 'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12',                     text: 'Uploaded PDF'  },
+  PDF_TEMPLATE: { path: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', text: 'PDF Template'  },
+  EXTERNAL_API: { path: 'M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z', text: 'External API'  },
 }
 
 const AUDIT_ICONS = {
-  JOB_CREATED:          { icon: '🆕', color: 'text-purple-500' },
-  PROCESSING_STARTED:   { icon: '▶️', color: 'text-blue-500'   },
-  JOB_COMPLETED:        { icon: '✅', color: 'text-green-500'  },
-  JOB_PARTIAL:          { icon: '⚠️', color: 'text-orange-500' },
-  JOB_FAILED:           { icon: '❌', color: 'text-red-500'    },
-  JOB_CANCELLED:        { icon: '🚫', color: 'text-gray-400'   },
-  RESEND_CREATED:       { icon: '🔁', color: 'text-indigo-500' },
+  JOB_CREATED:          { path: 'M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z',                                         color: 'text-purple-500' },
+  PROCESSING_STARTED:   { path: 'M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z M21 12a9 9 0 11-18 0 9 9 0 0118 0z', color: 'text-blue-500'   },
+  JOB_COMPLETED:        { path: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',                                                        color: 'text-green-500'  },
+  JOB_PARTIAL:          { path: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z', color: 'text-orange-500' },
+  JOB_FAILED:           { path: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z',                                color: 'text-red-500'    },
+  JOB_CANCELLED:        { path: 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636',        color: 'text-gray-400'   },
+  RESEND_CREATED:       { path: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15', color: 'text-indigo-500' },
 }
 
 const POLL_MS = 3000
@@ -292,7 +292,7 @@ export default function BulkEmailDetailPage() {
             <div className="grid grid-cols-2 gap-4">
               <InfoItem label="Email Template"  value={job.emailTemplateName} />
               <InfoItem label="Subject"         value={job.emailTemplateSubject || '—'} />
-              <InfoItem label="Attachment"      value={`${att.icon} ${att.text}`} />
+              <InfoItem label="Attachment"      value={att.text} />
               <InfoItem label="Total Recipients" value={String(job.totalCount)} />
             </div>
 
@@ -309,19 +309,26 @@ export default function BulkEmailDetailPage() {
             <h2 className="text-sm font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-4">Timeline</h2>
             <div className="space-y-4">
               <TimelineItem
-                icon="🆕"
+                icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}
                 label="Job Created"
                 time={job.createdAt}
                 active
               />
               <TimelineItem
-                icon="▶️"
+                icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}
                 label="Processing Started"
                 time={job.startedAt}
                 active={!!job.startedAt}
               />
               <TimelineItem
-                icon={isTerminal ? (job.status === 'COMPLETED' ? '✅' : job.status === 'CANCELLED' ? '🚫' : '⚠️') : '⏳'}
+                icon={isTerminal
+                  ? job.status === 'COMPLETED'
+                    ? <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    : job.status === 'CANCELLED'
+                    ? <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                    : <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                  : <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                }
                 label={isTerminal ? `Completed (${job.status})` : 'Awaiting completion…'}
                 time={job.completedAt}
                 active={!!job.completedAt}
@@ -336,7 +343,11 @@ export default function BulkEmailDetailPage() {
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
           {!job.rows || job.rows.length === 0 ? (
             <div className="p-12 text-center text-gray-400">
-              <p className="text-3xl mb-3">📭</p>
+              <div className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600">
+                <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+                </svg>
+              </div>
               <p className="text-sm">No recipient data available.</p>
             </div>
           ) : (
@@ -368,7 +379,12 @@ export default function BulkEmailDetailPage() {
                           : r.status === 'FAILED' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
                           : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
                         }`}>
-                          {r.status === 'SENT' ? '✓' : r.status === 'FAILED' ? '✗' : '⏳'}
+                          {r.status === 'SENT'
+                            ? <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/></svg>
+                            : r.status === 'FAILED'
+                            ? <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12"/></svg>
+                            : <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                          }
                           {' '}{r.status}
                         </span>
                       </td>
@@ -394,14 +410,22 @@ export default function BulkEmailDetailPage() {
 
           {job.attachmentType === 'NONE' || !job.attachmentType ? (
             <div className="flex flex-col items-center py-12 text-gray-400">
-              <span className="text-4xl mb-3">✉️</span>
+              <div className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600">
+                <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+              </div>
               <p className="text-base font-semibold text-gray-600 dark:text-gray-300">No attachment</p>
               <p className="text-sm mt-1">Emails were sent without a PDF attachment.</p>
             </div>
           ) : (
             <div className="space-y-4">
               <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700/40 rounded-xl">
-                <span className="text-3xl">{att.icon}</span>
+                <div className="w-8 h-8 flex items-center justify-center text-gray-500 dark:text-gray-400 shrink-0">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={att.path}/>
+                  </svg>
+                </div>
                 <div>
                   <p className="font-semibold text-gray-800 dark:text-gray-100">{att.text}</p>
                   <p className="text-xs text-gray-500 mt-0.5">
@@ -454,7 +478,11 @@ export default function BulkEmailDetailPage() {
 
           {audit.length === 0 ? (
             <div className="flex flex-col items-center py-12 text-gray-400">
-              <span className="text-4xl mb-3">📋</span>
+              <div className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600">
+                <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                </svg>
+              </div>
               <p className="text-sm">No audit events recorded yet.</p>
             </div>
           ) : (
@@ -463,12 +491,14 @@ export default function BulkEmailDetailPage() {
               <div className="absolute left-5 top-0 bottom-0 w-px bg-gray-200 dark:bg-gray-700" />
               <div className="space-y-5 pl-12">
                 {audit.map((ev, i) => {
-                  const ei = AUDIT_ICONS[ev.type] || { icon: '•', color: 'text-gray-400' }
+                  const ei = AUDIT_ICONS[ev.type] || { path: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z', color: 'text-gray-400' }
                   return (
                     <div key={i} className="relative">
                       {/* Dot on the timeline */}
-                      <div className={`absolute -left-[2.6rem] w-8 h-8 rounded-full bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 flex items-center justify-center text-sm ${ei.color}`}>
-                        {ei.icon}
+                      <div className={`absolute -left-[2.6rem] w-8 h-8 rounded-full bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-600 flex items-center justify-center ${ei.color}`}>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={ei.path}/>
+                        </svg>
                       </div>
                       <div className="bg-gray-50 dark:bg-gray-700/40 rounded-xl p-4">
                         <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -520,7 +550,7 @@ function StatCard({ value, label, color }) {
 function TimelineItem({ icon, label, time, active }) {
   return (
     <div className={`flex items-start gap-3 ${active ? '' : 'opacity-40'}`}>
-      <span className="text-xl shrink-0">{icon}</span>
+      <div className="w-5 h-5 shrink-0 mt-0.5">{icon}</div>
       <div>
         <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{label}</p>
         {time ? (

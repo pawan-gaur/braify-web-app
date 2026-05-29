@@ -1,12 +1,17 @@
 /**
  * Bulk Email Send — 4-step wizard
  *
- * Steps: Upload XLSX → Select Email Template → Configure Attachment → Review & Send
- * After submitting, navigates directly to the detail/status page (/bulk-email/:id).
+ * Design matches the Bulk E-Sign Send page:
+ *  - Circle + connector step indicator above the card
+ *  - Unified card container (max-w-4xl, white, rounded-xl)
+ *  - Shared Back / Next footer nav
+ *
+ * Steps: 0=Upload XLSX  1=Email Template  2=Attachment  3=Review & Send
+ * After submitting, navigates to the job detail page (/bulk-email/:id).
  *
  * Route: /bulk-email/send
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 import {
@@ -19,14 +24,8 @@ import Breadcrumbs from '../components/ui/Breadcrumbs'
 // ── Constants ──────────────────────────────────────────────────────────────────
 const MAX_ROWS = 500
 
-const STEPS = [
-  { n: 1, label: 'Upload XLSX'    },
-  { n: 2, label: 'Email Template' },
-  { n: 3, label: 'Attachment'     },
-  { n: 4, label: 'Review & Send'  },
-]
+const STEPS = ['Upload XLSX', 'Email Template', 'Attachment', 'Review & Send']
 
-// SVG paths for attachment option icons (used in the step-3 selector cards)
 const ATT_OPTIONS = [
   {
     value: 'NONE',
@@ -55,6 +54,8 @@ const ATT_OPTIONS = [
 ]
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
+const INPUT = 'w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-400'
+
 function fmtBytes(b) {
   if (!b) return ''
   if (b < 1024) return `${b} B`
@@ -62,52 +63,100 @@ function fmtBytes(b) {
   return `${(b / (1024 * 1024)).toFixed(1)} MB`
 }
 
+// ── Step indicator (mirrors ESignBulkPage design) ─────────────────────────────
+function StepIndicator({ current }) {
+  return (
+    <div className="flex items-center mb-8">
+      {STEPS.map((label, i) => (
+        <div key={i} className="flex items-center flex-1 last:flex-none">
+          <div className="flex flex-col items-center shrink-0">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors
+              ${i < current
+                ? 'bg-purple-600 text-white'
+                : i === current
+                  ? 'bg-purple-600 text-white ring-4 ring-purple-200 dark:ring-purple-900/40'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-400'}`}>
+              {i < current
+                ? <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/>
+                  </svg>
+                : i + 1}
+            </div>
+            <span className={`text-xs mt-1 whitespace-nowrap
+              ${i === current
+                ? 'text-purple-600 dark:text-purple-400 font-medium'
+                : 'text-gray-400'}`}>
+              {label}
+            </span>
+          </div>
+          {i < STEPS.length - 1 && (
+            <div className={`h-px flex-1 mx-3 mb-4 ${i < current ? 'bg-purple-400' : 'bg-gray-200 dark:bg-gray-700'}`} />
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function BulkEmailSendPage() {
-  const toast    = useToast()
-  const navigate = useNavigate()
+  const { showToast } = useToast()
+  const navigate      = useNavigate()
 
-  /* ── Wizard state ── */
-  const [step, setStep] = useState(1)
+  /* ── Wizard state (0-based steps) ── */
+  const [step, setStep] = useState(0)
 
-  /* Step 1 — XLSX */
-  const [xlsxRows,      setXlsxRows]      = useState([])    // [{col1: val, col2: val, ...}]
-  const [xlsxColumns,   setXlsxColumns]   = useState([])    // column header names
-  const [emailColumn,   setEmailColumn]   = useState('')
-  const [nameColumn,    setNameColumn]    = useState('')
-  const [xlsxFileName,  setXlsxFileName]  = useState('')
-  const [xlsxDragOver,  setXlsxDragOver]  = useState(false)
+  /* Step 0 — XLSX */
+  const [xlsxRows,     setXlsxRows]     = useState([])
+  const [xlsxColumns,  setXlsxColumns]  = useState([])
+  const [emailColumn,  setEmailColumn]  = useState('')
+  const [nameColumn,   setNameColumn]   = useState('')
+  const [xlsxFileName, setXlsxFileName] = useState('')
+  const [xlsxDragOver, setXlsxDragOver] = useState(false)
+  const xlsxRef = useRef()
 
-  /* Step 2 — Email template */
-  const [emailTemplates,      setEmailTemplates]      = useState([])
-  const [selectedTemplateId,  setSelectedTemplateId]  = useState('')
-  const [selectedTemplate,    setSelectedTemplate]    = useState(null)
-  const [columnMapping,       setColumnMapping]       = useState({})  // placeholder → xlsxCol
+  /* Step 1 — Email template */
+  const [emailTemplates,     setEmailTemplates]     = useState([])
+  const [templatesLoading,   setTemplatesLoading]   = useState(false)
+  const [selectedTemplateId, setSelectedTemplateId] = useState('')
+  const [selectedTemplate,   setSelectedTemplate]   = useState(null)
+  const [columnMapping,      setColumnMapping]      = useState({})
 
-  /* Step 3 — Attachment */
-  const [attachmentType,      setAttachmentType]      = useState('NONE')
-  const [uploadedPdfFile,     setUploadedPdfFile]     = useState(null)
-  const [uploadedPdfB64,      setUploadedPdfB64]      = useState('')
-  const [pdfTemplates,        setPdfTemplates]        = useState([])
+  /* Step 2 — Attachment */
+  const [attachmentType,       setAttachmentType]       = useState('NONE')
+  const [uploadedPdfFile,      setUploadedPdfFile]      = useState(null)
+  const [uploadedPdfB64,       setUploadedPdfB64]       = useState('')
+  const [pdfTemplates,         setPdfTemplates]         = useState([])
+  const [pdfTemplatesLoading,  setPdfTemplatesLoading]  = useState(false)
   const [selectedPdfTemplateId, setSelectedPdfTemplateId] = useState('')
-  const [selectedPdfTemplate, setSelectedPdfTemplate] = useState(null)
-  const [pdfColumnMapping,    setPdfColumnMapping]    = useState({})
-  const [extApiUrl,           setExtApiUrl]           = useState('')
-  const [extApiMethod,        setExtApiMethod]        = useState('GET')
-  const [extApiHeaders,       setExtApiHeaders]       = useState('')
-  const [extApiBody,          setExtApiBody]          = useState('')
+  const [selectedPdfTemplate,  setSelectedPdfTemplate]  = useState(null)
+  const [pdfColumnMapping,     setPdfColumnMapping]     = useState({})
+  const [extApiUrl,            setExtApiUrl]            = useState('')
+  const [extApiMethod,         setExtApiMethod]         = useState('GET')
+  const [extApiHeaders,        setExtApiHeaders]        = useState('')
+  const [extApiBody,           setExtApiBody]           = useState('')
+  const pdfRef = useRef()
 
-  /* Step 4 — Review */
-  const [jobLabel,    setJobLabel]    = useState('')
-  const [sending,     setSending]     = useState(false)
+  /* Step 3 — Review & Send */
+  const [jobLabel,  setJobLabel]  = useState('')
+  const [sending,   setSending]   = useState(false)
+  const [sendError, setSendError] = useState('')
 
-  // ── Load email templates & PDF templates ─────────────────────────────────
+  // ── Load email & PDF templates ───────────────────────────────────────────
   useEffect(() => {
-    getEmailTemplates().then(setEmailTemplates).catch(() => {})
-    getTemplates().then(setPdfTemplates).catch(() => {})
+    setTemplatesLoading(true)
+    getEmailTemplates()
+      .then(setEmailTemplates)
+      .catch(() => showToast('Failed to load email templates', 'error'))
+      .finally(() => setTemplatesLoading(false))
+
+    setPdfTemplatesLoading(true)
+    getTemplates()
+      .then(setPdfTemplates)
+      .catch(() => {})
+      .finally(() => setPdfTemplatesLoading(false))
   }, [])
 
-  // ── Update selectedTemplate object when id changes ───────────────────────
   useEffect(() => {
     const t = emailTemplates.find(t => t.id === selectedTemplateId) || null
     setSelectedTemplate(t)
@@ -120,6 +169,21 @@ export default function BulkEmailSendPage() {
     setPdfColumnMapping({})
   }, [selectedPdfTemplateId, pdfTemplates])
 
+  // ── Step validation ───────────────────────────────────────────────────────
+  const stepValid = [
+    xlsxRows.length > 0 && emailColumn.length > 0,               // step 0
+    !!selectedTemplateId,                                          // step 1
+    attachmentType === 'UPLOAD'       ? !!uploadedPdfB64          // step 2
+      : attachmentType === 'PDF_TEMPLATE' ? !!selectedPdfTemplateId
+      : attachmentType === 'EXTERNAL_API' ? extApiUrl.trim().length > 0
+      : true,
+    true,                                                          // step 3 (always can review)
+  ]
+
+  function canGoNext() { return stepValid[step] }
+  function goNext()    { if (canGoNext()) setStep(s => Math.min(s + 1, STEPS.length - 1)) }
+  function goBack()    { setStep(s => Math.max(s - 1, 0)) }
+
   // ── XLSX upload ───────────────────────────────────────────────────────────
   function handleXlsxFile(file) {
     if (!file) return
@@ -129,9 +193,9 @@ export default function BulkEmailSendPage() {
         const wb     = XLSX.read(e.target.result, { type: 'binary' })
         const ws     = wb.Sheets[wb.SheetNames[0]]
         const parsed = XLSX.utils.sheet_to_json(ws, { defval: '' })
-        if (!parsed.length) { toast.error('XLSX file appears to be empty'); return }
+        if (!parsed.length) { showToast('XLSX file appears to be empty', 'error'); return }
         if (parsed.length > MAX_ROWS) {
-          toast.error(`File has ${parsed.length} rows — maximum is ${MAX_ROWS}`)
+          showToast(`File has ${parsed.length} rows — maximum is ${MAX_ROWS}`, 'error')
           return
         }
         const cols = Object.keys(parsed[0])
@@ -142,43 +206,32 @@ export default function BulkEmailSendPage() {
         }))
         setXlsxColumns(cols)
         setXlsxFileName(file.name)
-        // Auto-generate campaign name from filename if not already set
         setJobLabel(prev =>
           prev.trim() ? prev : file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ')
         )
-        // Auto-detect email / name columns
         const guess = cols.find(c => /email/i.test(c))
         if (guess) setEmailColumn(guess)
         const nameGuess = cols.find(c => /name/i.test(c))
         if (nameGuess) setNameColumn(nameGuess)
-      } catch (err) { toast.error('Could not parse XLSX file: ' + err.message) }
+      } catch (err) { showToast('Could not parse XLSX file: ' + err.message, 'error') }
     }
     reader.readAsBinaryString(file)
   }
 
-  // ── PDF attachment file ───────────────────────────────────────────────────
+  // ── PDF attachment ────────────────────────────────────────────────────────
   function handlePdfFile(file) {
     if (!file) return
-    if (file.size > 10 * 1024 * 1024) { toast.error('PDF file exceeds 10 MB'); return }
+    if (file.size > 10 * 1024 * 1024) { showToast('PDF file exceeds 10 MB', 'error'); return }
     setUploadedPdfFile(file)
     const reader = new FileReader()
     reader.onload = (e) => setUploadedPdfB64(e.target.result)
     reader.readAsDataURL(file)
   }
 
-  // ── Step validation ───────────────────────────────────────────────────────
-  const step1Valid = xlsxRows.length > 0 && emailColumn.length > 0
-  const step2Valid = !!selectedTemplateId
-  const step3Valid = (() => {
-    if (attachmentType === 'UPLOAD')       return !!uploadedPdfB64
-    if (attachmentType === 'PDF_TEMPLATE') return !!selectedPdfTemplateId
-    if (attachmentType === 'EXTERNAL_API') return extApiUrl.trim().length > 0
-    return true // NONE
-  })()
-
-  // ── Submit job ────────────────────────────────────────────────────────────
+  // ── Submit ────────────────────────────────────────────────────────────────
   async function handleSend() {
-    if (!step1Valid || !step2Valid || !step3Valid) return
+    if (!stepValid[0] || !stepValid[1] || !stepValid[2]) return
+    setSendError('')
     setSending(true)
     try {
       const payload = {
@@ -195,7 +248,7 @@ export default function BulkEmailSendPage() {
         }),
         ...(attachmentType === 'PDF_TEMPLATE' && {
           pdfTemplateId:    selectedPdfTemplateId,
-          pdfColumnMapping: pdfColumnMapping,
+          pdfColumnMapping,
         }),
         ...(attachmentType === 'EXTERNAL_API' && {
           externalApiUrl:     extApiUrl.trim(),
@@ -205,470 +258,568 @@ export default function BulkEmailSendPage() {
         }),
       }
       const job = await bulkEmailCreateJob(payload)
-      toast.success('Campaign started — redirecting to status…')
+      showToast('Campaign started — redirecting to status…', 'success')
       navigate(`/bulk-email/${job.id}`)
     } catch (e) {
-      toast.error(e.message || 'Failed to start job')
+      setSendError(e.message || 'Failed to start campaign')
     } finally {
       setSending(false)
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────────────────
+  // ── Render: Step 0 — Upload XLSX ─────────────────────────────────────────
+  function renderStep0() {
+    return (
+      <div className="space-y-5">
+        <div>
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">Upload Recipient List</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Supported formats: .xlsx, .xls — first row must contain column headers. Max {MAX_ROWS} rows.
+          </p>
+        </div>
+
+        {/* Drop zone */}
+        <button
+          type="button"
+          onClick={() => xlsxRef.current?.click()}
+          className={`w-full border-2 border-dashed rounded-xl p-10 text-center transition-colors group
+            ${xlsxDragOver   ? 'border-purple-400 bg-purple-50 dark:bg-purple-900/10'
+              : xlsxRows.length ? 'border-green-400 bg-green-50 dark:bg-green-900/10'
+              : 'border-gray-300 dark:border-gray-600 hover:border-purple-400 dark:hover:border-purple-500'}`}
+          onDragOver={e  => { e.preventDefault(); setXlsxDragOver(true) }}
+          onDragLeave={() => setXlsxDragOver(false)}
+          onDrop={e      => { e.preventDefault(); setXlsxDragOver(false); handleXlsxFile(e.dataTransfer.files[0]) }}
+        >
+          {xlsxRows.length > 0 ? (
+            <>
+              <svg className="w-10 h-10 mx-auto mb-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <p className="text-sm font-medium text-green-700 dark:text-green-400">{xlsxFileName} — click to replace</p>
+              <p className="text-xs text-gray-500 mt-1">{xlsxRows.length} rows · {xlsxColumns.length} columns</p>
+            </>
+          ) : (
+            <>
+              <svg className="w-10 h-10 mx-auto mb-3 text-gray-300 group-hover:text-purple-400 transition-colors"
+                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                  d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Click to upload Excel or CSV</p>
+              <p className="text-xs text-gray-400 mt-1">.xlsx · .xls</p>
+            </>
+          )}
+        </button>
+        <input ref={xlsxRef} type="file" accept=".xlsx,.xls" className="hidden"
+          onChange={e => { handleXlsxFile(e.target.files[0]); e.target.value = '' }}/>
+
+        {xlsxColumns.length > 0 && (
+          <div className="space-y-4">
+            {/* Campaign name */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
+                Campaign Name <span className="font-normal text-gray-400">(optional — auto-filled from filename)</span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. October Newsletter — Customers"
+                value={jobLabel}
+                onChange={e => setJobLabel(e.target.value)}
+                className={INPUT}
+              />
+            </div>
+
+            {/* Column selectors */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
+                  Email Column <span className="text-red-400">*</span>
+                </label>
+                <select value={emailColumn} onChange={e => setEmailColumn(e.target.value)} className={INPUT}>
+                  <option value="">Select column…</option>
+                  {xlsxColumns.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
+                  Name Column <span className="font-normal text-gray-400">(optional)</span>
+                </label>
+                <select value={nameColumn} onChange={e => setNameColumn(e.target.value)} className={INPUT}>
+                  <option value="">None</option>
+                  {xlsxColumns.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* Preview table */}
+            {xlsxRows.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {xlsxRows.length} rows · {xlsxColumns.length} columns
+                  </p>
+                  <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400
+                                   px-2 py-0.5 rounded-full font-medium">Ready</span>
+                </div>
+                <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                  <table className="min-w-full text-xs">
+                    <thead className="bg-gray-50 dark:bg-gray-800">
+                      <tr>
+                        {xlsxColumns.map(c => (
+                          <th key={c} className="px-3 py-2 text-left text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
+                            {c}
+                            {c === emailColumn && <span className="ml-1 text-purple-500">(email)</span>}
+                            {c === nameColumn  && <span className="ml-1 text-blue-500">(name)</span>}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                      {xlsxRows.slice(0, 3).map((r, i) => (
+                        <tr key={i} className="bg-white dark:bg-gray-900">
+                          {xlsxColumns.map(c => (
+                            <td key={c} className="px-3 py-2 text-gray-600 dark:text-gray-400 truncate max-w-[150px]">{r[c]}</td>
+                          ))}
+                        </tr>
+                      ))}
+                      {xlsxRows.length > 3 && (
+                        <tr className="bg-gray-50 dark:bg-gray-800/60">
+                          <td colSpan={xlsxColumns.length} className="px-3 py-2 text-center text-gray-400 text-xs">
+                            +{xlsxRows.length - 3} more rows…
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ── Render: Step 1 — Email Template ──────────────────────────────────────
+  function renderStep1() {
+    return (
+      <div className="space-y-5">
+        <div>
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">Select Email Template</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Choose the email template to use for this campaign.
+          </p>
+        </div>
+
+        {templatesLoading ? (
+          <div className="flex items-center justify-center py-10">
+            <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"/>
+          </div>
+        ) : emailTemplates.length === 0 ? (
+          <div className="text-center py-10 text-sm text-gray-500 dark:text-gray-400">
+            No email templates found.{' '}
+            <a href="/email-templates" className="text-purple-600 underline">Create one first.</a>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {emailTemplates.map(t => (
+              <button key={t.id} type="button" onClick={() => setSelectedTemplateId(t.id)}
+                className={`text-left p-4 rounded-xl border-2 transition-all
+                  ${selectedTemplateId === t.id
+                    ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
+                    : 'border-gray-200 dark:border-gray-600 hover:border-purple-300 bg-white dark:bg-gray-700/40'}`}>
+                <div className="flex items-start gap-2">
+                  {selectedTemplateId === t.id && (
+                    <svg className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                    </svg>
+                  )}
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm text-gray-800 dark:text-gray-100 truncate">{t.name}</p>
+                    {t.subject && <p className="text-xs text-gray-500 mt-0.5 truncate">Subject: {t.subject}</p>}
+                    {t.placeholders?.length > 0 && (
+                      <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                        {t.placeholders.length} variable{t.placeholders.length > 1 ? 's' : ''}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Placeholder → Column mapping */}
+        {selectedTemplate?.placeholders?.length > 0 && (
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+              <p className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+                Map Template Variables to XLSX Columns
+              </p>
+            </div>
+            <div className="p-4 space-y-3">
+              {selectedTemplate.placeholders.map(ph => (
+                <div key={ph} className="flex items-center gap-3">
+                  <span className="text-xs font-mono bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-1 rounded w-36 shrink-0 truncate">
+                    {'{{'}{ph}{'}}'}
+                  </span>
+                  <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                  </svg>
+                  <select
+                    value={columnMapping[ph] || ''}
+                    onChange={e => setColumnMapping(m => ({ ...m, [ph]: e.target.value }))}
+                    className={INPUT + ' flex-1'}>
+                    <option value="">— not mapped —</option>
+                    {xlsxColumns.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ── Render: Step 2 — Attachment ───────────────────────────────────────────
+  function renderStep2() {
+    return (
+      <div className="space-y-5">
+        <div>
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">Attachment</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Optionally attach a PDF to every email. Choose how to source it.
+          </p>
+        </div>
+
+        {/* Attachment type cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {ATT_OPTIONS.map(opt => (
+            <button key={opt.value} type="button" onClick={() => setAttachmentType(opt.value)}
+              className={`p-4 rounded-xl border-2 text-left transition-all
+                ${attachmentType === opt.value
+                  ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
+                  : 'border-gray-200 dark:border-gray-600 hover:border-purple-300 bg-white dark:bg-gray-700/40'}`}>
+              <svg className={`w-5 h-5 mb-2.5 ${attachmentType === opt.value ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`}
+                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d={opt.iconPath}/>
+              </svg>
+              <p className="text-xs font-bold text-gray-800 dark:text-gray-100 leading-tight">{opt.label}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-tight">{opt.desc}</p>
+            </button>
+          ))}
+        </div>
+
+        {/* UPLOAD */}
+        {attachmentType === 'UPLOAD' && (
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+              <p className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">Upload PDF (max 10 MB)</p>
+            </div>
+            <div className="p-4">
+              <button type="button" onClick={() => pdfRef.current?.click()}
+                className={`w-full flex items-center gap-4 border-2 border-dashed rounded-xl p-4 transition-colors text-left
+                  ${uploadedPdfFile
+                    ? 'border-green-400 bg-green-50 dark:bg-green-900/10'
+                    : 'border-gray-300 dark:border-gray-600 hover:border-purple-400'}`}>
+                <svg className="w-8 h-8 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <div>
+                  {uploadedPdfFile
+                    ? <><p className="text-sm font-medium text-green-700 dark:text-green-400">{uploadedPdfFile.name}</p>
+                       <p className="text-xs text-gray-500">{fmtBytes(uploadedPdfFile.size)}</p></>
+                    : <p className="text-sm text-gray-500 dark:text-gray-400">Click to choose a PDF file</p>
+                  }
+                </div>
+              </button>
+              <input ref={pdfRef} type="file" accept=".pdf,application/pdf" className="hidden"
+                onChange={e => { handlePdfFile(e.target.files[0]); e.target.value = '' }}/>
+            </div>
+          </div>
+        )}
+
+        {/* PDF_TEMPLATE */}
+        {attachmentType === 'PDF_TEMPLATE' && (
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+              <p className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">Select PDF Template</p>
+            </div>
+            <div className="p-4 space-y-4">
+              {pdfTemplatesLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"/>
+                </div>
+              ) : pdfTemplates.length === 0 ? (
+                <p className="text-sm text-gray-500">No PDF templates found. Create one in PDF Templates.</p>
+              ) : (
+                <select value={selectedPdfTemplateId} onChange={e => setSelectedPdfTemplateId(e.target.value)} className={INPUT}>
+                  <option value="">Select template…</option>
+                  {pdfTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              )}
+
+              {selectedPdfTemplate?.placeholders?.length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+                    Map PDF Variables to XLSX Columns
+                  </p>
+                  {selectedPdfTemplate.placeholders.map(ph => (
+                    <div key={ph} className="flex items-center gap-3">
+                      <span className="text-xs font-mono bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded w-36 shrink-0 truncate">
+                        {'{{'}{ph}{'}}'}
+                      </span>
+                      <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                      </svg>
+                      <select
+                        value={pdfColumnMapping[ph] || ''}
+                        onChange={e => setPdfColumnMapping(m => ({ ...m, [ph]: e.target.value }))}
+                        className={INPUT + ' flex-1'}>
+                        <option value="">— not mapped —</option>
+                        {xlsxColumns.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* EXTERNAL_API */}
+        {attachmentType === 'EXTERNAL_API' && (
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+              <p className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">External API Configuration</p>
+            </div>
+            <div className="p-4 space-y-4">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Use{' '}
+                <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded font-mono text-purple-600 dark:text-purple-400">
+                  {'{{'+'column'+'}}'}}
+                </code>{' '}
+                in URL or body to inject row values. The endpoint must return PDF bytes.
+              </p>
+
+              <div className="flex gap-2">
+                <select value={extApiMethod} onChange={e => setExtApiMethod(e.target.value)}
+                  className="w-24 shrink-0 px-2 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-400">
+                  <option>GET</option>
+                  <option>POST</option>
+                </select>
+                <input type="url" placeholder="https://api.example.com/invoice?id={{invoice_id}}"
+                  value={extApiUrl} onChange={e => setExtApiUrl(e.target.value)}
+                  className={INPUT + ' flex-1'}/>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
+                  Headers <span className="font-normal text-gray-400">(JSON, optional)</span>
+                </label>
+                <textarea rows={2} placeholder={'{"Authorization": "Bearer token123"}'}
+                  value={extApiHeaders} onChange={e => setExtApiHeaders(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs font-mono text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"/>
+              </div>
+
+              {extApiMethod === 'POST' && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
+                    Request Body Template <span className="font-normal text-gray-400">(JSON with {'{{'+'var'+'}}'} placeholders)</span>
+                  </label>
+                  <textarea rows={3} placeholder={'{"customerId": "{{id}}", "name": "{{name}}"}'}
+                    value={extApiBody} onChange={e => setExtApiBody(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs font-mono text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"/>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // ── Render: Step 3 — Review & Send ────────────────────────────────────────
+  function renderStep3() {
+    return (
+      <div className="space-y-5">
+        <div>
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">Review &amp; Send</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Review the campaign details below, then click <strong>Send Campaign</strong>.
+          </p>
+        </div>
+
+        {/* Summary card — mirrors ESignBulkPage Step 4 summary */}
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
+          {[
+            { label: 'Campaign label',  value: jobLabel.trim() || (xlsxFileName ? xlsxFileName.replace(/\.[^.]+$/, '') : 'Auto-named') },
+            { label: 'Recipients',      value: `${xlsxRows.length} email${xlsxRows.length !== 1 ? 's' : ''}` },
+            { label: 'Email template',  value: selectedTemplate?.name || '—' },
+            { label: 'Attachment',      value: ATT_OPTIONS.find(a => a.value === attachmentType)?.label || 'None' },
+            ...(attachmentType === 'UPLOAD' && uploadedPdfFile
+              ? [{ label: 'PDF file', value: `${uploadedPdfFile.name} (${fmtBytes(uploadedPdfFile.size)})` }]
+              : []),
+            ...(attachmentType === 'PDF_TEMPLATE' && selectedPdfTemplate
+              ? [{ label: 'PDF template', value: selectedPdfTemplate.name }]
+              : []),
+            ...(attachmentType === 'EXTERNAL_API' && extApiUrl
+              ? [{ label: 'API endpoint', value: extApiUrl.length > 50 ? extApiUrl.slice(0, 50) + '…' : extApiUrl }]
+              : []),
+          ].map(({ label, value }) => (
+            <div key={label} className="flex items-center justify-between px-4 py-2.5 text-sm">
+              <span className="text-gray-500 dark:text-gray-400">{label}</span>
+              <span className="font-medium text-gray-800 dark:text-gray-200 text-right max-w-[60%] truncate">{value}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* First row preview */}
+        {xlsxRows.length > 0 && (
+          <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
+            <p className="text-xs font-semibold text-purple-700 dark:text-purple-400 mb-3 uppercase tracking-wider">
+              First Recipient Preview
+            </p>
+            <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+              {[
+                emailColumn && ['To', xlsxRows[0][emailColumn]],
+                nameColumn  && ['Name', xlsxRows[0][nameColumn]],
+                selectedTemplate?.subject && ['Subject', selectedTemplate.subject],
+              ].filter(Boolean).map(([k, v]) => (
+                <>
+                  <span key={k + 'l'} className="text-gray-500 dark:text-gray-400">{k}:</span>
+                  <span key={k + 'v'} className="font-medium text-gray-900 dark:text-white truncate">{v || '—'}</span>
+                </>
+              ))}
+              {selectedTemplate?.placeholders?.map(ph => (
+                <>
+                  <span key={ph + 'l'} className="text-gray-500 dark:text-gray-400 font-mono text-xs">{`{{${ph}}}`}:</span>
+                  <span key={ph + 'v'} className="font-medium text-gray-900 dark:text-white truncate text-xs">
+                    {columnMapping[ph] ? xlsxRows[0][columnMapping[ph]] || '—' : '(not mapped)'}
+                  </span>
+                </>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Campaign name editable */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
+            Campaign Name <span className="font-normal text-gray-400">(optional)</span>
+          </label>
+          <input type="text" placeholder="e.g. October Newsletter — Customers"
+            value={jobLabel} onChange={e => setJobLabel(e.target.value)} className={INPUT}/>
+        </div>
+
+        {/* Error banner */}
+        {sendError && (
+          <div className="flex items-start gap-3 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700">
+            <svg className="w-4 h-4 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <p className="text-xs text-red-700 dark:text-red-300">{sendError}</p>
+          </div>
+        )}
+
+        {/* Send button — full width, matches ESignBulkPage "Start Batch" style */}
+        <button
+          type="button"
+          onClick={handleSend}
+          disabled={sending}
+          className="w-full py-3 rounded-xl font-semibold text-sm text-white
+                     disabled:opacity-50 disabled:cursor-not-allowed transition-colors
+                     flex items-center justify-center gap-2"
+          style={{ background: sending ? '#9ca3af' : 'linear-gradient(135deg,#059669,#047857)' }}
+        >
+          {sending ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0"/>
+              Starting campaign…
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+              </svg>
+              Send Campaign — {xlsxRows.length} Email{xlsxRows.length !== 1 ? 's' : ''}
+            </>
+          )}
+        </button>
+      </div>
+    )
+  }
+
+  // ── Root render ───────────────────────────────────────────────────────────
   return (
-    <div className="p-6 max-w-screen-xl mx-auto">
+    <div className="p-6 max-w-4xl mx-auto">
       <Breadcrumbs items={[
         { label: 'Dashboard', to: '/' },
         { label: 'Bulk Email', to: '/bulk-email' },
         { label: 'Send Campaign' },
       ]} />
 
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white mt-2 mb-6">
-        Send Bulk Email Campaign
-      </h1>
-
-      <div className="max-w-2xl">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
-
-          {/* Step indicator */}
-          <div className="flex border-b border-gray-200 dark:border-gray-700">
-            {STEPS.map((s, i) => (
-              <button
-                key={s.n}
-                onClick={() => { if (s.n < step || (s.n === 2 && step1Valid) || (s.n === 3 && step2Valid) || (s.n === 4 && step3Valid)) setStep(s.n) }}
-                className={`flex-1 py-3 px-2 text-xs font-semibold flex flex-col items-center gap-1 border-b-2 transition-colors
-                  ${step === s.n
-                    ? 'border-purple-600 text-purple-700 dark:text-purple-400'
-                    : s.n < step
-                      ? 'border-transparent text-green-600 cursor-pointer'
-                      : 'border-transparent text-gray-400 cursor-default'}`}
-              >
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold
-                  ${step === s.n ? 'bg-purple-600 text-white' : s.n < step ? 'bg-green-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}>
-                  {s.n < step ? '✓' : s.n}
-                </span>
-                <span className="hidden sm:block leading-tight text-center">{s.label}</span>
-              </button>
-            ))}
-          </div>
-
-          <div className="p-6">
-
-            {/* ── Step 1: Upload XLSX ── */}
-            {step === 1 && (
-              <div className="space-y-5">
-                <h2 className="text-lg font-bold text-gray-800 dark:text-white">Upload Recipient List</h2>
-                <p className="text-sm text-gray-500">Upload an Excel (.xlsx) file. The first row must be column headers.</p>
-
-                {/* Drop zone */}
-                <label
-                  className={`flex flex-col items-center justify-center gap-3 border-2 border-dashed rounded-2xl p-10 cursor-pointer transition-colors
-                    ${xlsxDragOver ? 'border-purple-400 bg-purple-50 dark:bg-purple-900/20'
-                      : xlsxRows.length ? 'border-green-400 bg-green-50 dark:bg-green-900/10'
-                      : 'border-gray-300 bg-gray-50 dark:bg-gray-700/40 hover:border-purple-300'}`}
-                  onDragOver={e  => { e.preventDefault(); setXlsxDragOver(true) }}
-                  onDragLeave={() => setXlsxDragOver(false)}
-                  onDrop={e      => { e.preventDefault(); setXlsxDragOver(false); handleXlsxFile(e.dataTransfer.files[0]) }}
-                >
-                  {xlsxRows.length > 0 ? (
-                    <>
-                      <span className="text-4xl">✅</span>
-                      <p className="font-semibold text-green-700 dark:text-green-400">{xlsxFileName}</p>
-                      <p className="text-sm text-gray-500">{xlsxRows.length} rows · {xlsxColumns.length} columns</p>
-                      <span className="text-xs text-purple-600 underline">Click to replace</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                          d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                      </svg>
-                      <p className="text-sm text-gray-500">Drag &amp; drop an <strong>.xlsx</strong> file, or <span className="text-purple-600 font-semibold">browse</span></p>
-                      <p className="text-xs text-gray-400">Max {MAX_ROWS} rows</p>
-                    </>
-                  )}
-                  <input type="file" accept=".xlsx,.xls" className="hidden"
-                    onChange={e => handleXlsxFile(e.target.files[0])}/>
-                </label>
-
-                {xlsxColumns.length > 0 && (
-                  <div className="space-y-4">
-                    {/* Campaign name */}
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
-                        Campaign Name <span className="font-normal text-gray-400">(optional — auto-filled from file name)</span>
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. October Newsletter — Customers"
-                        value={jobLabel}
-                        onChange={e => setJobLabel(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
-                                   bg-white dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-100
-                                   focus:outline-none focus:ring-2 focus:ring-purple-400"
-                      />
-                    </div>
-
-                    {/* Column mapping */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
-                          Email Column <span className="text-red-400">*</span>
-                        </label>
-                        <select value={emailColumn} onChange={e => setEmailColumn(e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400">
-                          <option value="">Select column…</option>
-                          {xlsxColumns.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
-                          Name Column <span className="font-normal text-gray-400">(optional)</span>
-                        </label>
-                        <select value={nameColumn} onChange={e => setNameColumn(e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400">
-                          <option value="">None</option>
-                          {xlsxColumns.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Preview table */}
-                {xlsxRows.length > 0 && (
-                  <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
-                    <table className="text-xs w-full">
-                      <thead className="bg-gray-50 dark:bg-gray-700/50">
-                        <tr>
-                          {xlsxColumns.map(c => (
-                            <th key={c} className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                              {c}
-                              {c === emailColumn && <span className="ml-1 text-purple-500 font-normal">(email)</span>}
-                              {c === nameColumn  && <span className="ml-1 text-blue-500 font-normal">(name)</span>}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {xlsxRows.slice(0, 5).map((r, i) => (
-                          <tr key={i} className="border-t border-gray-100 dark:border-gray-700">
-                            {xlsxColumns.map(c => (
-                              <td key={c} className="px-3 py-2 text-gray-700 dark:text-gray-300 max-w-[160px] truncate">{r[c]}</td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    {xlsxRows.length > 5 && (
-                      <p className="text-center text-xs text-gray-400 py-2">+{xlsxRows.length - 5} more rows</p>
-                    )}
-                  </div>
-                )}
-
-                <div className="flex justify-end">
-                  <button onClick={() => setStep(2)} disabled={!step1Valid}
-                    className="px-6 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50 transition-all hover:opacity-90"
-                    style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)' }}>
-                    Next: Email Template →
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* ── Step 2: Email Template ── */}
-            {step === 2 && (
-              <div className="space-y-5">
-                <h2 className="text-lg font-bold text-gray-800 dark:text-white">Select Email Template</h2>
-
-                {emailTemplates.length === 0 ? (
-                  <p className="text-sm text-gray-500">No email templates found. Create one in Email Templates first.</p>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {emailTemplates.map(t => (
-                      <button key={t.id} onClick={() => setSelectedTemplateId(t.id)}
-                        className={`text-left p-4 rounded-xl border-2 transition-all
-                          ${selectedTemplateId === t.id
-                            ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
-                            : 'border-gray-200 dark:border-gray-600 hover:border-purple-300 bg-white dark:bg-gray-700/40'}`}>
-                        <p className="font-semibold text-sm text-gray-800 dark:text-gray-100">{t.name}</p>
-                        {t.subject && <p className="text-xs text-gray-500 mt-0.5 truncate">Subject: {t.subject}</p>}
-                        {t.placeholders?.length > 0 && (
-                          <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
-                            {t.placeholders.length} variable{t.placeholders.length > 1 ? 's' : ''}
-                          </p>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {/* Placeholder → Column mapping */}
-                {selectedTemplate?.placeholders?.length > 0 && (
-                  <div className="bg-gray-50 dark:bg-gray-700/40 rounded-xl p-4 space-y-3">
-                    <p className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
-                      Map Template Variables to XLSX Columns
-                    </p>
-                    {selectedTemplate.placeholders.map(ph => (
-                      <div key={ph} className="flex items-center gap-3">
-                        <span className="text-xs font-mono bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded w-40 shrink-0 truncate">
-                          {'{{'}{ph}{'}}'}
-                        </span>
-                        <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3"/>
-                        </svg>
-                        <select
-                          value={columnMapping[ph] || ''}
-                          onChange={e => setColumnMapping(m => ({ ...m, [ph]: e.target.value }))}
-                          className="flex-1 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400">
-                          <option value="">— not mapped —</option>
-                          {xlsxColumns.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="flex justify-between">
-                  <button onClick={() => setStep(1)}
-                    className="px-6 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    ← Back
-                  </button>
-                  <button onClick={() => setStep(3)} disabled={!step2Valid}
-                    className="px-6 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50 transition-all hover:opacity-90"
-                    style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)' }}>
-                    Next: Attachment →
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* ── Step 3: Attachment ── */}
-            {step === 3 && (
-              <div className="space-y-5">
-                <h2 className="text-lg font-bold text-gray-800 dark:text-white">Attachment</h2>
-                <p className="text-sm text-gray-500">Optionally attach a PDF to every email. Choose how to source it.</p>
-
-                {/* Attachment type selector */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {ATT_OPTIONS.map(opt => (
-                    <button key={opt.value} onClick={() => setAttachmentType(opt.value)}
-                      className={`p-3 rounded-xl border-2 text-left transition-all
-                        ${attachmentType === opt.value
-                          ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
-                          : 'border-gray-200 dark:border-gray-600 hover:border-purple-300 bg-white dark:bg-gray-700/40'}`}>
-                      <svg className={`w-5 h-5 mb-2 ${attachmentType === opt.value ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`}
-                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d={opt.iconPath}/>
-                      </svg>
-                      <p className="text-xs font-bold text-gray-800 dark:text-gray-100">{opt.label}</p>
-                      <p className="text-xs text-gray-500 mt-0.5 leading-tight">{opt.desc}</p>
-                    </button>
-                  ))}
-                </div>
-
-                {/* UPLOAD */}
-                {attachmentType === 'UPLOAD' && (
-                  <div className="bg-gray-50 dark:bg-gray-700/40 rounded-xl p-4 space-y-3">
-                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">Upload PDF (max 10 MB)</p>
-                    <label className={`flex items-center gap-3 border-2 border-dashed rounded-xl p-4 cursor-pointer transition-colors
-                      ${uploadedPdfFile ? 'border-green-400 bg-green-50 dark:bg-green-900/10' : 'border-gray-300 hover:border-purple-300'}`}>
-                      <svg className="w-8 h-8 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                      </svg>
-                      <div>
-                        {uploadedPdfFile
-                          ? <><p className="text-sm font-medium text-green-700">{uploadedPdfFile.name}</p><p className="text-xs text-gray-500">{fmtBytes(uploadedPdfFile.size)}</p></>
-                          : <p className="text-sm text-gray-500">Click to choose a PDF file</p>
-                        }
-                      </div>
-                      <input type="file" accept=".pdf,application/pdf" className="hidden"
-                        onChange={e => handlePdfFile(e.target.files[0])} />
-                    </label>
-                  </div>
-                )}
-
-                {/* PDF_TEMPLATE */}
-                {attachmentType === 'PDF_TEMPLATE' && (
-                  <div className="bg-gray-50 dark:bg-gray-700/40 rounded-xl p-4 space-y-4">
-                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">Select PDF Template</p>
-                    {pdfTemplates.length === 0 ? (
-                      <p className="text-sm text-gray-500">No PDF templates found. Create one in PDF Templates.</p>
-                    ) : (
-                      <select value={selectedPdfTemplateId} onChange={e => setSelectedPdfTemplateId(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400">
-                        <option value="">Select template…</option>
-                        {pdfTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                      </select>
-                    )}
-
-                    {/* PDF placeholder → column mapping */}
-                    {selectedPdfTemplate?.placeholders?.length > 0 && (
-                      <div className="space-y-2">
-                        <p className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
-                          Map PDF Variables to XLSX Columns
-                        </p>
-                        {selectedPdfTemplate.placeholders.map(ph => (
-                          <div key={ph} className="flex items-center gap-3">
-                            <span className="text-xs font-mono bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded w-36 shrink-0 truncate">
-                              {'{{'}{ph}{'}}'}
-                            </span>
-                            <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3"/>
-                            </svg>
-                            <select
-                              value={pdfColumnMapping[ph] || ''}
-                              onChange={e => setPdfColumnMapping(m => ({ ...m, [ph]: e.target.value }))}
-                              className="flex-1 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400">
-                              <option value="">— not mapped —</option>
-                              {xlsxColumns.map(c => <option key={c} value={c}>{c}</option>)}
-                            </select>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* EXTERNAL_API */}
-                {attachmentType === 'EXTERNAL_API' && (
-                  <div className="bg-gray-50 dark:bg-gray-700/40 rounded-xl p-4 space-y-4">
-                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">External API Configuration</p>
-                    <p className="text-xs text-gray-500">
-                      Use <code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">{'{{'+'column'+'}}'}</code> in URL/body to inject row values. The API must return PDF bytes.
-                    </p>
-
-                    <div className="flex gap-2">
-                      <select value={extApiMethod} onChange={e => setExtApiMethod(e.target.value)}
-                        className="w-24 shrink-0 px-2 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400">
-                        <option>GET</option>
-                        <option>POST</option>
-                      </select>
-                      <input type="url" placeholder="https://api.example.com/invoice?id={{invoice_id}}"
-                        value={extApiUrl} onChange={e => setExtApiUrl(e.target.value)}
-                        className="flex-1 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400"/>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
-                        Headers <span className="font-normal text-gray-400">(JSON, optional)</span>
-                      </label>
-                      <textarea rows={2} placeholder={'{"Authorization": "Bearer token123"}'}
-                        value={extApiHeaders} onChange={e => setExtApiHeaders(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-xs font-mono text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"/>
-                    </div>
-
-                    {extApiMethod === 'POST' && (
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
-                          Request Body Template <span className="font-normal text-gray-400">(JSON with {'{{'+'var'+'}}'} placeholders)</span>
-                        </label>
-                        <textarea rows={3} placeholder={'{"customerId": "{{id}}", "name": "{{name}}"}'}
-                          value={extApiBody} onChange={e => setExtApiBody(e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-xs font-mono text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"/>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <div className="flex justify-between">
-                  <button onClick={() => setStep(2)}
-                    className="px-6 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    ← Back
-                  </button>
-                  <button onClick={() => setStep(4)} disabled={!step3Valid}
-                    className="px-6 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50 transition-all hover:opacity-90"
-                    style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)' }}>
-                    Next: Review & Send →
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* ── Step 4: Review & Send ── */}
-            {step === 4 && (
-              <div className="space-y-5">
-                <h2 className="text-lg font-bold text-gray-800 dark:text-white">Review &amp; Send</h2>
-
-                {/* Summary cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <SummaryCard icon="📧" label="Recipients" value={`${xlsxRows.length} emails`} />
-                  <SummaryCard icon="💌" label="Email Template" value={selectedTemplate?.name || '—'} />
-                  <SummaryCard icon="📎" label="Attachment"
-                    value={ATT_OPTIONS.find(a => a.value === attachmentType)?.label || 'None'} />
-                </div>
-
-                {/* Preview first row */}
-                {xlsxRows.length > 0 && (
-                  <div className="bg-gray-50 dark:bg-gray-700/40 rounded-xl p-4">
-                    <p className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-2">
-                      First Recipient Preview
-                    </p>
-                    <div className="space-y-1">
-                      {emailColumn && <PreviewRow k="To" v={xlsxRows[0][emailColumn]} />}
-                      {nameColumn  && <PreviewRow k="Name" v={xlsxRows[0][nameColumn]} />}
-                      {selectedTemplate?.subject && (
-                        <PreviewRow k="Subject" v={selectedTemplate.subject} />
-                      )}
-                      {selectedTemplate?.placeholders?.map(ph => (
-                        <PreviewRow key={ph} k={`{{${ph}}}`}
-                          v={columnMapping[ph] ? xlsxRows[0][columnMapping[ph]] : '(not mapped)'} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Job label */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
-                    Job Label <span className="font-normal text-gray-400">(optional)</span>
-                  </label>
-                  <input type="text" placeholder="e.g. October Newsletter — Customers"
-                    value={jobLabel} onChange={e => setJobLabel(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-400"/>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <button onClick={() => setStep(3)}
-                    className="px-6 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    ← Back
-                  </button>
-                  <button onClick={handleSend} disabled={sending}
-                    className="flex items-center gap-2 px-8 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-all hover:opacity-90 active:scale-95"
-                    style={{ background: 'linear-gradient(135deg,#059669,#047857)' }}>
-                    {sending
-                      ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/><span>Starting…</span></>
-                      : <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg><span>Send {xlsxRows.length} Emails</span></>
-                    }
-                  </button>
-                </div>
-              </div>
-            )}
-
-          </div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Send Bulk Email Campaign</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            Send personalised emails to multiple recipients from a spreadsheet
+          </p>
         </div>
       </div>
-    </div>
-  )
-}
 
-// ── Small helpers ──────────────────────────────────────────────────────────────
-function SummaryCard({ icon, label, value }) {
-  return (
-    <div className="bg-gray-50 dark:bg-gray-700/40 rounded-xl p-4">
-      <p className="text-2xl mb-1">{icon}</p>
-      <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
-      <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{value}</p>
-    </div>
-  )
-}
+      <StepIndicator current={step} />
 
-function PreviewRow({ k, v }) {
-  return (
-    <div className="flex gap-2 text-xs">
-      <span className="text-gray-400 w-28 shrink-0">{k}</span>
-      <span className="text-gray-700 dark:text-gray-200 font-medium truncate">{v || '—'}</span>
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200
+                      dark:border-gray-700 p-6 min-h-[400px]">
+
+        {step === 0 && renderStep0()}
+        {step === 1 && renderStep1()}
+        {step === 2 && renderStep2()}
+        {step === 3 && renderStep3()}
+
+        {/* Unified footer nav — hidden on step 3 (send button inside step) */}
+        {step < 3 && (
+          <div className="flex justify-between mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+            <button type="button" onClick={goBack} disabled={step === 0}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400
+                         border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50
+                         dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/>
+              </svg>
+              Back
+            </button>
+            <button type="button" onClick={goNext} disabled={!canGoNext()}
+              className="flex items-center gap-2 px-5 py-2 text-sm font-medium bg-purple-600 text-white
+                         rounded-lg hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed
+                         transition-colors">
+              {step === 2 ? 'Review & Send' : 'Next'}
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
+              </svg>
+            </button>
+          </div>
+        )}
+
+        {/* Back button on Review step (send button is inside the step content) */}
+        {step === 3 && (
+          <div className="flex mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+            <button type="button" onClick={goBack}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400
+                         border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50
+                         dark:hover:bg-gray-700 transition-colors">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/>
+              </svg>
+              Back
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

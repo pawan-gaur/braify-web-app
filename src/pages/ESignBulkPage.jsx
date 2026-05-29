@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 import * as pdfjsLib from 'pdfjs-dist'
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
-import { esignCreateDocument, esignSaveFields, esignSendDocument, esignInitBatch, esignFinalizeBatch, getTemplates, generatePdfAsBase64, getEmailTemplates } from '../services/api'
+import { esignBulkCreate, getTemplates, generatePdfAsBase64, getEmailTemplates } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 
@@ -22,6 +22,18 @@ const BULK_FIELD_TYPES = [
   { type: 'INITIALS',  label: 'Initials',  color: '#2563eb', bg: '#dbeafe' },
   { type: 'DATE',      label: 'Date',      color: '#059669', bg: '#d1fae5' },
   { type: 'TEXT',      label: 'Text',      color: '#d97706', bg: '#fef3c7' },
+]
+
+/** File extension options shown when allowClientUpload is enabled */
+const FILE_TYPE_OPTIONS = [
+  { ext: 'pdf',  label: 'PDF'  },
+  { ext: 'jpg',  label: 'JPG'  },
+  { ext: 'jpeg', label: 'JPEG' },
+  { ext: 'png',  label: 'PNG'  },
+  { ext: 'doc',  label: 'DOC'  },
+  { ext: 'docx', label: 'DOCX' },
+  { ext: 'xls',  label: 'XLS'  },
+  { ext: 'xlsx', label: 'XLSX' },
 ]
 
 // E-sign fields to map from Excel columns (fileIdentifier removed — API mode uses URL substitution)
@@ -233,6 +245,7 @@ export default function ESignBulkPage() {
   const [excelError,    setExcelError]    = useState('')
   const [batchName,          setBatchName]          = useState('')   // user-editable; defaults to filename
   const [allowClientUpload, setAllowClientUpload] = useState(false) // whether clients may upload after signing
+  const [allowedFileTypes,  setAllowedFileTypes]  = useState([])    // empty = all types; e.g. ['pdf','jpg']
   const excelRef = useRef()
 
   /* ── Step 1 — PDF Source ─────────────────────────────────────────── */
@@ -297,10 +310,9 @@ export default function ESignBulkPage() {
   const [mapping, setMapping] = useState({ title: '', clientEmail: '', clientName: '', ccEmails: '', tokenValidDays: '' })
 
   /* ── Step 4 — Processing ─────────────────────────────────────────── */
-  const [rowStatuses, setRowStatuses] = useState([])
-  const [processing,  setProcessing]  = useState(false)
-  const [processDone, setProcessDone] = useState(false)
-  const cancelRef = useRef(false)
+  const [processing,       setProcessing]      = useState(false)
+  const [processProgress,  setProcessProgress] = useState({ current: 0, total: 0 })
+  const [processError,     setProcessError]    = useState('')
 
   /* ── Load PDF templates when mode switches to 'template' ────────── */
   useEffect(() => {
@@ -603,136 +615,73 @@ export default function ESignBulkPage() {
   function goBack() { if (step > 0 && !processing) setStep(s => s - 1) }
 
   /* ────────────────────────────────────────────────────────────────── */
-  /* Processing                                                          */
+  /* Processing — resolve PDFs then bulk-create via API                   */
   /* ────────────────────────────────────────────────────────────────── */
-  function updateStatus(idx, patch) {
-    setRowStatuses(prev => prev.map((s, j) => j === idx ? { ...s, ...patch } : s))
-  }
-
   async function startProcessing() {
-    const initial = previewRows.map(r => ({
-      ...r, docStatus: 'pending', sendStatus: 'pending', docId: null, error: null,
-    }))
-    setRowStatuses(initial)
+    const validRows = previewRows.filter(r => r.valid)
+    if (!validRows.length) return
+    setProcessError('')
     setProcessing(true)
-    setProcessDone(false)
-    cancelRef.current = false
+    setProcessProgress({ current: 0, total: validRows.length })
 
-    const validCount = previewRows.filter(r => r.valid).length
+    const fieldPayload  = bulkFields.map(({ id: _id, ...rest }) => rest)
+    const resolvedDocs  = []
 
-    // ── 0. Create a batch record so documents appear in Bulk Batches tab ──
-    // Use the user-set batch name, falling back to the uploaded filename (no extension)
-    const resolvedBatchName = batchName.trim()
-      || (excelFileName ? excelFileName.replace(/\.[^.]+$/, '') : null)
-    let batchId = null
-    try {
-      const batch = await esignInitBatch(resolvedBatchName, validCount, allowClientUpload)
-      batchId = batch.id
-    } catch (err) {
-      console.warn('Could not create batch record — documents will still be created:', err.message)
-    }
+    // ── Phase 1: Resolve PDFs browser-side with progress ──────────────
+    for (let i = 0; i < validRows.length; i++) {
+      const row = validRows[i]
+      setProcessProgress({ current: i, total: validRows.length })
 
-    let totalCreated = 0, totalSent = 0, totalFailed = 0
-
-    for (let i = 0; i < previewRows.length; i++) {
-      if (cancelRef.current) break
-      const row = previewRows[i]
-
-      if (!row.valid) {
-        updateStatus(i, { docStatus: 'skipped', sendStatus: 'skipped', error: row.errs.join('; ') })
-        continue
-      }
-
-      // ── 1. Resolve PDF base64 (try sources in priority order) ───────
-      let pdfBase64
-      try {
-        updateStatus(i, { docStatus: 'fetching_pdf' })
-        let lastErr = null
-        for (const src of activeSources) {
-          try {
-            if (src === 'single') {
-              pdfBase64 = singlePdfBase64
-            } else if (src === 'template') {
-              const data = {}
-              ;(selectedTemplate?.placeholders || []).forEach(p => {
-                const col = placeholderMapping[p]
-                data[p] = col ? (row.rawRow[col] || '') : ''
-              })
-              pdfBase64 = await generatePdfAsBase64(selectedTemplateId, data)
-            } else {
-              const url = buildApiUrl(fileApi.url, row.rawRow)
-              pdfBase64 = await fetchFileAsBase64(url, buildAuthHeaders(fileApi))
-            }
-            if (pdfBase64) break   // source succeeded — stop trying fallbacks
-          } catch (e) {
-            lastErr = e             // source failed — try next in chain
-          }
-        }
-        if (!pdfBase64) throw lastErr || new Error('No PDF source returned a result')
-      } catch (err) {
-        updateStatus(i, { docStatus: 'failed', sendStatus: 'skipped', error: `PDF: ${err.message}` })
-        totalFailed++
-        continue
-      }
-
-      // ── 2. Create document ─────────────────────────────────────────
-      let docId
-      try {
-        updateStatus(i, { docStatus: 'creating' })
-        const doc = await esignCreateDocument({
-          title:           row.title,
-          sourceType:      'UPLOAD',
-          pdfBase64,
-          clientEmail:     row.clientEmail,
-          clientName:      row.clientName,
-          ccEmails:        row.ccEmails?.length ? row.ccEmails : undefined,
-          tokenValidDays:  parseInt(row.tokenValidDays) || 7,
-          bulkBatchId:     batchId,
-          emailTemplateId: selectedEmailTemplateId || undefined,
-        })
-        docId = doc.id
-        totalCreated++
-        updateStatus(i, { docStatus: 'created', docId })
-      } catch (err) {
-        updateStatus(i, { docStatus: 'failed', sendStatus: 'skipped', error: `Create: ${err.message}` })
-        totalFailed++
-        continue
-      }
-
-      // ── 2b. Save field placements ──────────────────────────────────
-      if (bulkFields.length > 0) {
+      let pdfBase64 = null, lastErr = null
+      for (const src of activeSources) {
         try {
-          const fieldPayload = bulkFields.map(({ id: _id, ...rest }) => rest)
-          await esignSaveFields(docId, fieldPayload)
-        } catch (err) {
-          // Non-fatal — document still exists and can be sent
-          console.warn(`Field save failed for doc ${docId}:`, err.message)
-        }
+          if (src === 'single') {
+            pdfBase64 = singlePdfBase64
+          } else if (src === 'template') {
+            const data = {}
+            ;(selectedTemplate?.placeholders || []).forEach(p => {
+              const col = placeholderMapping[p]
+              data[p] = col ? (row.rawRow[col] || '') : ''
+            })
+            pdfBase64 = await generatePdfAsBase64(selectedTemplateId, data)
+          } else {
+            const url = buildApiUrl(fileApi.url, row.rawRow)
+            pdfBase64 = await fetchFileAsBase64(url, buildAuthHeaders(fileApi))
+          }
+          if (pdfBase64) break
+        } catch (e) { lastErr = e }
       }
 
-      // ── 3. Send document ───────────────────────────────────────────
-      try {
-        updateStatus(i, { sendStatus: 'sending' })
-        await esignSendDocument(docId, parseInt(row.tokenValidDays) || 7)
-        updateStatus(i, { sendStatus: 'sent' })
-        totalSent++
-      } catch (err) {
-        updateStatus(i, { sendStatus: 'failed', error: `Send: ${err.message}` })
-        totalFailed++
+      if (!pdfBase64) {
+        setProcessing(false)
+        setProcessError(`Row ${i + 1} (${row.clientEmail}): PDF resolution failed — ${lastErr?.message || 'No PDF source returned data'}`)
+        return
       }
+
+      resolvedDocs.push({
+        title:           row.title,
+        clientEmail:     row.clientEmail,
+        clientName:      row.clientName,
+        ccEmails:        row.ccEmails?.length ? row.ccEmails : undefined,
+        tokenValidDays:  parseInt(row.tokenValidDays) || 7,
+        pdfBase64,
+        fields:          fieldPayload.length ? fieldPayload : undefined,
+        emailTemplateId: selectedEmailTemplateId || undefined,
+      })
+      setProcessProgress({ current: i + 1, total: validRows.length })
     }
 
-    // ── 4. Finalize the batch record ──────────────────────────────────
-    if (batchId) {
-      try {
-        await esignFinalizeBatch(batchId, totalCreated, totalSent, totalFailed)
-      } catch (err) {
-        console.warn('Could not finalize batch record:', err.message)
-      }
+    // ── Phase 2: POST all documents in a single bulk request ──────────
+    const resolvedLabel = batchName.trim() || (excelFileName ? excelFileName.replace(/\.[^.]+$/, '') : undefined)
+    try {
+      await esignBulkCreate(resolvedDocs, true, resolvedLabel, allowClientUpload, allowedFileTypes)
+      showToast(`Bulk send complete — ${resolvedDocs.length} document${resolvedDocs.length !== 1 ? 's' : ''} created`, 'success')
+      navigate('/esign')
+    } catch (err) {
+      setProcessError('Failed to create bulk batch: ' + err.message)
+    } finally {
+      setProcessing(false)
     }
-
-    setProcessing(false)
-    setProcessDone(true)
   }
 
   /* ────────────────────────────────────────────────────────────────── */
@@ -779,25 +728,71 @@ export default function ESignBulkPage() {
           </p>
         </div>
 
-        {/* ── Allow client upload toggle ── */}
-        <div className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-3">
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-gray-900 dark:text-white">Allow client to upload supporting documents</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              After signing, clients can optionally attach files (e.g. ID copy, proof of address). Up to 5 files, 10 MB each.
-            </p>
+        {/* ── Allow client upload toggle + file-type picker ── */}
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="flex items-center justify-between gap-4 px-4 py-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-gray-900 dark:text-white">Allow client to upload supporting documents</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                After signing, clients can optionally attach files (e.g. ID copy, proof of address). Up to 5 files, 10 MB each.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const next = !allowClientUpload
+                setAllowClientUpload(next)
+                if (!next) setAllowedFileTypes([])
+              }}
+              className={`w-11 h-6 rounded-full shrink-0 relative transition-colors
+                          ${allowClientUpload ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-600'}`}
+              aria-pressed={allowClientUpload}
+              title={allowClientUpload ? 'Disable client upload' : 'Enable client upload'}
+            >
+              <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform
+                               ${allowClientUpload ? 'translate-x-5' : 'translate-x-0.5'}`} />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => setAllowClientUpload(v => !v)}
-            className={`w-11 h-6 rounded-full shrink-0 relative transition-colors
-                        ${allowClientUpload ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-600'}`}
-            aria-pressed={allowClientUpload}
-            title={allowClientUpload ? 'Disable client upload' : 'Enable client upload'}
-          >
-            <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform
-                             ${allowClientUpload ? 'translate-x-5' : 'translate-x-0.5'}`} />
-          </button>
+
+          {/* File-type picker — shown only when upload is enabled */}
+          {allowClientUpload && (
+            <div className="border-t border-gray-100 dark:border-gray-700 px-4 py-3 bg-gray-50 dark:bg-gray-800/50">
+              <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                Restrict allowed file types
+              </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+                Select the types clients may upload. Leave all unselected to accept any file type.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {FILE_TYPE_OPTIONS.map(({ ext, label: typeLabel }) => {
+                  const selected = allowedFileTypes.includes(ext)
+                  return (
+                    <button
+                      key={ext}
+                      type="button"
+                      onClick={() => setAllowedFileTypes(prev =>
+                        selected ? prev.filter(t => t !== ext) : [...prev, ext]
+                      )}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors
+                        ${selected
+                          ? 'bg-purple-600 text-white border-purple-600'
+                          : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-purple-400'}`}
+                    >
+                      .{typeLabel}
+                    </button>
+                  )
+                })}
+              </div>
+              {allowedFileTypes.length > 0 && (
+                <p className="text-xs text-purple-600 dark:text-purple-400 mt-2">
+                  Clients may only upload: {allowedFileTypes.map(t => '.' + t.toUpperCase()).join(', ')}
+                </p>
+              )}
+              {allowedFileTypes.length === 0 && (
+                <p className="text-xs text-gray-400 mt-2">Any file type will be accepted.</p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* ── File upload ── */}
@@ -865,9 +860,9 @@ export default function ESignBulkPage() {
   /* ────────────────────────────────────────────────────────────────── */
   function renderStep1() {
     const SOURCE_META = {
-      single:   { emoji: '📄', title: 'Upload PDF',   desc: 'One static PDF file used for all rows' },
-      template: { emoji: '🎨', title: 'PDF Template', desc: 'Generate a unique PDF per row using a designed template with placeholder data' },
-      api:      { emoji: '🌐', title: 'External API', desc: 'Fetch each row\'s PDF from an API URL — use {ColumnName} to substitute row values' },
+      single:   { path: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', title: 'Upload PDF',   desc: 'One static PDF file used for all rows' },
+      template: { path: 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01', title: 'PDF Template', desc: 'Generate a unique PDF per row using a designed template with placeholder data' },
+      api:      { path: 'M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z', title: 'External API', desc: 'Fetch each row\'s PDF from an API URL — use {ColumnName} to substitute row values' },
     }
 
     return (
@@ -894,7 +889,11 @@ export default function ESignBulkPage() {
               {/* Card header — clicking toggles the source */}
               <button type="button" onClick={() => toggleSource(src)}
                 className="w-full flex items-center gap-4 p-4 text-left">
-                <span className="text-2xl">{meta.emoji}</span>
+                <div className="w-6 h-6 shrink-0 text-gray-500 dark:text-gray-400">
+                  <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={meta.path}/>
+                  </svg>
+                </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-900 dark:text-white">{meta.title}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{meta.desc}</p>
@@ -1216,8 +1215,11 @@ export default function ESignBulkPage() {
                                    flex items-center justify-center shrink-0">
                     {idx + 1}
                   </span>
-                  <span className="text-sm font-medium text-gray-800 dark:text-gray-200 flex-1">
-                    {SOURCE_META[src].emoji} {SOURCE_META[src].title}
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-gray-800 dark:text-gray-200 flex-1">
+                    <svg className="w-4 h-4 shrink-0 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={SOURCE_META[src].path}/>
+                    </svg>
+                    {SOURCE_META[src].title}
                   </span>
                   <div className="flex flex-col gap-0.5">
                     <button type="button"
@@ -1254,7 +1256,11 @@ export default function ESignBulkPage() {
           {/* Toggle header */}
           <button type="button" onClick={() => setEmailPickerOpen(o => !o)}
             className="w-full flex items-center gap-4 p-4 text-left">
-            <span className="text-2xl">✉️</span>
+            <div className="w-6 h-6 shrink-0 text-gray-500 dark:text-gray-400">
+              <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              </svg>
+            </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-gray-900 dark:text-white">
                 Email Template
@@ -1773,124 +1779,90 @@ export default function ESignBulkPage() {
   }
 
   /* ────────────────────────────────────────────────────────────────── */
-  /* Render: Step 4 — Process & Track                                    */
+  /* Render: Step 4 — Launch Batch                                       */
   /* ────────────────────────────────────────────────────────────────── */
   function renderStep4() {
-    const sent    = rowStatuses.filter(r => r.sendStatus === 'sent').length
-    const failed  = rowStatuses.filter(r => r.docStatus === 'failed' || r.sendStatus === 'failed').length
-    const skipped = rowStatuses.filter(r => r.docStatus === 'skipped').length
-    const total   = rowStatuses.length
-    const done    = rowStatuses.filter(r =>
-      ['sent', 'failed', 'skipped'].includes(r.sendStatus) || r.docStatus === 'skipped'
-    ).length
-    const pct     = total > 0 ? Math.round((done / total) * 100) : 0
     const validCount = previewRows.filter(r => r.valid).length
+    const resolvedLabel = batchName.trim() || (excelFileName ? excelFileName.replace(/\.[^.]+$/, '') : 'Auto-named')
 
-    return (
-      <div className="space-y-5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-0.5">Process &amp; Track</h3>
-            {!processing && !processDone && (
-              <>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {validCount} valid document{validCount !== 1 ? 's' : ''} ready to send
-                </p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                  Batch: <span className="font-medium text-gray-600 dark:text-gray-300">
-                    {batchName.trim() || (excelFileName ? excelFileName.replace(/\.[^.]+$/, '') : 'Auto-named')}
-                  </span>
-                </p>
-              </>
-            )}
-            {processing && (
-              <p className="text-sm text-purple-600 dark:text-purple-400 animate-pulse">
-                Processing… ({done}/{total})
-              </p>
-            )}
-            {processDone && (
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Complete —{' '}
-                <span className="text-green-600 dark:text-green-400 font-medium">{sent} sent</span>
-                {failed  > 0 && <> · <span className="text-red-500 font-medium">{failed} failed</span></>}
-                {skipped > 0 && <> · <span className="text-gray-400">{skipped} skipped</span></>}
-              </p>
-            )}
+    // ── Processing: progress bar ──────────────────────────────────────
+    if (processing) {
+      const { current, total } = processProgress
+      const pct = total > 0 ? Math.round((current / total) * 100) : 0
+      return (
+        <div className="space-y-6 py-6">
+          <div className="flex items-center gap-3">
+            <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin shrink-0"/>
+            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              Processing… {current} / {total}
+            </p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {processing && (
-              <button type="button" onClick={() => { cancelRef.current = true }}
-                className="px-3 py-1.5 text-sm text-red-600 border border-red-200 dark:border-red-800
-                           rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                Stop
-              </button>
-            )}
-            {processDone && (
-              <button type="button" onClick={() => navigate('/esign')}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700
-                           text-sm font-medium transition-colors">
-                Go to E-Sign Documents
-              </button>
-            )}
+          <div className="space-y-1">
+            <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+              <div className="h-2.5 bg-purple-500 rounded-full transition-all duration-200"
+                   style={{ width: `${pct}%` }}/>
+            </div>
+            <p className="text-xs text-gray-400 text-right">{pct}%</p>
           </div>
         </div>
+      )
+    }
 
-        {(processing || processDone) && (
-          <div className="space-y-1">
-            <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-              <div className="h-2 bg-purple-500 rounded-full transition-all duration-300"
-                   style={{ width: `${pct}%` }} />
+    // ── Ready to send: summary + Start button ─────────────────────────
+    return (
+      <div className="space-y-5">
+        <div>
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">Ready to send</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Review the batch details below, then click <strong>Start Batch</strong>.
+          </p>
+        </div>
+
+        {/* Summary card */}
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
+          {[
+            { label: 'Batch label',     value: resolvedLabel },
+            { label: 'Documents',       value: `${validCount} valid (${previewRows.length - validCount} skipped)` },
+            { label: 'PDF source',      value: activeSources.map(s => s === 'single' ? 'Uploaded PDF' : s === 'template' ? 'PDF Template' : 'File API').join(' → ') },
+            ...(selectedEmailTemplateId ? [{ label: 'Email template', value: selectedEmailTemplate?.name || selectedEmailTemplateId }] : []),
+            ...(bulkFields.length > 0   ? [{ label: 'Signature fields', value: `${bulkFields.length} field${bulkFields.length !== 1 ? 's' : ''}` }] : []),
+            { label: 'Client upload', value: allowClientUpload
+                ? (allowedFileTypes.length > 0
+                    ? `Allowed (${allowedFileTypes.map(t => '.' + t.toUpperCase()).join(', ')})`
+                    : 'Allowed (any type)')
+                : 'Not allowed' },
+          ].map(({ label, value }) => (
+            <div key={label} className="flex items-center justify-between px-4 py-2.5 text-sm">
+              <span className="text-gray-500 dark:text-gray-400">{label}</span>
+              <span className="font-medium text-gray-800 dark:text-gray-200">{value}</span>
             </div>
-            <p className="text-xs text-gray-400 text-right">{done} / {total}</p>
+          ))}
+        </div>
+
+        {/* Error banner (shown on retry after failure) */}
+        {processError && (
+          <div className="flex items-start gap-3 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700">
+            <svg className="w-4 h-4 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <p className="text-xs text-red-700 dark:text-red-300">{processError}</p>
           </div>
         )}
 
-        {rowStatuses.length > 0 && (
-          <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
-            <table className="min-w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                <tr>
-                  {['#', 'Title', 'Client Email', 'Doc Status', 'Email Status', 'Notes'].map(h => (
-                    <th key={h} className="px-3 py-3 text-left text-xs font-semibold text-gray-500
-                                           uppercase tracking-wider whitespace-nowrap">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {rowStatuses.map((r, i) => (
-                  <tr key={i} className="bg-white dark:bg-gray-900">
-                    <td className="px-3 py-2.5 text-xs text-gray-400">{r.idx}</td>
-                    <td className="px-3 py-2.5 text-sm text-gray-900 dark:text-white truncate max-w-[150px]">{r.title}</td>
-                    <td className="px-3 py-2.5 text-xs text-gray-500 whitespace-nowrap">{r.clientEmail}</td>
-                    <td className="px-3 py-2.5">
-                      <span className="inline-flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300">
-                        <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT[r.docStatus] || 'bg-gray-300'}`}/>
-                        {STATUS_LABEL[r.docStatus] || r.docStatus}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <span className="inline-flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300">
-                        <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT[r.sendStatus] || 'bg-gray-300'}`}/>
-                        {STATUS_LABEL[r.sendStatus] || r.sendStatus}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2.5 text-xs text-red-500 max-w-[200px] truncate"
-                        title={r.error || undefined}>{r.error || ''}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {!processing && !processDone && (
-          <button type="button" onClick={startProcessing} disabled={validCount === 0}
-            className="w-full py-3 bg-purple-600 text-white rounded-xl font-semibold
-                       hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed
-                       transition-colors text-sm">
-            Start Processing {validCount} Document{validCount !== 1 ? 's' : ''}
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={startProcessing}
+          disabled={validCount === 0}
+          className="w-full py-3 bg-purple-600 text-white rounded-xl font-semibold
+                     hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed
+                     transition-colors text-sm flex items-center justify-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+          Start Batch — {validCount} Document{validCount !== 1 ? 's' : ''}
+        </button>
       </div>
     )
   }

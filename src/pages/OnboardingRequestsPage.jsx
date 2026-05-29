@@ -50,7 +50,9 @@ function FeaturePill({ featureKey }) {
       className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap"
       style={{ background: meta.bg, color: meta.color }}
     >
-      <span>{meta.icon}</span>
+      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={meta.icon}/>
+      </svg>
       {meta.label}
     </span>
   )
@@ -232,7 +234,11 @@ function ReviewModal({ request, onClose, onDone }) {
                         onChange={() => toggleFeature(feat.key)}
                         className="w-4 h-4 rounded accent-indigo-600 shrink-0"
                       />
-                      <span className="text-lg shrink-0">{feat.icon}</span>
+                      <div className="w-5 h-5 shrink-0" style={{ color: feat.color }}>
+                        <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={feat.icon}/>
+                        </svg>
+                      </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">{feat.label}</p>
                         <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{feat.description}</p>
