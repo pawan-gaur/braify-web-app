@@ -116,6 +116,49 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
     const editor = grapesjs.init(EDITOR_CONFIG('gjs-canvas'))
     editorRef.current = editor
 
+    // ── Image resize: GrapesJS 0.21's built-in image type has
+    //    resizable:{ ratioDefault:1 } which gives only ratio-locked resize.
+    //    We override it with all 8 handles + free resize, and use
+    //    updateTarget to write CSS width/height (not HTML attributes) so
+    //    the PDF renderer always picks up the correct size.
+    editor.DomComponents.addType('image', {
+      extend: 'image',
+      model: {
+        defaults: {
+          resizable: {
+            handles:    ['tl','tc','tr','cl','cr','bl','bc','br'],
+            minWidth:   20,
+            minHeight:  20,
+            ratioDefault: 0,            // 0 = free resize (no locked ratio)
+            // updateTarget is called every tick during drag-resize.
+            // We write to CSS so both the canvas and PDF renderer see the size.
+            updateTarget(el, rect) {
+              if (rect.w) el.style.width  = rect.w + 'px'
+              if (rect.h) el.style.height = rect.h + 'px'
+            },
+          },
+          // Add Width/Height inputs to the Traits panel for precise entry.
+          traits: [
+            { type: 'text',   name: 'src',   label: 'Image URL' },
+            { type: 'text',   name: 'alt',   label: 'Alt text'  },
+          ],
+        },
+      },
+    })
+
+    // After a resize drag ends, commit the element's rendered dimensions as
+    // CSS width/height on the component model so they survive save/reload.
+    editor.on('component:resize', component => {
+      if (component?.get('tagName')?.toLowerCase() !== 'img') return
+      const el = component.getEl()
+      if (!el) return
+      const w = el.offsetWidth
+      const h = el.offsetHeight
+      if (w > 0 && h > 0) {
+        component.setStyle({ ...component.getStyle(), width: w + 'px', height: h + 'px' })
+      }
+    })
+
     if (initialTemplate?.gjsData) {
       try { editor.loadProjectData(JSON.parse(initialTemplate.gjsData)) }
       catch { editor.setComponents(initialTemplate.htmlContent || ''); editor.setStyle(initialTemplate.cssContent || '') }
@@ -833,8 +876,12 @@ const RESIZE_CONFIG = {
 
 function enableResize(component) {
   const tag = component.get('tagName')?.toLowerCase()
-  if (tag && RESIZABLE_TAGS.has(tag) && !component.get('resizable')) {
-    component.set('resizable', RESIZE_CONFIG)
+  if (tag && RESIZABLE_TAGS.has(tag)) {
+    // img: the addType('image') override already sets the correct resizable
+    //      config as a model default. Skip here so we don't clobber it.
+    if (tag !== 'img' && !component.get('resizable')) {
+      component.set('resizable', RESIZE_CONFIG)
+    }
   }
   component.components().each(child => enableResize(child))
 }

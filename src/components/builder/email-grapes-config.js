@@ -877,33 +877,31 @@ function buildEmailBlocks() {
       media: svg(`<rect x="3" y="3" width="18" height="18" rx="1"/>
         <path d="M3 9h18M3 15h18M9 3v18"/>`),
       content: `
-        <table width="100%" cellpadding="0" cellspacing="0" border="0">
-          <tr>
-            <td style="padding:16px 32px;">
-              <table width="100%" cellpadding="0" cellspacing="0" border="0"
-                     style="border-collapse:collapse;">
-                <thead>
-                  <tr style="background:linear-gradient(135deg,#6366f1,#8b5cf6);">
-                    <th style="padding:10px 14px;text-align:left;font-size:12px;color:#fff;font-weight:600;">Name</th>
-                    <th style="padding:10px 14px;text-align:left;font-size:12px;color:#fff;font-weight:600;">Value</th>
-                    <th style="padding:10px 14px;text-align:right;font-size:12px;color:#fff;font-weight:600;">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr style="background:#fff;">
-                    <td style="padding:10px 14px;font-size:13px;color:#333;border-bottom:1px solid #f0f0f0;">{{row1Name}}</td>
-                    <td style="padding:10px 14px;font-size:13px;color:#333;border-bottom:1px solid #f0f0f0;">{{row1Value}}</td>
-                    <td style="padding:10px 14px;font-size:13px;color:#10b981;font-weight:600;border-bottom:1px solid #f0f0f0;text-align:right;">Active</td>
-                  </tr>
-                  <tr style="background:#fafafa;">
-                    <td style="padding:10px 14px;font-size:13px;color:#333;border-bottom:1px solid #f0f0f0;">{{row2Name}}</td>
-                    <td style="padding:10px 14px;font-size:13px;color:#333;border-bottom:1px solid #f0f0f0;">{{row2Value}}</td>
-                    <td style="padding:10px 14px;font-size:13px;color:#f59e0b;font-weight:600;border-bottom:1px solid #f0f0f0;text-align:right;">Pending</td>
-                  </tr>
-                </tbody>
-              </table>
-            </td>
-          </tr>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+          <thead>
+            <tr style="background:linear-gradient(135deg,#6366f1,#8b5cf6);">
+              <th style="padding:10px 14px;text-align:left;font-size:12px;color:#fff;font-weight:600;width:34%;">Column 1</th>
+              <th style="padding:10px 14px;text-align:left;font-size:12px;color:#fff;font-weight:600;width:33%;">Column 2</th>
+              <th style="padding:10px 14px;text-align:right;font-size:12px;color:#fff;font-weight:600;width:33%;">Column 3</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="background:#fff;">
+              <td style="padding:10px 14px;font-size:13px;color:#333;border-bottom:1px solid #f0f0f0;">{{row1Col1}}</td>
+              <td style="padding:10px 14px;font-size:13px;color:#333;border-bottom:1px solid #f0f0f0;">{{row1Col2}}</td>
+              <td style="padding:10px 14px;font-size:13px;color:#333;border-bottom:1px solid #f0f0f0;text-align:right;">{{row1Col3}}</td>
+            </tr>
+            <tr style="background:#fafafa;">
+              <td style="padding:10px 14px;font-size:13px;color:#333;border-bottom:1px solid #f0f0f0;">{{row2Col1}}</td>
+              <td style="padding:10px 14px;font-size:13px;color:#333;border-bottom:1px solid #f0f0f0;">{{row2Col2}}</td>
+              <td style="padding:10px 14px;font-size:13px;color:#333;border-bottom:1px solid #f0f0f0;text-align:right;">{{row2Col3}}</td>
+            </tr>
+            <tr style="background:#fff;">
+              <td style="padding:10px 14px;font-size:13px;color:#333;">{{row3Col1}}</td>
+              <td style="padding:10px 14px;font-size:13px;color:#333;">{{row3Col2}}</td>
+              <td style="padding:10px 14px;font-size:13px;color:#333;text-align:right;">{{row3Col3}}</td>
+            </tr>
+          </tbody>
         </table>`,
     },
   ]
