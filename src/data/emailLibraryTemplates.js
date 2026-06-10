@@ -813,6 +813,488 @@ ${FOOTER}
 ${CLOSE_WRAPPER}`,
   },
 
+  // ══ TRANSACTIONAL (continued) ══════════════════════════════════════════════
+  {
+    id: 'lib-shipping',
+    name: 'Shipping Notification',
+    category: 'transactional',
+    description: 'Order dispatched notification with tracking number and estimated delivery.',
+    tags: ['shipping', 'tracking', 'order', 'ecommerce'],
+    accent: '#0369a1',
+    htmlContent: `
+${WRAPPER('#f0f9ff', '#ffffff')}
+<tr><td style="background:#0369a1;padding:24px 32px;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+    <td>
+      <p style="margin:0;font-size:22px;font-weight:700;color:#fff;">Your order is on its way! 🚚</p>
+      <p style="margin:4px 0 0;font-size:12px;color:rgba(255,255,255,0.8);">Order #{{order_id}}</p>
+    </td>
+    <td align="right">
+      <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.8);">{{company_name}}</p>
+    </td>
+  </tr></table>
+</td></tr>
+<tr><td style="padding:32px;">
+  <p style="margin:0 0 20px;font-size:15px;color:#444;line-height:1.7;">
+    Hi {{first_name}}, great news! Your order has been dispatched and is on its way to you.
+  </p>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0"
+         style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:12px;margin-bottom:24px;">
+    <tr>
+      <td style="padding:20px 24px;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td width="50%" style="padding-bottom:12px;">
+              <p style="margin:0 0 2px;font-size:11px;color:#0369a1;text-transform:uppercase;font-weight:700;">Carrier</p>
+              <p style="margin:0;font-size:14px;font-weight:600;color:#0f172a;">{{carrier_name}}</p>
+            </td>
+            <td width="50%" style="padding-bottom:12px;">
+              <p style="margin:0 0 2px;font-size:11px;color:#0369a1;text-transform:uppercase;font-weight:700;">Est. Delivery</p>
+              <p style="margin:0;font-size:14px;font-weight:600;color:#0f172a;">{{delivery_date}}</p>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2">
+              <p style="margin:0 0 2px;font-size:11px;color:#0369a1;text-transform:uppercase;font-weight:700;">Tracking Number</p>
+              <p style="margin:0;font-size:16px;font-weight:800;color:#0369a1;letter-spacing:0.05em;">{{tracking_number}}</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+  <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+    <tr>
+      <td style="background:#0369a1;border-radius:8px;">
+        <a href="{{tracking_url}}" style="display:block;padding:12px 28px;color:#fff;
+                                         font-size:14px;font-weight:700;text-decoration:none;">
+          Track My Order →
+        </a>
+      </td>
+    </tr>
+  </table>
+  <p style="margin:0;font-size:13px;color:#888;">
+    Shipping to: <strong>{{shipping_address}}</strong>
+  </p>
+</td></tr>
+${FOOTER}
+${CLOSE_WRAPPER}`,
+  },
+
+  {
+    id: 'lib-subscription-renewal',
+    name: 'Subscription Renewal',
+    category: 'transactional',
+    description: 'Upcoming subscription renewal reminder with plan details and management link.',
+    tags: ['subscription', 'renewal', 'billing', 'saas'],
+    accent: '#6d28d9',
+    htmlContent: `
+${WRAPPER('#f5f3ff', '#ffffff')}
+${HEADER('#6d28d9')}
+<tr><td style="padding:32px;">
+  <p style="margin:0 0 16px;font-size:22px;font-weight:700;color:#1a1a2e;">
+    Your subscription renews soon
+  </p>
+  <p style="margin:0 0 20px;font-size:15px;color:#555;line-height:1.7;">
+    Hi {{first_name}}, just a heads-up that your <strong>{{plan_name}}</strong> plan will
+    automatically renew on <strong>{{renewal_date}}</strong>.
+  </p>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0"
+         style="background:#f5f3ff;border:1px solid #ede9fe;border-radius:12px;margin-bottom:24px;">
+    <tr>
+      <td style="padding:20px 24px;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td>
+              <p style="margin:0 0 4px;font-size:13px;color:#888;">Plan</p>
+              <p style="margin:0;font-size:16px;font-weight:700;color:#1a1a2e;">{{plan_name}}</p>
+            </td>
+            <td align="right">
+              <p style="margin:0 0 4px;font-size:13px;color:#888;">Amount</p>
+              <p style="margin:0;font-size:22px;font-weight:800;color:#6d28d9;">{{renewal_amount}}</p>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2" style="padding-top:12px;border-top:1px solid #ede9fe;">
+              <p style="margin:4px 0 0;font-size:12px;color:#888;">
+                Billed to card ending in <strong>{{card_last4}}</strong> on {{renewal_date}}
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+  <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:12px;">
+    <tr>
+      <td style="background:linear-gradient(135deg,#6d28d9,#7c3aed);border-radius:8px;">
+        <a href="{{manage_url}}" style="display:block;padding:12px 28px;color:#fff;
+                                       font-size:14px;font-weight:700;text-decoration:none;">
+          Manage Subscription
+        </a>
+      </td>
+    </tr>
+  </table>
+  <p style="margin:0;font-size:12px;color:#aaa;">
+    To cancel, visit your billing settings before {{renewal_date}}.
+  </p>
+</td></tr>
+${FOOTER}
+${CLOSE_WRAPPER}`,
+  },
+
+  {
+    id: 'lib-payment-failed',
+    name: 'Payment Failed',
+    category: 'transactional',
+    description: 'Payment failure alert with retry link and account impact warning.',
+    tags: ['payment', 'billing', 'failed', 'retry'],
+    accent: '#dc2626',
+    htmlContent: `
+${WRAPPER('#fef2f2', '#ffffff')}
+<tr><td style="background:#dc2626;padding:20px 32px;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+    <td>
+      <p style="margin:0;font-size:12px;font-weight:700;color:rgba(255,255,255,0.8);
+                 text-transform:uppercase;letter-spacing:0.1em;">⚠ Payment Failed</p>
+      <p style="margin:4px 0 0;font-size:18px;font-weight:700;color:#fff;">Action needed on your account</p>
+    </td>
+  </tr></table>
+</td></tr>
+<tr><td style="padding:32px;">
+  <p style="margin:0 0 16px;font-size:15px;color:#444;line-height:1.7;">
+    Hi {{first_name}}, we were unable to process your payment of <strong>{{amount}}</strong>
+    for your <strong>{{plan_name}}</strong> plan.
+  </p>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0"
+         style="background:#fef2f2;border:1px solid #fecaca;border-left:4px solid #dc2626;
+                border-radius:8px;margin-bottom:24px;">
+    <tr>
+      <td style="padding:14px 16px;">
+        <p style="margin:0 0 4px;font-size:13px;color:#991b1b;font-weight:700;">
+          Card ending in {{card_last4}} — {{failure_reason}}
+        </p>
+        <p style="margin:0;font-size:12px;color:#b91c1c;">
+          If not resolved by {{deadline}}, your account may be suspended.
+        </p>
+      </td>
+    </tr>
+  </table>
+  <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;">
+    <tr>
+      <td style="background:#dc2626;border-radius:8px;">
+        <a href="{{update_payment_url}}" style="display:block;padding:12px 28px;color:#fff;
+                                               font-size:14px;font-weight:700;text-decoration:none;">
+          Update Payment Method
+        </a>
+      </td>
+    </tr>
+  </table>
+  <p style="margin:0;font-size:12px;color:#aaa;">
+    Need help? Contact us at <a href="mailto:{{support_email}}" style="color:#dc2626;">{{support_email}}</a>
+  </p>
+</td></tr>
+${FOOTER}
+${CLOSE_WRAPPER}`,
+  },
+
+  // ══ MARKETING (continued) ══════════════════════════════════════════════════
+  {
+    id: 'lib-reengagement',
+    name: 'Re-engagement / Win-Back',
+    category: 'marketing',
+    description: 'Win back inactive users with a personalised message and exclusive offer.',
+    tags: ['reengagement', 'winback', 'inactive', 'retention'],
+    accent: '#db2777',
+    htmlContent: `
+${WRAPPER('#fdf2f8', '#ffffff')}
+<tr><td style="background:linear-gradient(135deg,#db2777,#9333ea);padding:48px 32px;text-align:center;">
+  <p style="margin:0 0 8px;font-size:36px;">💔</p>
+  <p style="margin:0 0 8px;font-size:24px;font-weight:800;color:#fff;">We miss you, {{first_name}}!</p>
+  <p style="margin:0;font-size:15px;color:rgba(255,255,255,0.85);">
+    It's been {{days_inactive}} days since your last visit
+  </p>
+</td></tr>
+<tr><td style="padding:36px 32px;text-align:center;">
+  <p style="margin:0 0 20px;font-size:15px;color:#555;line-height:1.7;">
+    {{reengagement_message}}
+  </p>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0"
+         style="background:linear-gradient(135deg,#fdf2f8,#fae8ff);border:1px solid #f0abfc;
+                border-radius:16px;margin-bottom:28px;">
+    <tr>
+      <td style="padding:24px;text-align:center;">
+        <p style="margin:0 0 4px;font-size:13px;color:#9333ea;font-weight:700;text-transform:uppercase;">
+          Your exclusive offer
+        </p>
+        <p style="margin:0 0 8px;font-size:40px;font-weight:900;color:#db2777;">
+          {{discount}}% OFF
+        </p>
+        <p style="margin:0 0 16px;font-size:16px;font-weight:700;color:#1a1a2e;letter-spacing:0.08em;">
+          Code: <span style="color:#db2777;">{{promo_code}}</span>
+        </p>
+        <p style="margin:0;font-size:12px;color:#888;">Expires {{offer_expiry}}</p>
+      </td>
+    </tr>
+  </table>
+  <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+    <tr>
+      <td style="background:linear-gradient(135deg,#db2777,#9333ea);border-radius:8px;">
+        <a href="{{cta_url}}" style="display:block;padding:14px 40px;color:#fff;
+                                    font-size:16px;font-weight:800;text-decoration:none;">
+          Come Back →
+        </a>
+      </td>
+    </tr>
+  </table>
+</td></tr>
+${FOOTER}
+${CLOSE_WRAPPER}`,
+  },
+
+  {
+    id: 'lib-referral',
+    name: 'Referral Program',
+    category: 'marketing',
+    description: 'Invite friends email with personal referral link and reward description.',
+    tags: ['referral', 'invite', 'rewards', 'growth'],
+    accent: '#16a34a',
+    htmlContent: `
+${WRAPPER('#f0fdf4', '#ffffff')}
+${HEADER('#16a34a')}
+<tr><td style="padding:36px 32px;text-align:center;">
+  <p style="margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;color:#16a34a;font-weight:700;">
+    Share &amp; Earn
+  </p>
+  <h1 style="margin:0 0 12px;font-size:26px;font-weight:800;color:#0f172a;">
+    Give {{referral_reward}}, Get {{your_reward}}
+  </h1>
+  <p style="margin:0 0 28px;font-size:15px;color:#555;line-height:1.7;">
+    {{referral_description}}
+  </p>
+  <!-- Referral link box -->
+  <table width="100%" cellpadding="0" cellspacing="0" border="0"
+         style="background:#f0fdf4;border:2px dashed #86efac;border-radius:12px;margin-bottom:28px;">
+    <tr>
+      <td style="padding:20px 24px;text-align:center;">
+        <p style="margin:0 0 6px;font-size:11px;color:#16a34a;text-transform:uppercase;font-weight:700;">
+          Your unique referral link
+        </p>
+        <p style="margin:0 0 12px;font-size:15px;font-weight:700;color:#0f172a;word-break:break-all;">
+          {{referral_url}}
+        </p>
+        <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+          <tr>
+            <td style="background:#16a34a;border-radius:6px;">
+              <a href="{{referral_url}}" style="display:block;padding:10px 24px;color:#fff;
+                                               font-size:13px;font-weight:700;text-decoration:none;">
+                Copy Link
+              </a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+  <!-- How it works -->
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td width="33%" style="padding:12px 8px;text-align:center;border-right:1px solid #dcfce7;">
+        <p style="margin:0 0 6px;font-size:24px;">🔗</p>
+        <p style="margin:0;font-size:12px;font-weight:600;color:#333;">Share your link</p>
+      </td>
+      <td width="33%" style="padding:12px 8px;text-align:center;border-right:1px solid #dcfce7;">
+        <p style="margin:0 0 6px;font-size:24px;">✅</p>
+        <p style="margin:0;font-size:12px;font-weight:600;color:#333;">Friend signs up</p>
+      </td>
+      <td width="33%" style="padding:12px 8px;text-align:center;">
+        <p style="margin:0 0 6px;font-size:24px;">🎁</p>
+        <p style="margin:0;font-size:12px;font-weight:600;color:#333;">Both get rewarded</p>
+      </td>
+    </tr>
+  </table>
+</td></tr>
+${FOOTER}
+${CLOSE_WRAPPER}`,
+  },
+
+  {
+    id: 'lib-webinar-followup',
+    name: 'Webinar Follow-up',
+    category: 'marketing',
+    description: 'Post-webinar email with recording link, slides, and next-step CTA.',
+    tags: ['webinar', 'followup', 'recording', 'content'],
+    accent: '#0f766e',
+    htmlContent: `
+${WRAPPER('#f0fdfa', '#ffffff')}
+${HEADER('#0f766e')}
+<tr><td style="padding:32px;">
+  <p style="margin:0 0 16px;font-size:22px;font-weight:700;color:#0f172a;">
+    Thanks for joining, {{first_name}}! 🎉
+  </p>
+  <p style="margin:0 0 20px;font-size:15px;color:#555;line-height:1.7;">
+    We hope you enjoyed <strong>{{webinar_name}}</strong>. As promised, here are all the resources:
+  </p>
+  <!-- Resources -->
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+    <tr>
+      <td style="padding:12px 16px;background:#f0fdfa;border:1px solid #99f6e4;border-radius:10px;margin-bottom:8px;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+          <td width="36" style="font-size:24px;">🎬</td>
+          <td>
+            <p style="margin:0 0 2px;font-size:13px;font-weight:700;color:#0f172a;">Full Recording</p>
+            <a href="{{recording_url}}" style="font-size:12px;color:#0f766e;text-decoration:none;">Watch now →</a>
+          </td>
+        </tr></table>
+      </td>
+    </tr>
+    <tr><td style="height:8px;"></td></tr>
+    <tr>
+      <td style="padding:12px 16px;background:#f0fdfa;border:1px solid #99f6e4;border-radius:10px;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+          <td width="36" style="font-size:24px;">📊</td>
+          <td>
+            <p style="margin:0 0 2px;font-size:13px;font-weight:700;color:#0f172a;">Slide Deck</p>
+            <a href="{{slides_url}}" style="font-size:12px;color:#0f766e;text-decoration:none;">Download PDF →</a>
+          </td>
+        </tr></table>
+      </td>
+    </tr>
+  </table>
+  <p style="margin:0 0 20px;font-size:15px;color:#444;line-height:1.7;">
+    {{followup_message}}
+  </p>
+  <table cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td style="background:linear-gradient(135deg,#0f766e,#0891b2);border-radius:8px;">
+        <a href="{{cta_url}}" style="display:block;padding:12px 28px;color:#fff;
+                                    font-size:14px;font-weight:700;text-decoration:none;">
+          {{cta_text}}
+        </a>
+      </td>
+    </tr>
+  </table>
+</td></tr>
+${FOOTER}
+${CLOSE_WRAPPER}`,
+  },
+
+  // ══ ONBOARDING (continued) ══════════════════════════════════════════════════
+  {
+    id: 'lib-trial-expiring',
+    name: 'Trial Expiring Soon',
+    category: 'onboarding',
+    description: 'Nudge free-trial users to upgrade before their trial ends.',
+    tags: ['trial', 'upgrade', 'conversion', 'saas'],
+    accent: '#ea580c',
+    htmlContent: `
+${WRAPPER('#fff7ed', '#ffffff')}
+${HEADER('#ea580c')}
+<tr><td style="padding:32px;">
+  <p style="margin:0 0 4px;font-size:22px;font-weight:700;color:#1a1a2e;">
+    Your trial ends in {{days_left}} days, {{first_name}}
+  </p>
+  <!-- Countdown bar -->
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:16px 0 20px;">
+    <tr>
+      <td style="background:#fed7aa;border-radius:8px;height:10px;padding:0;overflow:hidden;">
+        <td style="background:#ea580c;height:10px;width:{{trial_progress_pct}}%;border-radius:8px;padding:0;"></td>
+      </td>
+    </tr>
+  </table>
+  <p style="margin:0 0 20px;font-size:15px;color:#555;line-height:1.7;">
+    You've been using <strong>{{company_name}}</strong> for {{days_used}} days. Don't lose access
+    to these features when your trial ends on <strong>{{trial_end_date}}</strong>:
+  </p>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+    ${['feature_1','feature_2','feature_3'].map(f => `
+    <tr>
+      <td style="padding:8px 0;border-bottom:1px solid #fed7aa;">
+        <p style="margin:0;font-size:14px;color:#444;">
+          ✅ &nbsp;{{${f}}}
+        </p>
+      </td>
+    </tr>`).join('')}
+  </table>
+  <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:12px;">
+    <tr>
+      <td style="background:linear-gradient(135deg,#ea580c,#dc2626);border-radius:8px;">
+        <a href="{{upgrade_url}}" style="display:block;padding:14px 32px;color:#fff;
+                                        font-size:15px;font-weight:800;text-decoration:none;">
+          Upgrade Now — Keep Everything
+        </a>
+      </td>
+    </tr>
+  </table>
+  <p style="margin:0;font-size:12px;color:#aaa;">
+    Starting at {{price_from}}/month · Cancel anytime
+  </p>
+</td></tr>
+${FOOTER}
+${CLOSE_WRAPPER}`,
+  },
+
+  {
+    id: 'lib-upgrade-prompt',
+    name: 'Upgrade Prompt',
+    category: 'onboarding',
+    description: 'Highlight the gap between a user\'s current plan and the next tier.',
+    tags: ['upgrade', 'upsell', 'pricing', 'saas'],
+    accent: '#7c3aed',
+    htmlContent: `
+${WRAPPER('#f5f3ff', '#ffffff')}
+${HEADER('linear-gradient(135deg,#7c3aed,#4f46e5)')}
+<tr><td style="padding:32px;">
+  <p style="margin:0 0 16px;font-size:22px;font-weight:700;color:#1a1a2e;">
+    You're almost at your limit, {{first_name}}
+  </p>
+  <p style="margin:0 0 20px;font-size:15px;color:#555;line-height:1.7;">
+    You've used <strong>{{used_amount}}</strong> of your <strong>{{plan_limit}}</strong> {{resource_name}}
+    on the {{plan_name}} plan. Upgrade to keep the momentum going.
+  </p>
+  <!-- Plan comparison -->
+  <table width="100%" cellpadding="0" cellspacing="0" border="0"
+         style="border-collapse:collapse;border-radius:12px;overflow:hidden;margin-bottom:24px;border:1px solid #ede9fe;">
+    <tr style="background:#f5f3ff;">
+      <th style="padding:10px 16px;text-align:left;font-size:11px;color:#7c3aed;font-weight:700;text-transform:uppercase;">Feature</th>
+      <th style="padding:10px 16px;text-align:center;font-size:11px;color:#9ca3af;font-weight:700;text-transform:uppercase;">{{plan_name}}</th>
+      <th style="padding:10px 16px;text-align:center;font-size:11px;color:#7c3aed;font-weight:700;text-transform:uppercase;">{{next_plan_name}}</th>
+    </tr>
+    <tr style="border-top:1px solid #ede9fe;">
+      <td style="padding:10px 16px;font-size:13px;color:#333;">{{resource_name}}</td>
+      <td style="padding:10px 16px;font-size:13px;color:#888;text-align:center;">{{plan_limit}}</td>
+      <td style="padding:10px 16px;font-size:13px;color:#7c3aed;font-weight:700;text-align:center;">{{next_plan_limit}}</td>
+    </tr>
+    <tr style="border-top:1px solid #ede9fe;background:#fafafa;">
+      <td style="padding:10px 16px;font-size:13px;color:#333;">{{feature_2_name}}</td>
+      <td style="padding:10px 16px;font-size:13px;color:#888;text-align:center;">—</td>
+      <td style="padding:10px 16px;font-size:13px;color:#7c3aed;font-weight:700;text-align:center;">✓</td>
+    </tr>
+    <tr style="border-top:1px solid #ede9fe;">
+      <td style="padding:10px 16px;font-size:13px;color:#333;">Priority support</td>
+      <td style="padding:10px 16px;font-size:13px;color:#888;text-align:center;">—</td>
+      <td style="padding:10px 16px;font-size:13px;color:#7c3aed;font-weight:700;text-align:center;">✓</td>
+    </tr>
+  </table>
+  <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:12px;">
+    <tr>
+      <td style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border-radius:8px;">
+        <a href="{{upgrade_url}}" style="display:block;padding:13px 32px;color:#fff;
+                                        font-size:14px;font-weight:700;text-decoration:none;">
+          Upgrade to {{next_plan_name}} →
+        </a>
+      </td>
+    </tr>
+  </table>
+  <p style="margin:0;font-size:12px;color:#aaa;">
+    Only {{next_plan_price}}/month · Upgrade takes effect immediately
+  </p>
+</td></tr>
+${FOOTER}
+${CLOSE_WRAPPER}`,
+  },
+
+  // ══ NOTIFICATION (continued) ══════════════════════════════════════════════
   {
     id: 'lib-survey',
     name: 'Feedback Survey',
@@ -863,6 +1345,532 @@ ${HEADER('#0891b2')}
 ${FOOTER}
 ${CLOSE_WRAPPER}`,
   },
+
+  {
+    id: 'lib-weekly-report',
+    name: 'Weekly Report',
+    category: 'notification',
+    description: 'Auto-generated weekly digest with key metrics and activity summary.',
+    tags: ['report', 'weekly', 'digest', 'metrics'],
+    accent: '#0284c7',
+    htmlContent: `
+${WRAPPER('#f0f9ff', '#ffffff')}
+${HEADER('#0284c7')}
+<tr><td style="padding:24px 32px 0;">
+  <p style="margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:0.1em;color:#0284c7;font-weight:700;">
+    Week of {{week_start}} – {{week_end}}
+  </p>
+  <h2 style="margin:0 0 20px;font-size:22px;font-weight:700;color:#0f172a;">
+    Your Weekly Summary
+  </h2>
+  <!-- KPI row -->
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+    <tr>
+      <td width="32%" style="padding:14px;text-align:center;background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;">
+        <p style="margin:0 0 2px;font-size:22px;font-weight:800;color:#0284c7;">{{metric_1_value}}</p>
+        <p style="margin:0;font-size:11px;color:#888;text-transform:uppercase;font-weight:600;">{{metric_1_label}}</p>
+      </td>
+      <td width="4px;"></td>
+      <td width="32%" style="padding:14px;text-align:center;background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;">
+        <p style="margin:0 0 2px;font-size:22px;font-weight:800;color:#0284c7;">{{metric_2_value}}</p>
+        <p style="margin:0;font-size:11px;color:#888;text-transform:uppercase;font-weight:600;">{{metric_2_label}}</p>
+      </td>
+      <td width="4px;"></td>
+      <td width="32%" style="padding:14px;text-align:center;background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;">
+        <p style="margin:0 0 2px;font-size:22px;font-weight:800;color:#0284c7;">{{metric_3_value}}</p>
+        <p style="margin:0;font-size:11px;color:#888;text-transform:uppercase;font-weight:600;">{{metric_3_label}}</p>
+      </td>
+    </tr>
+  </table>
+  <!-- Top activity -->
+  <p style="margin:0 0 12px;font-size:14px;font-weight:700;color:#0f172a;">This week's highlights</p>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0"
+         style="border-collapse:collapse;margin-bottom:24px;border:1px solid #bae6fd;border-radius:8px;overflow:hidden;">
+    <tr style="background:#e0f2fe;">
+      <th style="padding:8px 12px;text-align:left;font-size:11px;color:#0284c7;font-weight:700;">Activity</th>
+      <th style="padding:8px 12px;text-align:right;font-size:11px;color:#0284c7;font-weight:700;">Count</th>
+      <th style="padding:8px 12px;text-align:right;font-size:11px;color:#0284c7;font-weight:700;">vs Last Week</th>
+    </tr>
+    <tr style="border-top:1px solid #bae6fd;">
+      <td style="padding:9px 12px;font-size:13px;color:#333;">{{activity_1_name}}</td>
+      <td style="padding:9px 12px;font-size:13px;color:#333;text-align:right;">{{activity_1_count}}</td>
+      <td style="padding:9px 12px;font-size:13px;color:#16a34a;font-weight:600;text-align:right;">{{activity_1_change}}</td>
+    </tr>
+    <tr style="border-top:1px solid #bae6fd;background:#f0f9ff;">
+      <td style="padding:9px 12px;font-size:13px;color:#333;">{{activity_2_name}}</td>
+      <td style="padding:9px 12px;font-size:13px;color:#333;text-align:right;">{{activity_2_count}}</td>
+      <td style="padding:9px 12px;font-size:13px;color:#dc2626;font-weight:600;text-align:right;">{{activity_2_change}}</td>
+    </tr>
+  </table>
+  <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:32px;">
+    <tr>
+      <td style="background:#0284c7;border-radius:8px;">
+        <a href="{{dashboard_url}}" style="display:block;padding:12px 24px;color:#fff;
+                                          font-size:13px;font-weight:700;text-decoration:none;">
+          View Full Report →
+        </a>
+      </td>
+    </tr>
+  </table>
+</td></tr>
+${FOOTER}
+${CLOSE_WRAPPER}`,
+  },
+
+  {
+    id: 'lib-new-login',
+    name: 'New Login Alert',
+    category: 'notification',
+    description: 'Security alert when a new device or unusual location logs into the account.',
+    tags: ['security', 'login', 'alert', '2fa'],
+    accent: '#b45309',
+    htmlContent: `
+${WRAPPER('#fffbeb', '#ffffff')}
+<tr><td style="background:#b45309;padding:20px 32px;">
+  <p style="margin:0;font-size:12px;font-weight:700;color:rgba(255,255,255,0.8);
+             text-transform:uppercase;letter-spacing:0.1em;">🔐 Security Alert</p>
+  <p style="margin:6px 0 0;font-size:18px;font-weight:700;color:#fff;">
+    New sign-in to your account
+  </p>
+</td></tr>
+<tr><td style="padding:32px;">
+  <p style="margin:0 0 20px;font-size:15px;color:#444;line-height:1.7;">
+    Hi {{first_name}}, we noticed a new sign-in to your {{company_name}} account.
+    If this was you, no action is needed.
+  </p>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0"
+         style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;margin-bottom:24px;">
+    <tr>
+      <td style="padding:20px 24px;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td width="50%" style="padding-bottom:12px;">
+              <p style="margin:0 0 2px;font-size:11px;color:#b45309;text-transform:uppercase;font-weight:700;">Device</p>
+              <p style="margin:0;font-size:13px;font-weight:600;color:#0f172a;">{{device_name}}</p>
+            </td>
+            <td width="50%" style="padding-bottom:12px;">
+              <p style="margin:0 0 2px;font-size:11px;color:#b45309;text-transform:uppercase;font-weight:700;">Location</p>
+              <p style="margin:0;font-size:13px;font-weight:600;color:#0f172a;">{{login_location}}</p>
+            </td>
+          </tr>
+          <tr>
+            <td width="50%">
+              <p style="margin:0 0 2px;font-size:11px;color:#b45309;text-transform:uppercase;font-weight:700;">IP Address</p>
+              <p style="margin:0;font-size:13px;font-weight:600;color:#0f172a;">{{ip_address}}</p>
+            </td>
+            <td width="50%">
+              <p style="margin:0 0 2px;font-size:11px;color:#b45309;text-transform:uppercase;font-weight:700;">Time</p>
+              <p style="margin:0;font-size:13px;font-weight:600;color:#0f172a;">{{login_time}}</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+  <p style="margin:0 0 16px;font-size:14px;font-weight:700;color:#991b1b;">
+    Not you? Secure your account immediately:
+  </p>
+  <table cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td style="background:#dc2626;border-radius:8px;">
+        <a href="{{secure_account_url}}" style="display:block;padding:12px 28px;color:#fff;
+                                               font-size:14px;font-weight:700;text-decoration:none;">
+          Secure My Account
+        </a>
+      </td>
+    </tr>
+  </table>
+</td></tr>
+${FOOTER}
+${CLOSE_WRAPPER}`,
+  },
+
+  {
+    id: 'lib-account-reactivation',
+    name: 'Account Reactivation',
+    category: 'notification',
+    description: 'Confirm account reactivation after a suspension or voluntary pause.',
+    tags: ['reactivation', 'account', 'suspension', 'billing'],
+    accent: '#16a34a',
+    htmlContent: `
+${WRAPPER('#f0fdf4', '#ffffff')}
+<tr><td style="background:linear-gradient(135deg,#16a34a,#0d9488);padding:32px;text-align:center;">
+  <p style="margin:0 0 8px;font-size:40px;">🎉</p>
+  <p style="margin:0;font-size:24px;font-weight:800;color:#fff;">Your account is active again!</p>
+</td></tr>
+<tr><td style="padding:32px;">
+  <p style="margin:0 0 16px;font-size:15px;color:#444;line-height:1.7;">
+    Hi {{first_name}}, your <strong>{{company_name}}</strong> account has been successfully reactivated.
+    You now have full access to all your features and data.
+  </p>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0"
+         style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;margin-bottom:24px;">
+    <tr>
+      <td style="padding:16px 20px;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td>
+              <p style="margin:0 0 2px;font-size:11px;color:#16a34a;text-transform:uppercase;font-weight:700;">Plan</p>
+              <p style="margin:0;font-size:15px;font-weight:700;color:#0f172a;">{{plan_name}}</p>
+            </td>
+            <td align="right">
+              <span style="display:inline-block;background:#dcfce7;color:#16a34a;font-size:12px;
+                           font-weight:700;padding:4px 12px;border-radius:20px;">Active</span>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2" style="padding-top:10px;border-top:1px solid #bbf7d0;">
+              <p style="margin:4px 0 0;font-size:12px;color:#888;">
+                Next billing: <strong>{{next_billing_date}}</strong> · {{billing_amount}}
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+  <p style="margin:0 0 20px;font-size:15px;color:#444;line-height:1.7;">
+    {{reactivation_message}}
+  </p>
+  <table cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td style="background:linear-gradient(135deg,#16a34a,#0d9488);border-radius:8px;">
+        <a href="{{dashboard_url}}" style="display:block;padding:13px 28px;color:#fff;
+                                          font-size:14px;font-weight:700;text-decoration:none;">
+          Go to Dashboard →
+        </a>
+      </td>
+    </tr>
+  </table>
+</td></tr>
+${FOOTER}
+${CLOSE_WRAPPER}`,
+  },
+  // ══ OPERATIONAL ════════════════════════════════════════════════════════════
+  {
+    id: 'lib-service-provider-notice',
+    name: 'Service Provider Notice',
+    category: 'operational',
+    description: 'All-in-one notification to a service provider covering info, payment details, attachments, and step-by-step instructions.',
+    tags: ['service-provider', 'b2b', 'payment', 'instructions', 'attachments', 'operational'],
+    accent: '#0f4c81',
+    htmlContent: `
+${WRAPPER('#f1f5f9', '#ffffff')}
+<!-- ── Header ── -->
+<tr>
+  <td style="background:linear-gradient(135deg,#0f4c81,#1e3a5f);padding:28px 32px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+      <td>
+        <p style="margin:0 0 2px;font-size:11px;color:rgba(255,255,255,0.6);
+                   text-transform:uppercase;letter-spacing:0.12em;font-weight:700;">
+          {{company_name}}
+        </p>
+        <p style="margin:0;font-size:22px;font-weight:800;color:#fff;">
+          Service Provider Notice
+        </p>
+      </td>
+      <td align="right" style="vertical-align:top;">
+        <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.6);">Ref: {{reference_number}}</p>
+        <p style="margin:4px 0 0;font-size:11px;color:rgba(255,255,255,0.6);">Date: {{notice_date}}</p>
+      </td>
+    </tr></table>
+  </td>
+</tr>
+
+<!-- ── Addressed To ── -->
+<tr>
+  <td style="padding:24px 32px 0;">
+    <p style="margin:0 0 4px;font-size:13px;color:#888;">To:</p>
+    <p style="margin:0 0 2px;font-size:15px;font-weight:700;color:#0f172a;">{{provider_name}}</p>
+    <p style="margin:0 0 2px;font-size:13px;color:#555;">{{provider_contact_name}} · {{provider_contact_title}}</p>
+    <p style="margin:0;font-size:13px;color:#555;">{{provider_email}}</p>
+  </td>
+</tr>
+
+<!-- ── Notification / Subject ── -->
+<tr>
+  <td style="padding:20px 32px 0;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0"
+           style="background:#eff6ff;border-left:4px solid #0f4c81;border-radius:0 8px 8px 0;">
+      <tr>
+        <td style="padding:14px 18px;">
+          <p style="margin:0 0 3px;font-size:11px;color:#0f4c81;text-transform:uppercase;
+                     font-weight:700;letter-spacing:0.08em;">Subject</p>
+          <p style="margin:0;font-size:15px;font-weight:700;color:#0f172a;">{{notice_subject}}</p>
+        </td>
+      </tr>
+    </table>
+  </td>
+</tr>
+
+<!-- ── Message Body ── -->
+<tr>
+  <td style="padding:20px 32px 0;">
+    <p style="margin:0 0 12px;font-size:15px;color:#444;line-height:1.75;">
+      Dear {{provider_contact_name}},
+    </p>
+    <p style="margin:0 0 12px;font-size:15px;color:#444;line-height:1.75;">
+      {{notice_body}}
+    </p>
+    <p style="margin:0;font-size:15px;color:#444;line-height:1.75;">
+      {{notice_additional_info}}
+    </p>
+  </td>
+</tr>
+
+<!-- ── Payment Details ── -->
+<tr>
+  <td style="padding:20px 32px 0;">
+    <p style="margin:0 0 10px;font-size:14px;font-weight:700;color:#0f172a;">
+      💳 Payment Details
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0"
+           style="border-collapse:collapse;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">
+      <tr style="background:#f8fafc;">
+        <td style="padding:10px 14px;font-size:12px;font-weight:700;color:#64748b;
+                   text-transform:uppercase;border-bottom:1px solid #e2e8f0;width:40%;">Field</td>
+        <td style="padding:10px 14px;font-size:12px;font-weight:700;color:#64748b;
+                   text-transform:uppercase;border-bottom:1px solid #e2e8f0;">Details</td>
+      </tr>
+      <tr>
+        <td style="padding:10px 14px;font-size:13px;color:#64748b;border-bottom:1px solid #f1f5f9;">
+          Invoice / PO Number
+        </td>
+        <td style="padding:10px 14px;font-size:13px;font-weight:600;color:#0f172a;
+                   border-bottom:1px solid #f1f5f9;">{{invoice_number}}</td>
+      </tr>
+      <tr style="background:#f8fafc;">
+        <td style="padding:10px 14px;font-size:13px;color:#64748b;border-bottom:1px solid #f1f5f9;">
+          Amount Due
+        </td>
+        <td style="padding:10px 14px;font-size:15px;font-weight:800;color:#0f4c81;
+                   border-bottom:1px solid #f1f5f9;">{{payment_amount}}</td>
+      </tr>
+      <tr>
+        <td style="padding:10px 14px;font-size:13px;color:#64748b;border-bottom:1px solid #f1f5f9;">
+          Payment Due Date
+        </td>
+        <td style="padding:10px 14px;font-size:13px;font-weight:600;color:#0f172a;
+                   border-bottom:1px solid #f1f5f9;">{{payment_due_date}}</td>
+      </tr>
+      <tr style="background:#f8fafc;">
+        <td style="padding:10px 14px;font-size:13px;color:#64748b;border-bottom:1px solid #f1f5f9;">
+          Payment Method
+        </td>
+        <td style="padding:10px 14px;font-size:13px;font-weight:600;color:#0f172a;
+                   border-bottom:1px solid #f1f5f9;">{{payment_method}}</td>
+      </tr>
+      <tr>
+        <td style="padding:10px 14px;font-size:13px;color:#64748b;">Bank / Account Ref</td>
+        <td style="padding:10px 14px;font-size:13px;font-weight:600;color:#0f172a;">
+          {{bank_account_reference}}
+        </td>
+      </tr>
+    </table>
+    <table cellpadding="0" cellspacing="0" border="0" style="margin-top:12px;">
+      <tr>
+        <td style="background:linear-gradient(135deg,#0f4c81,#1e3a5f);border-radius:8px;">
+          <a href="{{payment_url}}" style="display:block;padding:11px 24px;color:#fff;
+                                          font-size:13px;font-weight:700;text-decoration:none;">
+            Complete Payment →
+          </a>
+        </td>
+      </tr>
+    </table>
+  </td>
+</tr>
+
+<!-- ── Attachments ── -->
+<tr>
+  <td style="padding:20px 32px 0;">
+    <p style="margin:0 0 10px;font-size:14px;font-weight:700;color:#0f172a;">
+      📎 Attachments
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td style="padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;
+                   border-radius:8px;margin-bottom:8px;">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+            <td width="32" style="font-size:20px;vertical-align:middle;">📄</td>
+            <td style="vertical-align:middle;">
+              <p style="margin:0 0 1px;font-size:13px;font-weight:700;color:#0f172a;">
+                {{attachment_1_name}}
+              </p>
+              <a href="{{attachment_1_url}}" style="font-size:12px;color:#0f4c81;text-decoration:none;font-weight:600;">
+                Download →
+              </a>
+            </td>
+          </tr></table>
+        </td>
+      </tr>
+      <tr><td style="height:8px;"></td></tr>
+      <tr>
+        <td style="padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+            <td width="32" style="font-size:20px;vertical-align:middle;">📋</td>
+            <td style="vertical-align:middle;">
+              <p style="margin:0 0 1px;font-size:13px;font-weight:700;color:#0f172a;">
+                {{attachment_2_name}}
+              </p>
+              <a href="{{attachment_2_url}}" style="font-size:12px;color:#0f4c81;text-decoration:none;font-weight:600;">
+                Download →
+              </a>
+            </td>
+          </tr></table>
+        </td>
+      </tr>
+      <tr><td style="height:8px;"></td></tr>
+      <tr>
+        <td style="padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+            <td width="32" style="font-size:20px;vertical-align:middle;">🖼️</td>
+            <td style="vertical-align:middle;">
+              <p style="margin:0 0 1px;font-size:13px;font-weight:700;color:#0f172a;">
+                {{attachment_3_name}}
+              </p>
+              <a href="{{attachment_3_url}}" style="font-size:12px;color:#0f4c81;text-decoration:none;font-weight:600;">
+                Download →
+              </a>
+            </td>
+          </tr></table>
+        </td>
+      </tr>
+    </table>
+  </td>
+</tr>
+
+<!-- ── Instructions ── -->
+<tr>
+  <td style="padding:20px 32px 0;">
+    <p style="margin:0 0 10px;font-size:14px;font-weight:700;color:#0f172a;">
+      📋 Instructions
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" border="0"
+           style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">
+      <tr>
+        <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;">
+          <table cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+            <td width="28" style="vertical-align:top;padding-top:1px;">
+              <span style="display:inline-block;width:20px;height:20px;background:#0f4c81;
+                           border-radius:50%;text-align:center;line-height:20px;
+                           font-size:11px;font-weight:800;color:#fff;">1</span>
+            </td>
+            <td style="padding-left:8px;">
+              <p style="margin:0 0 2px;font-size:13px;font-weight:700;color:#0f172a;">
+                {{step_1_title}}
+              </p>
+              <p style="margin:0;font-size:12px;color:#64748b;line-height:1.5;">
+                {{step_1_details}}
+              </p>
+            </td>
+          </tr></table>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;background:#fff;">
+          <table cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+            <td width="28" style="vertical-align:top;padding-top:1px;">
+              <span style="display:inline-block;width:20px;height:20px;background:#0f4c81;
+                           border-radius:50%;text-align:center;line-height:20px;
+                           font-size:11px;font-weight:800;color:#fff;">2</span>
+            </td>
+            <td style="padding-left:8px;">
+              <p style="margin:0 0 2px;font-size:13px;font-weight:700;color:#0f172a;">
+                {{step_2_title}}
+              </p>
+              <p style="margin:0;font-size:12px;color:#64748b;line-height:1.5;">
+                {{step_2_details}}
+              </p>
+            </td>
+          </tr></table>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;">
+          <table cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+            <td width="28" style="vertical-align:top;padding-top:1px;">
+              <span style="display:inline-block;width:20px;height:20px;background:#0f4c81;
+                           border-radius:50%;text-align:center;line-height:20px;
+                           font-size:11px;font-weight:800;color:#fff;">3</span>
+            </td>
+            <td style="padding-left:8px;">
+              <p style="margin:0 0 2px;font-size:13px;font-weight:700;color:#0f172a;">
+                {{step_3_title}}
+              </p>
+              <p style="margin:0;font-size:12px;color:#64748b;line-height:1.5;">
+                {{step_3_details}}
+              </p>
+            </td>
+          </tr></table>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:14px 18px;background:#fff;">
+          <table cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+            <td width="28" style="vertical-align:top;padding-top:1px;">
+              <span style="display:inline-block;width:20px;height:20px;background:#0f4c81;
+                           border-radius:50%;text-align:center;line-height:20px;
+                           font-size:11px;font-weight:800;color:#fff;">4</span>
+            </td>
+            <td style="padding-left:8px;">
+              <p style="margin:0 0 2px;font-size:13px;font-weight:700;color:#0f172a;">
+                {{step_4_title}}
+              </p>
+              <p style="margin:0;font-size:12px;color:#64748b;line-height:1.5;">
+                {{step_4_details}}
+              </p>
+            </td>
+          </tr></table>
+        </td>
+      </tr>
+    </table>
+  </td>
+</tr>
+
+<!-- ── Important Notice / Deadline ── -->
+<tr>
+  <td style="padding:20px 32px 0;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0"
+           style="background:#fff7ed;border:1px solid #fed7aa;border-left:4px solid #ea580c;
+                  border-radius:0 8px 8px 0;">
+      <tr>
+        <td style="padding:14px 18px;">
+          <p style="margin:0 0 3px;font-size:12px;color:#ea580c;font-weight:700;
+                     text-transform:uppercase;">⚠ Important Deadline</p>
+          <p style="margin:0;font-size:13px;color:#7c2d12;line-height:1.6;">
+            {{deadline_message}}
+            <strong style="display:block;margin-top:4px;">Due by: {{action_deadline}}</strong>
+          </p>
+        </td>
+      </tr>
+    </table>
+  </td>
+</tr>
+
+<!-- ── Confirmation CTA ── -->
+<tr>
+  <td style="padding:24px 32px;">
+    <p style="margin:0 0 14px;font-size:14px;color:#555;line-height:1.7;">
+      Please confirm receipt of this notice and let us know if you have any questions.
+      You can reach us at
+      <a href="mailto:{{contact_email}}" style="color:#0f4c81;font-weight:600;">{{contact_email}}</a>
+      or call <strong>{{contact_phone}}</strong>.
+    </p>
+    <table cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td style="background:linear-gradient(135deg,#0f4c81,#1e3a5f);border-radius:8px;margin-right:8px;">
+          <a href="{{confirm_url}}" style="display:block;padding:12px 28px;color:#fff;
+                                          font-size:14px;font-weight:700;text-decoration:none;">
+            Confirm Receipt
+          </a>
+        </td>
+      </tr>
+    </table>
+  </td>
+</tr>
+${FOOTER}
+${CLOSE_WRAPPER}`,
+  },
 ]
 
 export const LIBRARY_CATEGORIES = [
@@ -871,4 +1879,5 @@ export const LIBRARY_CATEGORIES = [
   { key: 'marketing',      label: 'Marketing',       count: EMAIL_LIBRARY.filter(t => t.category === 'marketing').length },
   { key: 'onboarding',     label: 'Onboarding',      count: EMAIL_LIBRARY.filter(t => t.category === 'onboarding').length },
   { key: 'notification',   label: 'Notification',    count: EMAIL_LIBRARY.filter(t => t.category === 'notification').length },
+  { key: 'operational',    label: 'Operational',     count: EMAIL_LIBRARY.filter(t => t.category === 'operational').length },
 ]

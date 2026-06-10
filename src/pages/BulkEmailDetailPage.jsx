@@ -13,8 +13,10 @@ import { useEffect, useState, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   bulkEmailGetJob,
+  bulkEmailGetStatus,
   bulkEmailGetAudit,
   bulkEmailResend,
+  bulkEmailRetryPending,
   bulkEmailCancelJob,
 } from '../services/api'
 import { useToast } from '../context/ToastContext'
@@ -61,13 +63,27 @@ export default function BulkEmailDetailPage() {
   const navigate      = useNavigate()
   const toast         = useToast()
 
-  const [job,     setJob]     = useState(null)
-  const [audit,   setAudit]   = useState([])
-  const [loading, setLoading] = useState(true)
-  const [tab,     setTab]     = useState('overview') // overview | recipients | attachment | audit
+  const [job,          setJob]          = useState(null)
+  const [audit,        setAudit]        = useState([])
+  const [auditLoaded,  setAuditLoaded]  = useState(false)
+  const [loading,      setLoading]      = useState(true)
+  const [tab,          setTab]          = useState('overview')
   const pollRef = useRef(null)
 
-  // ── Load data ─────────────────────────────────────────────────────────────
+  const TERMINAL = ['COMPLETED', 'PARTIAL', 'FAILED', 'CANCELLED']
+
+  // Merge lightweight status counters into job state without overwriting
+  // fields that were only loaded by the full getJob call (e.g. rows[]).
+  const applyStatus = (prev, status) => prev
+    ? { ...prev,
+        status:       status.status,
+        sentCount:    status.sentCount,
+        failedCount:  status.failedCount,
+        pendingCount: status.pendingCount,
+        totalCount:   status.totalCount }
+    : prev
+
+  // ── Initial load — full job + audit in parallel ────────────────────────
   useEffect(() => {
     async function load() {
       try {
@@ -77,6 +93,7 @@ export default function BulkEmailDetailPage() {
         ])
         setJob(j)
         setAudit(a || [])
+        setAuditLoaded(true)
       } catch (e) {
         toast.error(e.message)
         navigate('/bulk-email')
@@ -87,40 +104,72 @@ export default function BulkEmailDetailPage() {
     load()
   }, [id])
 
-  // Poll while active
+  // ── Polling — lightweight status only (counters + status field) ────────
+  // Replaces the old full-job poll that was loading ~5 MB of rows every 3 s.
+  // When the job reaches a terminal state the poll fires one final full reload
+  // so the Recipients tab and audit trail reflect the completed picture.
   useEffect(() => {
     clearInterval(pollRef.current)
-    if (!job) return
-    const TERMINAL = ['COMPLETED', 'PARTIAL', 'FAILED', 'CANCELLED']
-    if (TERMINAL.includes(job.status)) return
+    if (!job || TERMINAL.includes(job.status)) return
+
     pollRef.current = setInterval(async () => {
       try {
-        const [j, a] = await Promise.all([
-          bulkEmailGetJob(id),
-          bulkEmailGetAudit(id).catch(() => []),
-        ])
-        setJob(j)
-        setAudit(a || [])
-        if (TERMINAL.includes(j.status)) clearInterval(pollRef.current)
-      } catch { /* ignore transient */ }
+        const status = await bulkEmailGetStatus(id)
+        setJob(prev => applyStatus(prev, status))
+
+        if (TERMINAL.includes(status.status)) {
+          clearInterval(pollRef.current)
+          // One final full reload so rows + audit are up to date
+          const [j, a] = await Promise.all([
+            bulkEmailGetJob(id),
+            bulkEmailGetAudit(id).catch(() => []),
+          ])
+          setJob(j)
+          setAudit(a || [])
+          setAuditLoaded(true)
+        }
+      } catch { /* ignore transient network errors */ }
     }, POLL_MS)
+
     return () => clearInterval(pollRef.current)
   }, [job?.status, id])
+
+  // ── Lazy audit load — only fetch when Audit tab is first opened ────────
+  useEffect(() => {
+    if (tab !== 'audit' || auditLoaded) return
+    bulkEmailGetAudit(id)
+      .then(a => { setAudit(a || []); setAuditLoaded(true) })
+      .catch(() => {})
+  }, [tab, auditLoaded, id])
 
   // ── Actions ───────────────────────────────────────────────────────────────
   async function handleResend() {
     try {
       await bulkEmailResend(id)
-      // Reload the SAME record (with full rows) so counters and the
-      // Recipients tab reflect the reset state immediately, then the
-      // existing poll loop streams live progress updates automatically.
       const [j, a] = await Promise.all([
         bulkEmailGetJob(id),
         bulkEmailGetAudit(id).catch(() => []),
       ])
       setJob(j)
       setAudit(a || [])
+      setAuditLoaded(true)
       toast.success(`Resend started — ${j.pendingCount} failed email(s) are being retried`)
+    } catch (e) { toast.error(e.message) }
+  }
+
+  async function handleRetryPending() {
+    const n = job.pendingCount ?? 0
+    if (!confirm(`Retry ${n.toLocaleString()} pending email(s)? Already-sent emails will NOT be duplicated.`)) return
+    try {
+      await bulkEmailRetryPending(id)
+      const [j, a] = await Promise.all([
+        bulkEmailGetJob(id),
+        bulkEmailGetAudit(id).catch(() => []),
+      ])
+      setJob(j)
+      setAudit(a || [])
+      setAuditLoaded(true)
+      toast.success(`Retry started — ${n.toLocaleString()} pending email(s) are being sent`)
     } catch (e) { toast.error(e.message) }
   }
 
@@ -219,6 +268,20 @@ export default function BulkEmailDetailPage() {
                       d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                   </svg>
                   Resend {job.failedCount} Failed
+                </button>
+              )}
+              {job.status === 'CANCELLED' && job.pendingCount > 0 && (
+                <button
+                  onClick={handleRetryPending}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold border border-blue-400 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  Retry {(job.pendingCount ?? 0).toLocaleString()} Pending
                 </button>
               )}
               {isActive && (

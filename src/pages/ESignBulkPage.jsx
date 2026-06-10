@@ -113,6 +113,134 @@ async function fetchFileAsBase64(url, extraHeaders = {}) {
   })
 }
 
+/** Resolve a dot-notation path (e.g. "data.items") against a JSON object. */
+function getJsonAtPath(obj, path) {
+  if (!path) return obj
+  return path.split('.').reduce((cur, key) => {
+    if (cur == null) return undefined
+    const arrMatch = key.match(/^(.+)\[(\d+)\]$/)
+    if (arrMatch) return cur[arrMatch[1]]?.[Number(arrMatch[2])]
+    return cur[key]
+  }, obj)
+}
+
+/**
+ * Walk a JSON value and collect all dot-notation paths that point to
+ * arrays of objects (good candidates as data sources) and scalar leaves.
+ */
+function collectJsonPaths(val, prefix = '', depth = 0, result = []) {
+  if (depth > 6) return result
+  if (Array.isArray(val)) {
+    result.push({ path: prefix, type: 'array', length: val.length, sample: val[0] })
+    if (val.length && typeof val[0] === 'object' && val[0] !== null) {
+      collectJsonPaths(val[0], `${prefix}[0]`, depth + 1, result)
+    }
+  } else if (val !== null && typeof val === 'object') {
+    Object.entries(val).forEach(([k, v]) => {
+      const p = prefix ? `${prefix}.${k}` : k
+      if (Array.isArray(v)) {
+        result.push({ path: p, type: 'array', length: v.length, sample: v[0] })
+        if (v.length && typeof v[0] === 'object') {
+          collectJsonPaths(v[0], `${p}[0]`, depth + 1, result)
+        }
+      } else if (v !== null && typeof v === 'object') {
+        result.push({ path: p, type: 'object' })
+        collectJsonPaths(v, p, depth + 1, result)
+      } else {
+        result.push({ path: p, type: typeof v, value: v })
+      }
+    })
+  }
+  return result
+}
+
+/** Get the keys of the first object inside a resolved JSON path value. */
+function getFieldsAtPath(json, path) {
+  const val = getJsonAtPath(json, path)
+  if (Array.isArray(val) && val.length && typeof val[0] === 'object')
+    return Object.keys(val[0])
+  if (val !== null && typeof val === 'object' && !Array.isArray(val))
+    return Object.keys(val)
+  return []
+}
+
+/* ── JSON Tree explorer (inline component) ─────────────────────────── */
+function JsonTree({ data, path = '', selectedPath, onSelect, depth = 0 }) {
+  const [open, setOpen] = useState(depth < 2)
+  if (depth > 5) return null
+
+  if (Array.isArray(data)) {
+    const isSelected = path === selectedPath
+    return (
+      <div>
+        <button type="button"
+          onClick={() => setOpen(o => !o)}
+          className="flex items-center gap-1 text-xs font-mono text-left w-full hover:bg-gray-100 dark:hover:bg-gray-800 rounded px-1">
+          <span className="text-gray-400 w-3">{open ? '▾' : '▸'}</span>
+          <span className="text-violet-600 dark:text-violet-400 font-semibold">[Array · {data.length}]</span>
+          <button type="button"
+            onClick={e => { e.stopPropagation(); onSelect(path) }}
+            className={`ml-2 text-[10px] px-1.5 py-0.5 rounded font-semibold border transition-colors
+              ${isSelected
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'bg-white dark:bg-gray-900 text-blue-600 border-blue-300 hover:bg-blue-50'}`}>
+            {isSelected ? '✓ Selected' : 'Use this'}
+          </button>
+        </button>
+        {open && data.slice(0, 2).map((item, i) => (
+          <div key={i} className="ml-4 border-l border-gray-200 dark:border-gray-700 pl-2 mt-0.5">
+            <span className="text-[10px] text-gray-400 font-mono">[{i}]</span>
+            <JsonTree data={item} path={`${path}[${i}]`} selectedPath={selectedPath} onSelect={onSelect} depth={depth + 1} />
+          </div>
+        ))}
+        {data.length > 2 && open && <p className="ml-4 text-[10px] text-gray-400 pl-2">…{data.length - 2} more items</p>}
+      </div>
+    )
+  }
+
+  if (data !== null && typeof data === 'object') {
+    const entries = Object.entries(data)
+    const isSelected = path === selectedPath
+    return (
+      <div>
+        {path && (
+          <button type="button"
+            onClick={() => setOpen(o => !o)}
+            className="flex items-center gap-1 text-xs font-mono text-left w-full hover:bg-gray-100 dark:hover:bg-gray-800 rounded px-1">
+            <span className="text-gray-400 w-3">{open ? '▾' : '▸'}</span>
+            <span className="text-amber-600 dark:text-amber-400">{'{ }'}</span>
+            <button type="button"
+              onClick={e => { e.stopPropagation(); onSelect(path) }}
+              className={`ml-2 text-[10px] px-1.5 py-0.5 rounded font-semibold border transition-colors
+                ${isSelected
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-white dark:bg-gray-900 text-blue-600 border-blue-300 hover:bg-blue-50'}`}>
+              {isSelected ? '✓ Selected' : 'Use this'}
+            </button>
+          </button>
+        )}
+        {(open || !path) && entries.map(([k, v]) => (
+          <div key={k} className={`${path ? 'ml-4 border-l border-gray-200 dark:border-gray-700 pl-2' : ''} mt-0.5`}>
+            <span className="text-[10px] font-mono font-semibold text-gray-600 dark:text-gray-400">{k}: </span>
+            <JsonTree data={v} path={path ? `${path}.${k}` : k} selectedPath={selectedPath} onSelect={onSelect} depth={depth + 1} />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  // Scalar leaf
+  const display = data === null ? 'null' : String(data)
+  const color = typeof data === 'number' ? 'text-blue-600 dark:text-blue-400'
+    : typeof data === 'boolean' ? 'text-orange-500'
+    : 'text-green-700 dark:text-green-400'
+  return (
+    <span className={`text-[10px] font-mono ${color}`}>
+      {typeof data === 'string' ? `"${display.slice(0, 60)}${display.length > 60 ? '…' : ''}"` : display}
+    </span>
+  )
+}
+
 /* ─────────────────────────────────────────────────────────────────── */
 /* Step indicator                                                        */
 /* ─────────────────────────────────────────────────────────────────── */
@@ -276,6 +404,12 @@ export default function ESignBulkPage() {
   const [fileApiTested,  setFileApiTested]  = useState(false)
   const [fileApiError,   setFileApiError]   = useState('')
   const [fileApiTestInfo,setFileApiTestInfo]= useState(null) // { size, contentType }
+  // JSON response config (when API returns JSON instead of a binary PDF)
+  const [fileApiRespType,   setFileApiRespType]   = useState('')        // 'pdf' | 'json'
+  const [fileApiJsonRaw,    setFileApiJsonRaw]     = useState(null)      // parsed JSON object
+  const [fileApiJsonPath,   setFileApiJsonPath]    = useState('')        // dot-path user selected
+  const [fileApiJsonAction, setFileApiJsonAction]  = useState('pdf_template') // what to do with the data
+  const [fileApiJsonFields, setFileApiJsonFields]  = useState({})        // field → json-key mapping
 
   // Blob URL for PDF preview in field placement canvas
   const [singlePdfBlobUrl, setSinglePdfBlobUrl] = useState(null)
@@ -572,20 +706,35 @@ export default function ESignBulkPage() {
     setFileApiError('')
     setFileApiTested(false)
     setFileApiTestInfo(null)
+    setFileApiRespType('')
+    setFileApiJsonRaw(null)
+    setFileApiJsonPath('')
+    setFileApiJsonFields({})
     try {
       const testUrl = buildApiUrl(fileApi.url, excelRows[0])
       const res     = await fetch(testUrl, { headers: buildAuthHeaders(fileApi) })
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`)
       const ct = res.headers.get('content-type') || ''
       const cl = res.headers.get('content-length')
-      if (!ct.includes('pdf') && !ct.includes('octet-stream') && !ct.includes('binary')) {
-        throw new Error(`Expected a PDF but received content-type: "${ct || 'unknown'}"`)
+
+      if (ct.includes('json') || ct.includes('text/plain') || ct.includes('text/html')) {
+        const text = await res.text()
+        let parsed
+        try { parsed = JSON.parse(text) } catch { parsed = { raw: text } }
+        setFileApiRespType('json')
+        setFileApiJsonRaw(parsed)
+        setFileApiTestInfo({ contentType: ct, size: null })
+        setFileApiTested(true)
+      } else if (ct.includes('pdf') || ct.includes('octet-stream') || ct.includes('binary')) {
+        setFileApiRespType('pdf')
+        setFileApiTestInfo({
+          contentType: ct,
+          size: cl ? `${Math.round(parseInt(cl) / 1024)} KB` : null,
+        })
+        setFileApiTested(true)
+      } else {
+        throw new Error(`Unsupported content-type: "${ct || 'unknown'}". Expected PDF or JSON.`)
       }
-      setFileApiTestInfo({
-        contentType: ct,
-        size: cl ? `${Math.round(parseInt(cl) / 1024)} KB` : null,
-      })
-      setFileApiTested(true)
     } catch (err) {
       setFileApiError(err.message)
     } finally {
@@ -596,16 +745,41 @@ export default function ESignBulkPage() {
   /* ────────────────────────────────────────────────────────────────── */
   /* Navigation validation                                               */
   /* ────────────────────────────────────────────────────────────────── */
+  // Returns per-source readiness — used by canGoNext and the UI checklist.
+  function step1SourceReady(src) {
+    if (src === 'single')   return !!singlePdfBase64
+    if (src === 'template') return !!selectedTemplateId
+    if (src === 'api') {
+      if (!fileApi.url) return false
+      // If no Excel rows exist yet the test button is disabled — don't block Next.
+      if (!excelRows.length) return true
+      // Once tested: also require JSON path + action when response was JSON.
+      if (fileApiTested)
+        return fileApiRespType !== 'json' || (!!fileApiJsonPath && !!fileApiJsonAction)
+      return false
+    }
+    return false
+  }
+
+  // Human-readable label for what each source still needs.
+  function step1SourceBlockReason(src) {
+    if (src === 'single')   return 'Upload a PDF file'
+    if (src === 'template') return 'Select a PDF template'
+    if (src === 'api') {
+      if (!fileApi.url)    return 'Enter an API URL'
+      if (!excelRows.length) return null          // allowed without test when no rows
+      if (!fileApiTested)  return 'Click "Test with First Row" to verify the API'
+      if (fileApiRespType === 'json' && !fileApiJsonPath)   return 'Select a JSON data path'
+      if (fileApiRespType === 'json' && !fileApiJsonAction) return 'Choose an action for the JSON data'
+    }
+    return null
+  }
+
   function canGoNext() {
     if (step === 0) return excelRows.length > 0
     if (step === 1) {
       if (!activeSources.length) return false
-      const ready = {
-        single:   !!singlePdfBase64,
-        template: !!selectedTemplateId,
-        api:      fileApiTested && !!fileApi.url,
-      }
-      return activeSources.every(s => ready[s])
+      return activeSources.every(s => step1SourceReady(s))
     }
     if (step === 2) return !!(mapping.title && mapping.clientEmail && mapping.clientName)
     return true
@@ -1169,7 +1343,9 @@ export default function ESignBulkPage() {
                           {fileApiError}
                         </p>
                       )}
-                      {fileApiTested && fileApiTestInfo && (
+
+                      {/* ── PDF response success ── */}
+                      {fileApiTested && fileApiRespType === 'pdf' && fileApiTestInfo && (
                         <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400
                                         bg-green-50 dark:bg-green-900/20 rounded-lg px-4 py-2">
                           <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1180,6 +1356,198 @@ export default function ESignBulkPage() {
                             {fileApiTestInfo.size && ` (${fileApiTestInfo.size})`}
                             {' — '}<span className="opacity-70">{fileApiTestInfo.contentType}</span>
                           </span>
+                        </div>
+                      )}
+
+                      {/* ── JSON response config panel ── */}
+                      {fileApiTested && fileApiRespType === 'json' && fileApiJsonRaw && (
+                        <div className="space-y-4 border border-blue-200 dark:border-blue-800
+                                        bg-blue-50/40 dark:bg-blue-900/10 rounded-xl p-4">
+                          {/* Header */}
+                          <div className="flex items-center gap-2">
+                            <svg className="w-4 h-4 text-blue-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/>
+                            </svg>
+                            <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                              JSON response received
+                              <span className="font-normal text-blue-500 ml-2 text-xs">{fileApiTestInfo.contentType}</span>
+                            </p>
+                          </div>
+
+                          {/* Step 1 — JSON Explorer */}
+                          <div>
+                            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1.5">
+                              <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] font-bold">1</span>
+                              Select the data block to use
+                            </p>
+                            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700
+                                            rounded-lg p-3 max-h-56 overflow-y-auto font-mono text-xs leading-5">
+                              <JsonTree
+                                data={fileApiJsonRaw}
+                                selectedPath={fileApiJsonPath}
+                                onSelect={path => {
+                                  setFileApiJsonPath(path)
+                                  setFileApiJsonFields({})
+                                }}
+                              />
+                            </div>
+                            {fileApiJsonPath && (
+                              <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                                Selected: <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-blue-600 dark:text-blue-400">{fileApiJsonPath}</code>
+                                {' — '}
+                                {(() => {
+                                  const val = getJsonAtPath(fileApiJsonRaw, fileApiJsonPath)
+                                  if (Array.isArray(val)) return `Array of ${val.length} items`
+                                  if (val !== null && typeof val === 'object') return 'Object'
+                                  return `${typeof val}: ${String(val).slice(0, 40)}`
+                                })()}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Step 2 — Action */}
+                          <div>
+                            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1.5">
+                              <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] font-bold">2</span>
+                              What do you want to do with this data?
+                            </p>
+                            <div className="grid grid-cols-1 gap-2">
+                              {[
+                                { value: 'pdf_template',  icon: '📄', label: 'Generate PDF using a template',       desc: 'Map JSON fields to a PDF template\'s placeholders' },
+                                { value: 'create_excel',  icon: '📊', label: 'Create / append to Excel file',       desc: 'Write the selected JSON data into an Excel (.xlsx) sheet' },
+                                { value: 'create_pdf',    icon: '🖨️', label: 'Build a custom PDF',                  desc: 'Map JSON fields to a PDF layout built in the PDF builder' },
+                                { value: 'download_json', icon: '⬇️', label: 'Download as JSON',                    desc: 'Save the selected JSON block as a .json file per row' },
+                                { value: 'data_only',     icon: '🔗', label: 'Use as data input only',              desc: 'Pass JSON data to e-sign fields or column mapping without generating a file' },
+                              ].map(opt => (
+                                <label key={opt.value}
+                                  className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors
+                                    ${fileApiJsonAction === opt.value
+                                      ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-400 dark:border-blue-600'
+                                      : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 hover:border-blue-300'}`}>
+                                  <input type="radio" name="jsonAction" value={opt.value}
+                                    checked={fileApiJsonAction === opt.value}
+                                    onChange={() => { setFileApiJsonAction(opt.value); setFileApiJsonFields({}) }}
+                                    className="mt-0.5 accent-blue-600" />
+                                  <span className="text-lg leading-none mt-0.5">{opt.icon}</span>
+                                  <span>
+                                    <span className="block text-sm font-semibold text-gray-800 dark:text-gray-200">{opt.label}</span>
+                                    <span className="block text-xs text-gray-500 dark:text-gray-400">{opt.desc}</span>
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Step 3 — Field mapping (shown when a path is selected) */}
+                          {fileApiJsonPath && fileApiJsonAction !== 'download_json' && fileApiJsonAction !== 'data_only' && (() => {
+                            const fields = getFieldsAtPath(fileApiJsonRaw, fileApiJsonPath)
+                            if (!fields.length) return null
+                            const outputLabels = fileApiJsonAction === 'create_excel'
+                              ? fields.map(f => ({ key: f, label: f }))   // for Excel: map to column names
+                              : fileApiJsonAction === 'pdf_template' || fileApiJsonAction === 'create_pdf'
+                                ? [
+                                    { key: 'title',       label: 'Document Title' },
+                                    { key: 'recipient',   label: 'Recipient Name' },
+                                    { key: 'email',       label: 'Recipient Email' },
+                                    { key: 'amount',      label: 'Amount / Value' },
+                                    { key: 'date',        label: 'Date' },
+                                    { key: 'reference',   label: 'Reference / ID' },
+                                    { key: 'description', label: 'Description' },
+                                    { key: 'custom_1',    label: 'Custom Field 1' },
+                                    { key: 'custom_2',    label: 'Custom Field 2' },
+                                  ]
+                                : []
+                            return (
+                              <div>
+                                <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1.5">
+                                  <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-blue-600 text-white text-[10px] font-bold">3</span>
+                                  {fileApiJsonAction === 'create_excel'
+                                    ? 'Select JSON fields to include as Excel columns'
+                                    : 'Map JSON fields to output fields'}
+                                </p>
+                                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700
+                                                rounded-lg overflow-hidden">
+                                  <table className="w-full text-xs">
+                                    <thead>
+                                      <tr className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                                        <th className="text-left px-3 py-2 font-semibold text-gray-600 dark:text-gray-400 w-1/2">
+                                          {fileApiJsonAction === 'create_excel' ? 'JSON Field' : 'Output Field'}
+                                        </th>
+                                        <th className="text-left px-3 py-2 font-semibold text-gray-600 dark:text-gray-400 w-1/2">
+                                          {fileApiJsonAction === 'create_excel' ? 'Excel Column Name' : 'JSON Field'}
+                                        </th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {fileApiJsonAction === 'create_excel'
+                                        ? fields.map(f => (
+                                            <tr key={f} className="border-b border-gray-100 dark:border-gray-800 last:border-0">
+                                              <td className="px-3 py-2">
+                                                <label className="flex items-center gap-2 cursor-pointer">
+                                                  <input type="checkbox"
+                                                    checked={fileApiJsonFields[f] !== undefined}
+                                                    onChange={e => setFileApiJsonFields(prev => {
+                                                      const next = { ...prev }
+                                                      if (e.target.checked) next[f] = f
+                                                      else delete next[f]
+                                                      return next
+                                                    })}
+                                                    className="accent-blue-600" />
+                                                  <code className="text-blue-600 dark:text-blue-400">{f}</code>
+                                                </label>
+                                              </td>
+                                              <td className="px-3 py-2">
+                                                <input type="text"
+                                                  value={fileApiJsonFields[f] ?? ''}
+                                                  placeholder={f}
+                                                  disabled={fileApiJsonFields[f] === undefined}
+                                                  onChange={e => setFileApiJsonFields(prev => ({ ...prev, [f]: e.target.value }))}
+                                                  className="w-full border border-gray-200 dark:border-gray-700 rounded px-2 py-1
+                                                             bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200
+                                                             disabled:opacity-40 text-xs" />
+                                              </td>
+                                            </tr>
+                                          ))
+                                        : outputLabels.map(({ key, label }) => (
+                                            <tr key={key} className="border-b border-gray-100 dark:border-gray-800 last:border-0">
+                                              <td className="px-3 py-2 text-gray-700 dark:text-gray-300 font-medium">{label}</td>
+                                              <td className="px-3 py-2">
+                                                <select
+                                                  value={fileApiJsonFields[key] ?? ''}
+                                                  onChange={e => setFileApiJsonFields(prev => ({ ...prev, [key]: e.target.value }))}
+                                                  className="w-full border border-gray-200 dark:border-gray-700 rounded px-2 py-1
+                                                             bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 text-xs">
+                                                  <option value="">— not mapped —</option>
+                                                  {fields.map(f => <option key={f} value={f}>{f}</option>)}
+                                                </select>
+                                              </td>
+                                            </tr>
+                                          ))
+                                      }
+                                    </tbody>
+                                  </table>
+                                </div>
+                                {fileApiJsonAction === 'create_excel' && (
+                                  <p className="mt-1.5 text-xs text-gray-400">
+                                    {Object.keys(fileApiJsonFields).length} column{Object.keys(fileApiJsonFields).length !== 1 ? 's' : ''} selected
+                                  </p>
+                                )}
+                              </div>
+                            )
+                          })()}
+
+                          {/* Completion indicator */}
+                          {fileApiJsonPath && fileApiJsonAction && (
+                            <div className="flex items-center gap-2 text-xs text-green-700 dark:text-green-400
+                                            bg-green-50 dark:bg-green-900/20 rounded-lg px-3 py-2">
+                              <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/>
+                              </svg>
+                              API JSON configured — path: <code className="ml-1 bg-green-100 dark:bg-green-900/40 px-1 rounded">{fileApiJsonPath}</code>
+                              <span className="mx-1">·</span>
+                              action: <strong className="ml-1">{fileApiJsonAction.replace(/_/g, ' ')}</strong>
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -1894,25 +2262,59 @@ export default function ESignBulkPage() {
         {step === 4 && renderStep4()}
 
         {step < 4 && (
-          <div className="flex justify-between mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <button type="button" onClick={goBack} disabled={step === 0 || processing}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400
-                         border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50
-                         dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/>
-              </svg>
-              Back
-            </button>
-            <button type="button" onClick={goNext} disabled={!canGoNext()}
-              className="flex items-center gap-2 px-5 py-2 text-sm font-medium bg-purple-600 text-white
-                         rounded-lg hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed
-                         transition-colors">
-              {step === 3 ? 'Proceed to Processing' : 'Next'}
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
-              </svg>
-            </button>
+          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+            {/* Step 1 — per-source readiness checklist (only shown when blocked) */}
+            {step === 1 && !canGoNext() && activeSources.length > 0 && (
+              <div className="mb-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200
+                              dark:border-amber-800 rounded-xl px-4 py-3 space-y-1.5">
+                <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 mb-2">
+                  Complete the following before continuing:
+                </p>
+                {activeSources.map(src => {
+                  const done   = step1SourceReady(src)
+                  const reason = step1SourceBlockReason(src)
+                  const label  = src === 'single' ? 'Upload PDF' : src === 'template' ? 'PDF Template' : 'External API'
+                  return (
+                    <div key={src} className="flex items-start gap-2 text-xs">
+                      {done
+                        ? <svg className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/>
+                          </svg>
+                        : <svg className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="9" strokeWidth={2}/>
+                            <path strokeLinecap="round" strokeWidth={2} d="M12 8v4m0 4h.01"/>
+                          </svg>
+                      }
+                      <span className={done ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-300'}>
+                        <strong>{label}:</strong>{' '}
+                        {done ? 'Ready' : (reason ?? 'Complete configuration')}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            <div className="flex justify-between">
+              <button type="button" onClick={goBack} disabled={step === 0 || processing}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400
+                           border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50
+                           dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/>
+                </svg>
+                Back
+              </button>
+              <button type="button" onClick={goNext} disabled={!canGoNext()}
+                className="flex items-center gap-2 px-5 py-2 text-sm font-medium bg-purple-600 text-white
+                           rounded-lg hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed
+                           transition-colors">
+                {step === 3 ? 'Proceed to Processing' : 'Next'}
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
+                </svg>
+              </button>
+            </div>
           </div>
         )}
       </div>

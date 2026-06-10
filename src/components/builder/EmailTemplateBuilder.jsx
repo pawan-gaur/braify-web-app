@@ -138,6 +138,23 @@ export default function EmailTemplateBuilder({
     const editor = grapesjs.init(EMAIL_EDITOR_CONFIG('email-gjs-canvas'))
     editorRef.current = editor
 
+    // ── Register th/td as text-type components so double-click opens the RTE.
+    //    GrapesJS only activates RTE for components whose type extends 'text';
+    //    setting editable:true on a generic component is not sufficient.
+    for (const tag of ['th', 'td']) {
+      editor.DomComponents.addType(tag, {
+        extend: 'text',
+        isComponent: el => el.tagName?.toUpperCase() === tag.toUpperCase(),
+        model: {
+          defaults: {
+            tagName: tag,
+            editable: true,
+            droppable: false,  // prevent accidental block drops into cells
+          },
+        },
+      })
+    }
+
     // ── Register component:add BEFORE loading so every component — whether
     //    dragged from the block panel or hydrated from saved data — gets
     //    resize handles, draggable and droppable flags applied immediately.
@@ -1340,8 +1357,7 @@ const RESIZABLE_TAGS = new Set([
 // Elements that may also RECEIVE dropped children.
 const DROPPABLE_TAGS = new Set([
   'div', 'section', 'article', 'header', 'footer', 'nav', 'aside', 'main',
-  'table', 'thead', 'tbody', 'tfoot',
-  'tr', 'td', 'th',
+  'table', 'thead', 'tbody', 'tfoot', 'tr',
   'ul', 'ol', 'dl',
   'figure', 'details',
 ])

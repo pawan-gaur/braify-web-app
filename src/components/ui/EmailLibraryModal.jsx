@@ -6,6 +6,7 @@ const ACCENT_COLORS = {
   marketing:     { bg: 'bg-orange-50 dark:bg-orange-900/20', text: 'text-orange-600 dark:text-orange-400', border: 'border-orange-200 dark:border-orange-800' },
   onboarding:    { bg: 'bg-violet-50 dark:bg-violet-900/20', text: 'text-violet-600 dark:text-violet-400', border: 'border-violet-200 dark:border-violet-800' },
   notification:  { bg: 'bg-amber-50 dark:bg-amber-900/20',  text: 'text-amber-600 dark:text-amber-400',  border: 'border-amber-200 dark:border-amber-800'  },
+  operational:   { bg: 'bg-sky-50 dark:bg-sky-900/20',      text: 'text-sky-700 dark:text-sky-400',      border: 'border-sky-200 dark:border-sky-800'      },
 }
 
 /**
