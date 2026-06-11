@@ -116,74 +116,187 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
     const editor = grapesjs.init(EDITOR_CONFIG('gjs-canvas'))
     editorRef.current = editor
 
-    // ── Image resize: GrapesJS 0.21's built-in image type has
-    //    resizable:{ ratioDefault:1 } which gives only ratio-locked resize.
-    //    We override it with all 8 handles + free resize, and use
-    //    updateTarget to write CSS width/height (not HTML attributes) so
-    //    the PDF renderer always picks up the correct size.
+    // ── Register th/td as text-type so double-click opens the RTE in tables ──
+    for (const tag of ['th', 'td']) {
+      editor.DomComponents.addType(tag, {
+        extend: 'text',
+        isComponent: el => el.tagName?.toUpperCase() === tag.toUpperCase(),
+        model: { defaults: { tagName: tag, editable: true, droppable: false } },
+      })
+    }
+
+    // ── Image component override ───────────────────────────────────────────────
+    // • 8 resize handles, no ratio lock
+    // • position:absolute + default top/left so the image can be freely placed
+    //   anywhere on the page (GrapesJS updates top/left when the user drags it)
+    // • width/height as CSS px so the PDF renderer always sees explicit sizes
     editor.DomComponents.addType('image', {
       extend: 'image',
       model: {
         defaults: {
           resizable: {
-            handles:    ['tl','tc','tr','cl','cr','bl','bc','br'],
-            minWidth:   20,
-            minHeight:  20,
-            ratioDefault: 0,            // 0 = free resize (no locked ratio)
-            // updateTarget is called every tick during drag-resize.
-            // We write to CSS so both the canvas and PDF renderer see the size.
-            updateTarget(el, rect) {
-              if (rect.w) el.style.width  = rect.w + 'px'
-              if (rect.h) el.style.height = rect.h + 'px'
-            },
+            handles: ['tl','tc','tr','cl','cr','bl','bc','br'],
+            minWidth: 20, minHeight: 20, ratioDefault: 0,
           },
-          // Add Width/Height inputs to the Traits panel for precise entry.
+          style: { position: 'absolute', top: '20px', left: '20px', width: '200px', height: 'auto' },
+          draggable: true,
           traits: [
-            { type: 'text',   name: 'src',   label: 'Image URL' },
-            { type: 'text',   name: 'alt',   label: 'Alt text'  },
+            { type: 'text', name: 'src', label: 'Image URL' },
+            { type: 'text', name: 'alt', label: 'Alt text'  },
           ],
         },
       },
     })
 
-    // After a resize drag ends, commit the element's rendered dimensions as
-    // CSS width/height on the component model so they survive save/reload.
-    editor.on('component:resize', component => {
-      if (component?.get('tagName')?.toLowerCase() !== 'img') return
-      const el = component.getEl()
-      if (!el) return
-      const w = el.offsetWidth
-      const h = el.offsetHeight
-      if (w > 0 && h > 0) {
-        component.setStyle({ ...component.getStyle(), width: w + 'px', height: h + 'px' })
-      }
-    })
+    editor.on('component:add', enableResize)
 
     if (initialTemplate?.gjsData) {
       try { editor.loadProjectData(JSON.parse(initialTemplate.gjsData)) }
       catch { editor.setComponents(initialTemplate.htmlContent || ''); editor.setStyle(initialTemplate.cssContent || '') }
     } else if (initialTemplate?.htmlContent) {
-      // Starter templates ship only with raw HTML/CSS — no gjsData yet
       editor.setComponents(initialTemplate.htmlContent)
       editor.setStyle(initialTemplate.cssContent || '')
-      // Scan placeholders on first load
       setTimeout(() => refreshPlaceholders(editor.getHtml()), 200)
     }
+
+    // ── Track where the user drops a block from the panel ─────────────────
+    // When a block is dragged from the panel and dropped onto the canvas,
+    // GrapesJS fires component:add with the default top/left (20px/20px).
+    // We track the mouse position over the canvas during the drag so we can
+    // move the freshly-added image to the actual drop location.
+    let blockDropPos   = null  // { x, y } in canvas CSS pixels (zoom-corrected)
+    let blockDragging  = false
+
+    editor.on('block:drag:start', () => {
+      blockDragging = true
+      blockDropPos  = null
+    })
+
+    // block:drag:stop fires with the newly created component (or null on cancel).
+    // At this point the component is already in the model with the default position.
+    // We update top/left to the actual drop coordinates and force-select it.
+    editor.on('block:drag:stop', droppedComp => {
+      blockDragging = false
+      if (!droppedComp || droppedComp.get('tagName')?.toLowerCase() !== 'img') {
+        blockDropPos = null
+        return
+      }
+      if (blockDropPos) {
+        // Use rAF so the DOM has rendered the component before we mutate its style
+        requestAnimationFrame(() => {
+          droppedComp.setStyle({
+            ...droppedComp.getStyle(),
+            left: Math.max(0, blockDropPos.x) + 'px',
+            top:  Math.max(0, blockDropPos.y) + 'px',
+          })
+          editor.select(droppedComp)
+        })
+      } else {
+        // No position captured (e.g. dropped outside canvas) — still select it
+        requestAnimationFrame(() => editor.select(droppedComp))
+      }
+      blockDropPos = null
+    })
+
+    editor.once('load', () => {
+      editor.getComponents().each(c => enableResize(c))
+
+      const canvasDoc = editor.Canvas.getDocument()
+
+      // Track the mouse position over the canvas during block panel drags.
+      // This is the only reliable way to know WHERE the user dropped the block.
+      canvasDoc.addEventListener('mousemove', e => {
+        if (!blockDragging) return
+        const zoom = (editor.Canvas.getZoom() ?? 100) / 100
+        blockDropPos = {
+          x: e.clientX / zoom,
+          y: e.clientY / zoom,
+        }
+      })
+
+      // ── Free-form image drag (move an already-placed image) ──────────────
+      // GrapesJS's Sorter intercepts drag events on the canvas and does DOM
+      // reordering even for position:absolute elements.  We use capture-phase
+      // listeners so our handler fires first; we update top/left ourselves
+      // and call stopPropagation() so the Sorter never sees image drags.
+      let imgDrag = null
+
+      function findByEl(el) {
+        let found = null
+        const walk = c => {
+          if (found) return
+          try { if (c.getEl() === el) { found = c; return } } catch { return }
+          c.components().each(walk)
+        }
+        walk(editor.getWrapper())
+        return found
+      }
+
+      canvasDoc.addEventListener('mousedown', e => {
+        // Only intercept clicks on already-placed images, not block-panel drops
+        if (e.target?.tagName !== 'IMG' || blockDragging) return
+        const comp = findByEl(e.target)
+        if (!comp) return
+        editor.select(comp)
+        const s = comp.getStyle()
+        imgDrag = {
+          comp,
+          startX: e.clientX, startY: e.clientY,
+          origLeft: parseFloat(s.left) || 0,
+          origTop:  parseFloat(s.top)  || 0,
+        }
+        canvasDoc.body.style.cursor = 'grabbing'
+        e.stopPropagation()
+        e.preventDefault()
+      }, true)
+
+      canvasDoc.addEventListener('mousemove', e => {
+        if (!imgDrag) return
+        const { comp, startX, startY, origLeft, origTop } = imgDrag
+        const zoom = (editor.Canvas.getZoom() ?? 100) / 100
+        comp.setStyle({
+          ...comp.getStyle(),
+          left: Math.max(0, origLeft + (e.clientX - startX) / zoom) + 'px',
+          top:  Math.max(0, origTop  + (e.clientY - startY) / zoom) + 'px',
+        })
+        e.stopPropagation()
+      }, true)
+
+      canvasDoc.addEventListener('mouseup', () => {
+        if (imgDrag) {
+          imgDrag = null
+          canvasDoc.body.style.cursor = ''
+        }
+        // After a resize drag ends, sync the DOM pixel dimensions back to the
+        // component model so the saved HTML always has an explicit width/height.
+        // Guard: the setTimeout may fire after editor.destroy() on unmount —
+        // editorRef.current is nulled in the cleanup, so we bail out safely.
+        setTimeout(() => {
+          if (!editorRef.current) return
+          try {
+            const sel = editor.getSelected()
+            if (!sel || sel.get('tagName')?.toLowerCase() !== 'img') return
+            const el = sel.getEl()
+            if (!el) return
+            const w = el.offsetWidth
+            const h = el.offsetHeight
+            if (w > 0 && h > 0) {
+              const cur = sel.getStyle()
+              if (cur.width !== w + 'px' || cur.height !== h + 'px')
+                sel.setStyle({ ...cur, width: w + 'px', height: h + 'px' })
+            }
+          } catch { /* editor was destroyed mid-timeout — ignore */ }
+        }, 50)
+      }, true)
+    })
 
     editor.on('component:update component:add component:remove', () => {
       refreshPlaceholders(editor.getHtml())
     })
+    editor.on('rte:enable', () => requestAnimationFrame(() => injectRteExtras(editor)))
+    editor.on('rte:disable', () => document.querySelectorAll('.rte-extras').forEach(el => el.remove()))
 
-    editor.on('component:add', enableResize)
-
-    editor.on('rte:enable', () => {
-      requestAnimationFrame(() => injectRteExtras(editor))
-    })
-    editor.on('rte:disable', () => {
-      document.querySelectorAll('.rte-extras').forEach(el => el.remove())
-    })
-
-    return () => { editor.destroy(); mountedRef.current = false }
+    return () => { editorRef.current = null; editor.destroy(); mountedRef.current = false }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── Block search filter ─────────────────────────────────────────────────── */
@@ -876,13 +989,40 @@ const RESIZE_CONFIG = {
 
 function enableResize(component) {
   const tag = component.get('tagName')?.toLowerCase()
-  if (tag && RESIZABLE_TAGS.has(tag)) {
-    // img: the addType('image') override already sets the correct resizable
-    //      config as a model default. Skip here so we don't clobber it.
-    if (tag !== 'img' && !component.get('resizable')) {
-      component.set('resizable', RESIZE_CONFIG)
-    }
+  if (!tag || !RESIZABLE_TAGS.has(tag)) {
+    component.components().each(child => enableResize(child))
+    return
   }
+
+  if (tag === 'img') {
+    // Ensure images always have:
+    //  • position:absolute so they can be dragged anywhere
+    //  • explicit CSS width/height in px so the PDF renderer uses the right size
+    //    (falls back to HTML width/height attributes for templates saved before this change)
+    component.set('draggable', true)
+    const style = component.getStyle()
+    const attrs = component.getAttributes()
+    const attrW = attrs.width  && !isNaN(Number(attrs.width))  ? Number(attrs.width)  + 'px' : null
+    const attrH = attrs.height && !isNaN(Number(attrs.height)) ? Number(attrs.height) + 'px' : null
+    // Resolve final width/height: CSS style > HTML attribute > default
+    const resolvedW = style.width  || attrW  || '200px'
+    const resolvedH = style.height || attrH  || 'auto'
+    const newStyle = {
+      position: 'absolute',
+      top:      '20px',
+      left:     '20px',
+      ...style,          // existing style wins (preserves saved top/left/etc.)
+      width:    resolvedW,
+      height:   resolvedH,
+    }
+    component.setStyle(newStyle)
+    // Resize config is set as a model default in addType — only set if missing
+    if (!component.get('resizable')) component.set('resizable', RESIZE_CONFIG)
+  } else if (!component.get('resizable')) {
+    component.set('resizable', RESIZE_CONFIG)
+    component.set('draggable', true)
+  }
+
   component.components().each(child => enableResize(child))
 }
 

@@ -657,4 +657,162 @@ export const STARTER_CATEGORIES = [
       },
     ],
   },
+
+  // ── Healthcare ────────────────────────────────────────────────────────────
+  {
+    id: 'healthcare',
+    label: 'Healthcare',
+    icon: '🏥',
+    color: '#0f766e',
+    bg: '#f0fdfa',
+    description: 'Healthcare billing, reconciliation, and sign-off documents.',
+    pageSize: 'A4',
+    orientation: 'portrait',
+    templates: [
+      {
+        id: 'invoice-reconciliation-signoff',
+        name: 'Invoice Reconciliation Sign-Off',
+        description: 'Eden Care–style invoice reconciliation document with amount table, notes, dual-signatory section, and branded footer.',
+        tags: ['healthcare', 'reconciliation', 'signoff', 'billing', 'eden-care'],
+        html: `<div style="font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;background:#fff;padding:0;margin:0;">
+
+  <!-- ── Logo header ── -->
+  <div style="text-align:center;margin-bottom:20px;padding-top:8px;">
+    <img src="https://eden-static-files.s3.ap-south-1.amazonaws.com/logo-eden.png"
+         alt="Eden Care" style="width:180px;height:auto;"/>
+  </div>
+
+  <!-- ── Document title ── -->
+  <p style="text-align:center;font-size:14px;font-weight:bold;text-transform:uppercase;
+             letter-spacing:0.5px;margin:0 0 20px;">
+    INVOICE RECONCILIATION SIGN-OFF
+  </p>
+
+  <!-- ── Meta block ── -->
+  <p style="font-size:12px;margin:0 0 4px;"><strong>Date:</strong> {{date}}</p>
+  <p style="font-size:12px;margin:0 0 4px;"><strong>Service Provider (SP):</strong> {{provider_name}}</p>
+  <p style="font-size:12px;margin:0 0 18px;"><strong>Claim Invoices:</strong> {{claim_period}}</p>
+
+  <!-- ── Intro text ── -->
+  <p style="font-size:12px;line-height:1.6;margin:0 0 12px;">
+    This document summarizes the reconciliation of accounts between Eden Care Healthcare
+    (Rwanda) ltd and {{provider_name}} as of {{reconciliation_date}}.
+  </p>
+  <p style="font-size:12px;margin:0 0 16px;">Below are the key details:</p>
+
+  <!-- ── Amounts table ── -->
+  <table width="100%" cellpadding="0" cellspacing="0"
+         style="border-collapse:collapse;margin-bottom:24px;">
+    <thead>
+      <tr style="border-bottom:2px solid #1a1a1a;">
+        <th style="text-align:left;font-size:12px;padding:6px 8px 6px 0;width:65%;">Description</th>
+        <th style="text-align:right;font-size:12px;padding:6px 0;">Amount (RWF)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom:1px solid #e5e7eb;">
+        <td style="font-size:12px;padding:8px 8px 8px 0;">1. Total Amount Invoiced</td>
+        <td style="font-size:12px;padding:8px 0;text-align:right;color:#ca8a04;font-weight:600;">{{claim_amount}}</td>
+      </tr>
+      <tr style="border-bottom:1px solid #e5e7eb;">
+        <td style="font-size:12px;padding:8px 8px 8px 0;">2. Amount Payable After Reconciliation</td>
+        <td style="font-size:12px;padding:8px 0;text-align:right;color:#ca8a04;font-weight:600;">{{payable_after_discount}}</td>
+      </tr>
+      <tr style="border-bottom:1px solid #e5e7eb;">
+        <td style="font-size:12px;padding:8px 8px 8px 0;">3. Not Payable After Reconciliation</td>
+        <td style="font-size:12px;padding:8px 0;text-align:right;color:#ca8a04;font-weight:600;">{{rejected_amount}}</td>
+      </tr>
+      <tr style="border-bottom:1px solid #e5e7eb;">
+        <td style="font-size:12px;padding:8px 8px 8px 0;">4. Previous amount not paid, supposed to be paid</td>
+        <td style="font-size:12px;padding:8px 0;text-align:right;">{{previous_unpaid}}</td>
+      </tr>
+      <tr style="border-bottom:1px solid #e5e7eb;">
+        <td style="font-size:12px;padding:8px 8px 8px 0;">5. Early payment discount</td>
+        <td style="font-size:12px;padding:8px 0;text-align:right;color:#ca8a04;font-weight:600;">{{discount_amount}}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ── Notes ── -->
+  <p style="font-size:12px;font-weight:bold;margin:0 0 8px;">Notes:</p>
+  <ul style="margin:0 0 16px;padding-left:20px;">
+    <li style="font-size:12px;line-height:1.6;margin-bottom:6px;">
+      The "Amount Payable After Reconciliation" reflects the agreed final amount after
+      reviewing the invoices, deductions, and adjustments.
+    </li>
+    <li style="font-size:12px;line-height:1.6;">
+      The "Not Payable After Reconciliation" represents disallowed or disputed charges
+      that will not be settled as part of this agreement.
+    </li>
+  </ul>
+
+  <p style="font-size:12px;line-height:1.6;margin:0 0 24px;">
+    Both parties confirm the accuracy of this reconciliation and agree to the final
+    amounts stated above.
+  </p>
+
+  <!-- ── Signatories ── -->
+  <p style="font-size:13px;font-weight:bold;margin:0 0 12px;">Authorized Signatories</p>
+
+  <table width="100%" cellpadding="0" cellspacing="0"
+         style="border-collapse:collapse;margin-bottom:32px;">
+    <tr>
+      <td style="width:50%;vertical-align:top;padding-right:24px;">
+        <p style="font-size:12px;font-weight:bold;margin:0 0 20px;border-bottom:1px solid #e5e7eb;padding-bottom:8px;">
+          For Eden Care Healthcare (Rwanda) ltd
+        </p>
+        <p style="font-size:12px;margin:0 0 18px;">Name: {{eden_signatory_name}}</p>
+        <p style="font-size:12px;margin:0 0 18px;">Title: {{eden_signatory_title}}</p>
+        <p style="font-size:12px;margin:0 0 18px;">
+          Signature: <span style="display:inline-block;width:160px;border-bottom:1px solid #1a1a1a;">&nbsp;</span>
+        </p>
+        <p style="font-size:12px;margin:0;">
+          Date: <span style="display:inline-block;width:60px;">&nbsp;</span>{{eden_sign_date}}<span style="display:inline-block;width:60px;">&nbsp;</span>
+        </p>
+      </td>
+      <td style="width:50%;vertical-align:top;padding-left:24px;border-left:1px solid #e5e7eb;">
+        <p style="font-size:12px;font-weight:bold;margin:0 0 20px;border-bottom:1px solid #e5e7eb;padding-bottom:8px;">
+          For {{provider_name}}
+        </p>
+        <p style="font-size:12px;margin:0 0 18px;">Name: {{provider_signatory_name}}</p>
+        <p style="font-size:12px;margin:0 0 18px;">Title: {{provider_signatory_title}}</p>
+        <p style="font-size:12px;margin:0 0 18px;">
+          Signature: <span style="display:inline-block;width:130px;border-bottom:1px solid #1a1a1a;">&nbsp;</span>
+        </p>
+        <p style="font-size:12px;margin:0;">
+          Date: <span style="display:inline-block;width:140px;border-bottom:1px solid #1a1a1a;">&nbsp;</span>
+        </p>
+      </td>
+    </tr>
+  </table>
+
+  <!-- ── Footer ── -->
+  <div style="background:#1e4a4a;padding:14px 24px;margin-top:16px;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+      <tr>
+        <td style="text-align:center;width:33%;">
+          <span style="color:#fff;font-size:11px;">📞 +250 791 446 610</span>
+        </td>
+        <td style="text-align:center;width:33%;">
+          <span style="color:#fff;font-size:11px;">📍 KN 78 St, Kigali, Rwanda</span>
+        </td>
+        <td style="text-align:center;width:33%;">
+          <span style="color:#fff;font-size:11px;">✉ info@edencaremedical.com</span>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+</div>`,
+        css: `body { margin: 0; padding: 0; }`,
+        placeholders: [
+          'date', 'provider_name', 'claim_period', 'reconciliation_date',
+          'claim_amount', 'payable_after_discount', 'rejected_amount',
+          'previous_unpaid', 'discount_amount',
+          'eden_signatory_name', 'eden_signatory_title', 'eden_sign_date',
+          'provider_signatory_name', 'provider_signatory_title',
+        ],
+      },
+    ],
+  },
 ]

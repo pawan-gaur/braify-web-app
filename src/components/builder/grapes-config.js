@@ -11,11 +11,23 @@ export const EDITOR_CONFIG = (containerId) => ({
   storageManager: false,
   undoManager: { trackChanges: true },
 
+  // Setting frameContent to '' skips GrapesJS's document.write() call that
+  // causes Chrome to treat the iframe as sandboxed (URL: about:srcdoc) and
+  // block all script execution inside it.  With an empty string the iframe
+  // stays at about:blank — a proper same-origin context — and GrapesJS's own
+  // renderHead() still injects all required CSS / scripts correctly.
+  frameContent: '',
+
   canvas: {
     styles: [
+      // position:relative makes the body the containing block for
+      // position:absolute images — same role as in the PDF renderer.
+      // Zero padding ensures canvas coordinates match PDF coordinates 1:1.
+      // The gray surround comes from .gjs-frame-wrapper (outside the iframe).
       `data:text/css,
-        body { background: #94a3b8; padding: 30px; font-family: Arial, sans-serif; }
+        body { position: relative; margin: 0; padding: 0; background: #ffffff; font-family: Arial, sans-serif; }
         .gjs-frame-wrapper { background: #94a3b8; }
+        .gjs-selected { outline: 2px solid #7c3aed !important; }
       `,
     ],
   },
