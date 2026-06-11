@@ -68,7 +68,7 @@ function parseExcelFile(file) {
           .filter(r => headers.some((_, i) => r[i] !== '' && r[i] !== undefined))
           .map(r =>
             Object.fromEntries(
-              headers.map((h, i) => [h, r[i] !== undefined && r[i] !== '' ? String(r[i]) : ''])
+              headers.map((h, i) => [h, r[i] !== undefined && r[i] !== '' ? cellStr(r[i]) : ''])
             )
           )
         if (!rows.length) throw new Error('No data rows found in the file')
@@ -78,6 +78,17 @@ function parseExcelFile(file) {
     reader.onerror = () => reject(new Error('Failed to read file'))
     reader.readAsArrayBuffer(file)
   })
+}
+
+/**
+ * Convert a raw SheetJS cell value to a clean string, stripping IEEE 754
+ * floating-point noise from numeric cells (e.g. 652455.65 → "652455.65",
+ * not "652455.6500000001").
+ */
+function cellStr(v) {
+  if (v == null) return ''
+  if (typeof v === 'number') return String(parseFloat(v.toPrecision(15)))
+  return String(v)
 }
 
 /** Substitute {ColumnName} placeholders in a URL template with row values. */

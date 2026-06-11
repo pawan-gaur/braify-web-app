@@ -14,6 +14,9 @@ export const EMAIL_EDITOR_CONFIG = (containerId) => ({
   storageManager: false,
   undoManager: { trackChanges: true },
 
+  // Same fix as PDF builder: skip document.write() to avoid about:srcdoc sandbox error.
+  frameContent: '',
+
   canvas: {
     styles: [
       `data:text/css,

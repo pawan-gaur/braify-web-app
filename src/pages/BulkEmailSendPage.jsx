@@ -62,6 +62,18 @@ const ATT_OPTIONS = [
 // ── Helpers ────────────────────────────────────────────────────────────────────
 const INPUT = 'w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-400'
 
+/**
+ * Convert a raw SheetJS cell value to a clean string.
+ * SheetJS returns Excel numbers as JS floats which can carry IEEE 754 noise
+ * (e.g. 652455.65 → 652455.6500000001).  Routing through toPrecision(15)
+ * keeps all meaningful digits while stripping the noise.
+ */
+function cellStr(v) {
+  if (v == null) return ''
+  if (typeof v === 'number') return String(parseFloat(v.toPrecision(15)))
+  return String(v)
+}
+
 function fmtBytes(b) {
   if (!b) return ''
   if (b < 1024) return `${b} B`
@@ -117,6 +129,7 @@ export default function BulkEmailSendPage() {
   const [xlsxColumns,  setXlsxColumns]  = useState([])
   const [emailColumn,  setEmailColumn]  = useState('')
   const [nameColumn,   setNameColumn]   = useState('')
+  const [ccColumns,    setCcColumns]    = useState([])   // column names whose values become CC addresses
   const [xlsxFileName, setXlsxFileName] = useState('')
   const [xlsxDragOver, setXlsxDragOver] = useState(false)
   const xlsxRef = useRef()
@@ -129,27 +142,28 @@ export default function BulkEmailSendPage() {
   const [columnMapping,      setColumnMapping]      = useState({})
 
   /* Step 2 — Attachment */
-  const [attachmentType,       setAttachmentType]       = useState('NONE')
-  const [uploadedPdfFile,      setUploadedPdfFile]      = useState(null)
-  const [uploadedPdfB64,       setUploadedPdfB64]       = useState('')
-  const [pdfTemplates,         setPdfTemplates]         = useState([])
-  const [pdfTemplatesLoading,  setPdfTemplatesLoading]  = useState(false)
+  const [attachmentType,        setAttachmentType]        = useState('NONE')
+  const [includeExcelSheet,     setIncludeExcelSheet]     = useState(false)  // secondary attachment toggle
+  const [uploadedPdfFile,       setUploadedPdfFile]       = useState(null)
+  const [uploadedPdfB64,        setUploadedPdfB64]        = useState('')
+  const [pdfTemplates,          setPdfTemplates]          = useState([])
+  const [pdfTemplatesLoading,   setPdfTemplatesLoading]   = useState(false)
   const [selectedPdfTemplateId, setSelectedPdfTemplateId] = useState('')
-  const [selectedPdfTemplate,  setSelectedPdfTemplate]  = useState(null)
-  const [pdfColumnMapping,     setPdfColumnMapping]     = useState({})
-  const [extApiUrl,            setExtApiUrl]            = useState('')
-  const [extApiMethod,         setExtApiMethod]         = useState('GET')
-  const [extApiHeaders,        setExtApiHeaders]        = useState('')
-  const [extApiBody,           setExtApiBody]           = useState('')
+  const [selectedPdfTemplate,   setSelectedPdfTemplate]   = useState(null)
+  const [pdfColumnMapping,      setPdfColumnMapping]      = useState({})
+  const [extApiUrl,             setExtApiUrl]             = useState('')
+  const [extApiMethod,          setExtApiMethod]          = useState('GET')
+  const [extApiHeaders,         setExtApiHeaders]         = useState('')
+  const [extApiBody,            setExtApiBody]            = useState('')
   const pdfRef = useRef()
 
-  /* Step 2 — Sheet 2 (EXCEL_SHEET) */
+  /* Step 2 — Sheet 2 (EXCEL_SHEET or secondary attachment) */
   const [sheet2Rows,            setSheet2Rows]            = useState([])
   const [sheet2Columns,         setSheet2Columns]         = useState([])
-  const [sheet2SelectedColumns, setSheet2SelectedColumns] = useState([])  // columns to include in generated Excel
-  const [sheet2IdColumn,        setSheet2IdColumn]        = useState('')   // Sheet 2 col to match on
-  const [mainIdColumn,          setMainIdColumn]          = useState('')   // Sheet 1 col that holds the key
-  const [detailFileName,        setDetailFileName]        = useState('')   // filename template
+  const [sheet2SelectedColumns, setSheet2SelectedColumns] = useState([])
+  const [sheet2IdColumn,        setSheet2IdColumn]        = useState('')
+  const [mainIdColumn,          setMainIdColumn]          = useState('')
+  const [detailFileName,        setDetailFileName]        = useState('')
 
   /* Step 3 — Review & Send */
   const [jobLabel,  setJobLabel]  = useState('')
@@ -184,15 +198,29 @@ export default function BulkEmailSendPage() {
   }, [selectedPdfTemplateId, pdfTemplates])
 
   // ── Step validation ───────────────────────────────────────────────────────
-  const stepValid = [
-    xlsxRows.length > 0 && emailColumn.length > 0,               // step 0
-    !!selectedTemplateId,                                          // step 1
-    attachmentType === 'UPLOAD'       ? !!uploadedPdfB64          // step 2
+  // When the secondary Excel attachment is enabled, its link-columns must be configured
+  const excelSheetValid = sheet2Rows.length > 0
+    && sheet2IdColumn.length > 0
+    && mainIdColumn.length > 0
+    && sheet2SelectedColumns.length > 0
+
+  const step2Valid = (() => {
+    const primaryOk =
+        attachmentType === 'UPLOAD'       ? !!uploadedPdfB64
       : attachmentType === 'PDF_TEMPLATE' ? !!selectedPdfTemplateId
       : attachmentType === 'EXTERNAL_API' ? extApiUrl.trim().length > 0
-      : attachmentType === 'EXCEL_SHEET'  ? sheet2Rows.length > 0 && sheet2IdColumn.length > 0 && mainIdColumn.length > 0 && sheet2SelectedColumns.length > 0
-      : true,
-    true,                                                          // step 3 (always can review)
+      : attachmentType === 'EXCEL_SHEET'  ? excelSheetValid
+      : true  // NONE
+    // If the secondary Excel toggle is on, its config must also be complete
+    const secondaryOk = !includeExcelSheet || excelSheetValid
+    return primaryOk && secondaryOk
+  })()
+
+  const stepValid = [
+    xlsxRows.length > 0 && emailColumn.length > 0,   // step 0
+    !!selectedTemplateId,                              // step 1
+    step2Valid,                                        // step 2
+    true,                                              // step 3
   ]
 
   function canGoNext() { return stepValid[step] }
@@ -217,7 +245,7 @@ export default function BulkEmailSendPage() {
         const allRows = parsed.map(r => {
           const out = {}
           Object.keys(r).forEach(c => {
-            let v = String(r[c] ?? '')
+            let v = cellStr(r[c])
             if (v.toLowerCase().startsWith('mailto:')) v = v.slice(7)
             out[c] = v
           })
@@ -256,7 +284,7 @@ export default function BulkEmailSendPage() {
             const cols2 = Object.keys(parsed2[0])
             const rows2 = parsed2.map(r => {
               const out = {}
-              cols2.forEach(c => { out[c] = String(r[c] ?? '') })
+              cols2.forEach(c => { out[c] = cellStr(r[c]) })
               return out
             })
             setSheet2Rows(rows2)
@@ -300,14 +328,19 @@ export default function BulkEmailSendPage() {
     setSendError('')
     setSending(true)
     try {
+      // Sheet 2 fields are sent when primary = EXCEL_SHEET OR when secondary toggle is on
+      const needsExcelFields = attachmentType === 'EXCEL_SHEET' || includeExcelSheet
+
       const payload = {
         label:           jobLabel.trim() || undefined,
         emailTemplateId: selectedTemplateId,
         emailColumn,
         nameColumn:      nameColumn || undefined,
+        ccColumns:       ccColumns.length > 0 ? ccColumns : undefined,
         columnMapping,
         rows:            xlsxRows,
         attachmentType,
+        includeExcelSheet: includeExcelSheet && attachmentType !== 'EXCEL_SHEET',
         ...(attachmentType === 'UPLOAD' && {
           uploadedPdfBase64: uploadedPdfB64,
           uploadedPdfName:   uploadedPdfFile?.name,
@@ -322,7 +355,7 @@ export default function BulkEmailSendPage() {
           externalApiHeaders: extApiHeaders.trim() || undefined,
           externalApiBody:    extApiBody.trim() || undefined,
         }),
-        ...(attachmentType === 'EXCEL_SHEET' && {
+        ...(needsExcelFields && {
           detailSheetRows:     sheet2Rows,
           detailSheetColumns:  sheet2SelectedColumns,
           detailSheetIdColumn: sheet2IdColumn,
@@ -424,6 +457,54 @@ export default function BulkEmailSendPage() {
               </div>
             </div>
 
+            {/* CC columns — multi-select chip picker */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                CC Columns <span className="font-normal text-gray-400">(optional — select one or more columns containing additional email addresses)</span>
+              </label>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">
+                Every email address found in these columns per row will be added as a CC recipient.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {xlsxColumns
+                  .filter(c => c !== emailColumn)
+                  .map(col => {
+                    const isCC = ccColumns.includes(col)
+                    return (
+                      <button key={col} type="button"
+                        onClick={() => setCcColumns(prev =>
+                          prev.includes(col) ? prev.filter(c => c !== col) : [...prev, col]
+                        )}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all
+                          ${isCC
+                            ? 'bg-sky-600 text-white border-sky-600'
+                            : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:border-sky-400'}`}>
+                        {isCC && (
+                          <svg className="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                          </svg>
+                        )}
+                        {col}
+                      </button>
+                    )
+                  })}
+              </div>
+              {ccColumns.length > 0 && (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-xs font-semibold text-sky-700 dark:text-sky-400">CC columns selected:</span>
+                  {ccColumns.map(c => (
+                    <span key={c} className="text-xs bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 px-2 py-0.5 rounded-full font-medium">
+                      {c}
+                    </span>
+                  ))}
+                  <button type="button" onClick={() => setCcColumns([])}
+                    className="text-xs text-gray-400 hover:text-red-500 ml-1">
+                    Clear all
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* Preview table */}
             {xlsxRows.length > 0 && (
               <div className="space-y-3">
@@ -441,8 +522,9 @@ export default function BulkEmailSendPage() {
                         {xlsxColumns.map(c => (
                           <th key={c} className="px-3 py-2 text-left text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
                             {c}
-                            {c === emailColumn && <span className="ml-1 text-purple-500">(email)</span>}
-                            {c === nameColumn  && <span className="ml-1 text-blue-500">(name)</span>}
+                            {c === emailColumn      && <span className="ml-1 text-purple-500">(to)</span>}
+                            {c === nameColumn       && <span className="ml-1 text-blue-500">(name)</span>}
+                            {ccColumns.includes(c)  && <span className="ml-1 text-sky-500">(cc)</span>}
                           </th>
                         ))}
                       </tr>
@@ -555,21 +637,148 @@ export default function BulkEmailSendPage() {
     )
   }
 
+  // ── Shared Excel Sheet config panel (used for primary EXCEL_SHEET and secondary toggle) ──
+  function renderExcelSheetConfig(sectionTitle = 'Sheet 2 — Per-Recipient Excel Configuration') {
+    return (
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+          <p className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">{sectionTitle}</p>
+        </div>
+        <div className="p-4 space-y-5">
+          {sheet2Rows.length === 0 ? (
+            <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700">
+              <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+              </svg>
+              <p className="text-xs text-amber-700 dark:text-amber-300">
+                No second worksheet detected. Re-upload an Excel workbook with two worksheets — Sheet 1 for recipients and Sheet 2 for per-recipient detail rows.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700">
+                <svg className="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <p className="text-xs text-green-700 dark:text-green-400">
+                  Sheet 2 detected — <strong>{sheet2Rows.length} rows</strong> across <strong>{sheet2Columns.length} columns</strong>.
+                </p>
+              </div>
+
+              {/* Link columns */}
+              <div className="rounded-xl border border-gray-200 dark:border-gray-600 overflow-hidden">
+                <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700/60 border-b border-gray-200 dark:border-gray-600">
+                  <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Link columns — how Sheet 1 and Sheet 2 are joined</p>
+                </div>
+                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Sheet 1 key column <span className="text-red-400">*</span></label>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">Unique ID in the recipient sheet</p>
+                    <select value={mainIdColumn} onChange={e => setMainIdColumn(e.target.value)} className={INPUT}>
+                      <option value="">Select column…</option>
+                      {xlsxColumns.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Sheet 2 key column <span className="text-red-400">*</span></label>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">The column in Sheet 2 that matches the Sheet 1 ID</p>
+                    <select value={sheet2IdColumn} onChange={e => setSheet2IdColumn(e.target.value)} className={INPUT}>
+                      <option value="">Select column…</option>
+                      {sheet2Columns.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                </div>
+                {mainIdColumn && sheet2IdColumn && xlsxRows.length > 0 && (() => {
+                  const idVal      = xlsxRows[0][mainIdColumn] || ''
+                  const matchCount = sheet2Rows.filter(r => String(r[sheet2IdColumn]).toLowerCase() === idVal.toLowerCase()).length
+                  return (
+                    <div className="mx-4 mb-4 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
+                      <p className="text-xs text-gray-700 dark:text-gray-300">
+                        {mainIdColumn} = <code className="font-mono bg-white dark:bg-gray-700 px-1 rounded">{idVal || '—'}</code>{' '}→{' '}
+                        <strong className={matchCount === 0 ? 'text-amber-600' : 'text-green-700 dark:text-green-400'}>{matchCount} matching row{matchCount !== 1 ? 's' : ''}</strong>
+                        {matchCount === 0 && <span className="ml-2 text-amber-600"> — check key columns match</span>}
+                      </p>
+                    </div>
+                  )
+                })()}
+              </div>
+
+              {/* Column picker */}
+              <div className="rounded-xl border border-gray-200 dark:border-gray-600 overflow-hidden">
+                <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700/60 border-b border-gray-200 dark:border-gray-600 flex items-center justify-between">
+                  <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Columns to include</p>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setSheet2SelectedColumns([...sheet2Columns])} className="text-xs text-purple-600 dark:text-purple-400 hover:underline font-medium">All</button>
+                    <span className="text-gray-300 dark:text-gray-600">|</span>
+                    <button type="button" onClick={() => setSheet2SelectedColumns([])} className="text-xs text-gray-500 hover:underline font-medium">None</button>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <div className="flex flex-wrap gap-2">
+                    {sheet2Columns.map(col => {
+                      const selected = sheet2SelectedColumns.includes(col)
+                      return (
+                        <button key={col} type="button"
+                          onClick={() => setSheet2SelectedColumns(prev => prev.includes(col) ? prev.filter(c => c !== col) : [...prev, col])}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all
+                            ${selected ? 'bg-purple-600 text-white border-purple-600' : 'bg-white dark:bg-gray-800 text-gray-500 border-gray-300 dark:border-gray-600 hover:border-purple-400'}`}>
+                          {selected && <svg className="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>}
+                          {col}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {sheet2SelectedColumns.length === 0 && (
+                    <p className="mt-3 text-xs text-red-500">Select at least one column.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Filename template */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
+                  Filename template <span className="font-normal text-gray-400">(optional)</span>
+                </label>
+                <input type="text" placeholder="e.g. Claims_{{Provider Name}}_April2026.xlsx"
+                  value={detailFileName} onChange={e => setDetailFileName(e.target.value)} className={INPUT}/>
+                <p className="text-xs text-gray-400 mt-1.5">
+                  Use <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded font-mono text-purple-600 dark:text-purple-400">{'{{column}}'}</code> with any Sheet 1 column to personalise per recipient.
+                </p>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   // ── Render: Step 2 — Attachment ───────────────────────────────────────────
   function renderStep2() {
+    const showSecondaryExcelToggle = sheet2Rows.length > 0 && attachmentType !== 'EXCEL_SHEET'
+    const showExcelConfig = attachmentType === 'EXCEL_SHEET' || (includeExcelSheet && attachmentType !== 'EXCEL_SHEET')
+
     return (
       <div className="space-y-5">
+        {/* ── Section header ── */}
         <div>
-          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">Attachment</h3>
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">Attachments</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Optionally attach a file to every email. Choose the attachment source.
+            Choose a primary attachment and optionally also attach an Excel file from Sheet 2.
           </p>
         </div>
 
-        {/* Attachment type cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {/* ── Primary attachment label ── */}
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-purple-600 text-white text-[10px] font-bold">1</span>
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Primary attachment</p>
+        </div>
+
+        {/* Primary attachment type cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           {ATT_OPTIONS.map(opt => (
-            <button key={opt.value} type="button" onClick={() => setAttachmentType(opt.value)}
+            <button key={opt.value} type="button"
+              onClick={() => { setAttachmentType(opt.value); if (opt.value === 'EXCEL_SHEET') setIncludeExcelSheet(false) }}
               className={`p-4 rounded-xl border-2 text-left transition-all
                 ${attachmentType === opt.value
                   ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
@@ -584,7 +793,7 @@ export default function BulkEmailSendPage() {
           ))}
         </div>
 
-        {/* UPLOAD */}
+        {/* ── Primary attachment config panels ── */}
         {attachmentType === 'UPLOAD' && (
           <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
@@ -711,228 +920,74 @@ export default function BulkEmailSendPage() {
           </div>
         )}
 
-        {/* EXCEL_SHEET */}
-        {attachmentType === 'EXCEL_SHEET' && (
-          <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-              <p className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
-                Sheet 2 — Per-Recipient Excel Configuration
-              </p>
+        {/* Primary: EXCEL_SHEET config */}
+        {attachmentType === 'EXCEL_SHEET' && renderExcelSheetConfig()}
+
+        {/* ── Secondary attachment: Excel from Sheet 2 ── */}
+        {showSecondaryExcelToggle && (
+          <>
+            {/* Divider */}
+            <div className="flex items-center gap-3 py-1">
+              <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700"/>
+              <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Also attach</span>
+              <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700"/>
             </div>
-            <div className="p-4 space-y-5">
-              {sheet2Rows.length === 0 ? (
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700">
-                  <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+
+            <div className="flex items-center gap-2 mb-1">
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-600 text-white text-[10px] font-bold">2</span>
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Additional attachment (optional)</p>
+            </div>
+
+            {/* Excel Sheet 2 toggle card */}
+            <button type="button" onClick={() => setIncludeExcelSheet(v => !v)}
+              className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 text-left transition-all
+                ${includeExcelSheet
+                  ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                  : 'border-gray-200 dark:border-gray-600 hover:border-green-300 bg-white dark:bg-gray-700/40'}`}>
+              {/* Checkbox */}
+              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors
+                ${includeExcelSheet ? 'bg-green-600 border-green-600' : 'border-gray-300 dark:border-gray-500'}`}>
+                {includeExcelSheet && (
+                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
                   </svg>
-                  <p className="text-xs text-amber-700 dark:text-amber-300">
-                    No second worksheet was detected in the uploaded file. Please re-upload an Excel
-                    workbook that contains two worksheets — Sheet 1 with recipient data and Sheet 2
-                    with per-recipient detail rows.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {/* Sheet 2 detected badge */}
-                  <div className="flex items-center gap-2 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700">
-                    <svg className="w-4 h-4 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    <p className="text-xs text-green-700 dark:text-green-400">
-                      Sheet 2 detected — <strong>{sheet2Rows.length} rows</strong> across{' '}
-                      <strong>{sheet2Columns.length} columns</strong>.
-                      Rows will be grouped by ID and sent as individual Excel attachments.
-                    </p>
-                  </div>
-
-                  {/* ── Link / ID column selectors ── */}
-                  <div className="rounded-xl border border-gray-200 dark:border-gray-600 overflow-hidden">
-                    <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700/60 border-b border-gray-200 dark:border-gray-600">
-                      <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                        Link columns — how Sheet 1 and Sheet 2 are joined
-                      </p>
-                    </div>
-                    <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
-                          Sheet 1 key column <span className="text-red-400">*</span>
-                        </label>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">
-                          Unique ID in the recipient sheet
-                        </p>
-                        <select value={mainIdColumn} onChange={e => setMainIdColumn(e.target.value)} className={INPUT}>
-                          <option value="">Select column…</option>
-                          {xlsxColumns.map(c => (
-                            <option key={c} value={c}>{c}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
-                          Sheet 2 key column <span className="text-red-400">*</span>
-                        </label>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-1.5">
-                          The column in Sheet 2 that matches the Sheet 1 ID
-                        </p>
-                        <select value={sheet2IdColumn} onChange={e => setSheet2IdColumn(e.target.value)} className={INPUT}>
-                          <option value="">Select column…</option>
-                          {sheet2Columns.map(c => (
-                            <option key={c} value={c}>{c}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Live match preview */}
-                    {mainIdColumn && sheet2IdColumn && xlsxRows.length > 0 && (() => {
-                      const firstRow   = xlsxRows[0]
-                      const idVal      = firstRow[mainIdColumn] || ''
-                      const matchCount = sheet2Rows.filter(r =>
-                        String(r[sheet2IdColumn]).toLowerCase() === idVal.toLowerCase()
-                      ).length
-                      return (
-                        <div className="mx-4 mb-4 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
-                          <p className="text-xs font-semibold text-purple-700 dark:text-purple-400 mb-1 uppercase tracking-wider">
-                            Preview — first recipient
-                          </p>
-                          <p className="text-xs text-gray-700 dark:text-gray-300">
-                            {mainIdColumn} = <code className="font-mono bg-white dark:bg-gray-700 px-1 py-0.5 rounded text-gray-800 dark:text-gray-200">{idVal || '—'}</code>
-                            {' '}→{' '}
-                            <strong className={matchCount === 0 ? 'text-amber-600' : 'text-green-700 dark:text-green-400'}>
-                              {matchCount} matching row{matchCount !== 1 ? 's' : ''}
-                            </strong>
-                            {' '}in Sheet 2
-                            {matchCount === 0 && (
-                              <span className="ml-2 text-amber-600"> — check the key columns match</span>
-                            )}
-                          </p>
-                        </div>
-                      )
-                    })()}
-                  </div>
-
-                  {/* ── Sheet 2 column picker ── */}
-                  <div className="rounded-xl border border-gray-200 dark:border-gray-600 overflow-hidden">
-                    <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700/60 border-b border-gray-200 dark:border-gray-600 flex items-center justify-between">
-                      <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                        Columns to include in the Excel attachment
-                      </p>
-                      <div className="flex gap-2">
-                        <button type="button"
-                          onClick={() => setSheet2SelectedColumns([...sheet2Columns])}
-                          className="text-xs text-purple-600 dark:text-purple-400 hover:underline font-medium">
-                          All
-                        </button>
-                        <span className="text-gray-300 dark:text-gray-600">|</span>
-                        <button type="button"
-                          onClick={() => setSheet2SelectedColumns([])}
-                          className="text-xs text-gray-500 hover:underline font-medium">
-                          None
-                        </button>
-                      </div>
-                    </div>
-                    <div className="p-4">
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                        Click columns to toggle them. Selected columns appear in the generated Excel file in this order.
-                        {sheet2SelectedColumns.length > 0 && (
-                          <span className="ml-1 font-medium text-purple-600 dark:text-purple-400">
-                            {sheet2SelectedColumns.length} of {sheet2Columns.length} selected
-                          </span>
-                        )}
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {sheet2Columns.map(col => {
-                          const selected = sheet2SelectedColumns.includes(col)
-                          return (
-                            <button
-                              key={col}
-                              type="button"
-                              onClick={() => setSheet2SelectedColumns(prev =>
-                                prev.includes(col)
-                                  ? prev.filter(c => c !== col)
-                                  : [...prev, col]
-                              )}
-                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all
-                                ${selected
-                                  ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
-                                  : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:border-purple-400'}`}
-                            >
-                              {selected && (
-                                <svg className="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
-                                </svg>
-                              )}
-                              {col}
-                            </button>
-                          )
-                        })}
-                      </div>
-                      {sheet2SelectedColumns.length === 0 && (
-                        <p className="mt-3 text-xs text-red-500 dark:text-red-400">
-                          Select at least one column to include in the attachment.
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Column order preview */}
-                    {sheet2SelectedColumns.length > 0 && (
-                      <div className="px-4 pb-4">
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-2 font-medium">
-                          Column order in generated file:
-                        </p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {sheet2SelectedColumns.map((col, i) => (
-                            <span key={col}
-                              className="flex items-center gap-1 px-2 py-0.5 rounded-md text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                              <span className="text-gray-400 text-[10px]">{i + 1}.</span>
-                              {col}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* ── Filename template ── */}
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
-                      Attachment filename template{' '}
-                      <span className="font-normal text-gray-400">(optional)</span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder={`e.g. Claims_{{Provider Name}}_April2026.xlsx`}
-                      value={detailFileName}
-                      onChange={e => setDetailFileName(e.target.value)}
-                      className={INPUT}
-                    />
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">
-                      Use{' '}
-                      <code className="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded font-mono text-purple-600 dark:text-purple-400">
-                        {'{{column}}'}
-                      </code>{' '}
-                      with any Sheet 1 column name to personalise the filename per recipient.
-                      {xlsxColumns.length > 0 && (
-                        <span className="block mt-1">
-                          Available:{' '}
-                          {xlsxColumns.map((c, i) => (
-                            <button key={c} type="button"
-                              onClick={() => setDetailFileName(p =>
-                                (p.endsWith('.xlsx') ? p.slice(0, -5) : p) + `{{${c}}}.xlsx`
-                              )}
-                              className="font-mono text-purple-600 dark:text-purple-400 hover:underline">
-                              {c}{i < xlsxColumns.length - 1 ? ', ' : ''}
-                            </button>
-                          ))}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                </>
+                )}
+              </div>
+              <svg className={`w-5 h-5 shrink-0 ${includeExcelSheet ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`}
+                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75}
+                  d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              <div>
+                <p className="text-sm font-bold text-gray-800 dark:text-gray-100">Excel from Sheet 2</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  {sheet2Rows.length > 0
+                    ? `Attach a per-recipient Excel file alongside the primary attachment — ${sheet2Rows.length} Sheet 2 rows detected`
+                    : 'Upload an Excel workbook with Sheet 2 to enable this option'}
+                </p>
+              </div>
+              {includeExcelSheet && (
+                <span className="ml-auto shrink-0 text-xs font-bold text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/40 px-2 py-0.5 rounded-full">
+                  Enabled
+                </span>
               )}
-            </div>
+            </button>
+
+            {/* Excel Sheet 2 config — shown when toggle is on */}
+            {includeExcelSheet && renderExcelSheetConfig('Sheet 2 — Excel Attachment Configuration')}
+          </>
+        )}
+
+        {/* Summary badge when both are active */}
+        {attachmentType !== 'NONE' && attachmentType !== 'EXCEL_SHEET' && includeExcelSheet && sheet2Rows.length > 0 && (
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800">
+            <svg className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <p className="text-xs text-purple-700 dark:text-purple-300">
+              Each email will have <strong>2 attachments</strong>: a{' '}
+              <strong>{ATT_OPTIONS.find(o => o.value === attachmentType)?.label}</strong> and an Excel file from Sheet 2.
+            </p>
           </div>
         )}
       </div>
