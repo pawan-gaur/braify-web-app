@@ -22,7 +22,7 @@ import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
-const MAX_ROWS = 5000
+const MAX_ROWS = 10000
 
 const STEPS = ['Upload XLSX', 'Email Template', 'Attachment', 'Review & Send']
 
