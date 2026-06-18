@@ -97,10 +97,15 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
     description:  initialTemplate?.description  || '',
     pageSize:     initialTemplate?.pageSize     || 'A4',
     orientation:  initialTemplate?.orientation  || 'portrait',
-    marginTop:    initialTemplate?.marginTop    ?? 20,
-    marginBottom: initialTemplate?.marginBottom ?? 20,
-    marginLeft:   initialTemplate?.marginLeft   ?? 15,
-    marginRight:  initialTemplate?.marginRight  ?? 15,
+    // Free-placement designer: default to ZERO page margins so the editor's
+    // full page == the PDF's printable area. With non-zero @page margins the
+    // PDF body content box is inset, shifting every absolute top/left inward and
+    // making the generated PDF disagree with the editor/preview. Users can still
+    // set margins in Settings if they want flow-style padding.
+    marginTop:    initialTemplate?.marginTop    ?? 0,
+    marginBottom: initialTemplate?.marginBottom ?? 0,
+    marginLeft:   initialTemplate?.marginLeft   ?? 0,
+    marginRight:  initialTemplate?.marginRight  ?? 0,
   })
 
   const refreshPlaceholders = useCallback((html) => {

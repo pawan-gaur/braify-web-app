@@ -32,15 +32,22 @@ export const EDITOR_CONFIG = (containerId) => ({
     ],
   },
 
+  // widthMedia: '' on every device stops GrapesJS scoping component styles to a
+  // `@media (max-width: <device width>)` rule. Without it, styles set while the
+  // A4 device (794px) is active land inside `@media (max-width:794px)`, which the
+  // Preview iframe and openhtmltopdf (both wider than 794px) never match — so an
+  // image loses its size/position and snaps to the top-left. With widthMedia:''
+  // the rules are GLOBAL and apply everywhere, while resize still works normally
+  // (default avoidInlineStyle). `width` still sets the on-screen page size.
   deviceManager: {
     devices: [
-      { name: 'A4 Portrait',   width: '794px',  height: '1123px' },
-      { name: 'A4 Landscape',  width: '1123px', height: '794px'  },
-      { name: 'A3 Portrait',   width: '1123px', height: '1587px' },
-      { name: 'A3 Landscape',  width: '1587px', height: '1123px' },
-      { name: 'Letter',        width: '816px',  height: '1056px' },
-      { name: 'Legal',         width: '816px',  height: '1344px' },
-      { name: 'Custom',        width: '794px',  height: '1123px' },
+      { name: 'A4 Portrait',   width: '794px',  height: '1123px', widthMedia: '' },
+      { name: 'A4 Landscape',  width: '1123px', height: '794px',  widthMedia: '' },
+      { name: 'A3 Portrait',   width: '1123px', height: '1587px', widthMedia: '' },
+      { name: 'A3 Landscape',  width: '1587px', height: '1123px', widthMedia: '' },
+      { name: 'Letter',        width: '816px',  height: '1056px', widthMedia: '' },
+      { name: 'Legal',         width: '816px',  height: '1344px', widthMedia: '' },
+      { name: 'Custom',        width: '794px',  height: '1123px', widthMedia: '' },
     ],
   },
 
@@ -338,9 +345,12 @@ function buildBlocks() {
       category: 'Media',
       media: svg(`<rect x="3" y="3" width="18" height="18" rx="2"/>
         <circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>`),
+      // A bounded default size (NOT width:100%) so a freshly dropped or uploaded
+      // image fits on the page instead of spanning the full width and running
+      // off-canvas. The user resizes from here.
       content: {
         type: 'image',
-        style: { width: '100%', display: 'block', margin: '8px 0' },
+        style: { width: '300px', height: 'auto', display: 'block' },
         attributes: { src: 'https://placehold.co/400x200?text=Image' },
       },
     },

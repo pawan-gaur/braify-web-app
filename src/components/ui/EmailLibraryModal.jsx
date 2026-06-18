@@ -254,7 +254,7 @@ function PreviewPanel({ template, onClose, onUse }) {
             * {max-width:100%!important;}</style>
           </head><body>${template.htmlContent}</body></html>`}
           className="w-full h-full border-none"
-          sandbox="allow-same-origin"
+          sandbox="allow-same-origin allow-scripts"
         />
       </div>
 

@@ -213,7 +213,7 @@ export default function EmailPreviewModal({ template, onClose }) {
             <iframe
               ref={iframeRef}
               srcDoc={srcDoc}
-              sandbox="allow-same-origin"
+              sandbox="allow-same-origin allow-scripts"
               className="w-full border-none rounded-b-xl shadow-md bg-white"
               style={{ height: 600, display: 'block' }}
               title={`Email preview – ${template.name}`}

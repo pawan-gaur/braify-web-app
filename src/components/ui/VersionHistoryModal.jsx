@@ -416,7 +416,7 @@ function VersionPanel({ version, side, isCurrent }) {
               </style>
             </head><body>${version.htmlContent || ""}</body></html>`}
             className="w-full h-full border-none"
-            sandbox="allow-same-origin"
+            sandbox="allow-same-origin allow-scripts"
           />
         )}
       </div>

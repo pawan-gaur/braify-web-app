@@ -283,7 +283,39 @@ export default function PreviewDataModal({ getHtml, getCss, meta, onClose }) {
     return applyTemplateData(originalHtml, parsedData)
   }, [originalHtml, parsedData])
 
-  const iframeDoc = useMemo(() => `<!DOCTYPE html>
+  const iframeDoc = useMemo(() => {
+    // PDF templates use absolute, free placement on a fixed-size page. The
+    // preview must reproduce the SAME coordinate system the editor and the
+    // openhtmltopdf renderer use — a position:relative page of the exact page
+    // size — otherwise top/left/width land against the wrong box. Email
+    // templates stay flow-based, so keep the original responsive preview.
+    const PAGE_DIMS = { A4: [794, 1123], A3: [1123, 1587], Letter: [816, 1056], Legal: [816, 1344] }
+    const isPdf = !!meta?.pageSize
+    const innerHtml = substitutedHtml.replace(/^\s*<body[^>]*>/i, '').replace(/<\/body>\s*$/i, '')
+
+    if (isPdf) {
+      const [w, h] = PAGE_DIMS[meta.pageSize] || PAGE_DIMS.A4
+      const [pageW, pageH] = meta.orientation === 'landscape' ? [h, w] : [w, h]
+      return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>${meta?.name || 'Preview'}</title>
+  <style>
+    html, body { margin: 0; padding: 0; background: #8a8a8a; }
+    .pdf-page {
+      position: relative; width: ${pageW}px; min-height: ${pageH}px;
+      margin: 16px auto; background: #fff; overflow: hidden;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.35); font-family: Arial, sans-serif;
+    }
+    ${originalCss}
+  </style>
+</head>
+<body><div class="pdf-page">${innerHtml}</div></body>
+</html>`
+    }
+
+    return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
@@ -296,7 +328,8 @@ export default function PreviewDataModal({ getHtml, getCss, meta, onClose }) {
   </style>
 </head>
 <body>${substitutedHtml}</body>
-</html>`, [substitutedHtml, originalCss, meta])
+</html>`
+  }, [substitutedHtml, originalCss, meta])
 
   /* ── Detect variable list for summary ── */
   const detectedVars = useMemo(() => Object.keys(parsedData), [parsedData])
@@ -500,7 +533,7 @@ export default function PreviewDataModal({ getHtml, getCss, meta, onClose }) {
                   title="Template preview"
                   srcDoc={iframeDoc}
                   className="w-full h-full border-none"
-                  sandbox="allow-same-origin"
+                  sandbox="allow-same-origin allow-scripts"
                 />
               ) : (
                 <pre className="w-full h-full overflow-auto p-5 text-[11px] font-mono leading-relaxed
