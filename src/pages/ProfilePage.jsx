@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { updateProfile, changePassword, uploadAvatar, getMyAuditLog } from '../services/api'
+import MfaCard from '../components/profile/MfaCard'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 
@@ -182,6 +183,7 @@ export default function ProfilePage() {
         {[
           { id: 'info',     label: 'Personal Info' },
           { id: 'password', label: 'Change Password' },
+          { id: 'security', label: 'Security' },
           { id: 'activity', label: 'Activity Log' },
         ].map(t => (
           <button
@@ -279,6 +281,9 @@ export default function ProfilePage() {
           </div>
         </form>
       )}
+
+      {/* Tab: Security (2FA) */}
+      {tab === 'security' && <MfaCard />}
 
       {/* Tab: Activity Log */}
       {tab === 'activity' && (

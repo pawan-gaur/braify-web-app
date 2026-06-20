@@ -3,6 +3,23 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    // Split heavy libraries into their own cacheable chunks instead of one
+    // ~4.4 MB bundle. Combined with React.lazy routes, the landing/login path
+    // no longer downloads grapesjs / swagger-ui / xlsx / pdfjs.
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor':   ['react', 'react-dom', 'react-router-dom'],
+          'grapesjs':       ['grapesjs'],
+          'swagger':        ['swagger-ui-react'],
+          'xlsx':           ['xlsx'],
+          'pdfjs':          ['pdfjs-dist'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 900,
+  },
   server: {
     port: 5173,
     proxy: {

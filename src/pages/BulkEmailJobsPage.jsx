@@ -220,13 +220,16 @@ export default function BulkEmailJobsPage() {
 
   useEffect(() => { loadJobs() }, [loadJobs])
 
-  // Live poll while any job is active
+  // Live poll while any job is active.
+  // Depend on the derived boolean (not the whole `jobs` array) so the interval
+  // is created once when a job becomes active — not torn down and recreated on
+  // every poll tick (which happened when `jobs` was a dependency).
+  const hasActiveJob = jobs.some(j => j.status === 'PROCESSING' || j.status === 'PENDING')
   useEffect(() => {
-    const hasActive = jobs.some(j => j.status === 'PROCESSING' || j.status === 'PENDING')
     clearInterval(pollRef.current)
-    if (hasActive) pollRef.current = setInterval(() => loadJobs(true), POLL_MS)
+    if (hasActiveJob) pollRef.current = setInterval(() => loadJobs(true), POLL_MS)
     return () => clearInterval(pollRef.current)
-  }, [jobs, loadJobs])
+  }, [hasActiveJob, loadJobs])
 
   function applyStatusFilter(v) { setStatusFilter(v); setPage(0) }
   function applySize(v)         { setSize(v);          setPage(0) }

@@ -24,9 +24,20 @@ http.interceptors.request.use(config => {
  */
 http.interceptors.response.use(
   res => res,
-  err => {
-    const data    = err.response?.data
+  async err => {
+    let   data    = err.response?.data
     const status  = err.response?.status
+
+    // Blob responses (PDF preview / download / export use responseType:'blob')
+    // deliver JSON error bodies as a Blob, so `data.message` is invisible. Read
+    // the Blob back to text and parse it so the backend message survives —
+    // e.g. "Monthly documents quota exceeded (500/500)…".
+    if (data instanceof Blob) {
+      try {
+        const text = await data.text()
+        try { data = JSON.parse(text) } catch { data = text }
+      } catch { /* keep the Blob if it can't be read */ }
+    }
 
     // Unauthorised → session expired or token revoked → send to login
     if (status === 401 && !err.config?.url?.includes('/auth/')) {
@@ -106,6 +117,10 @@ export const getTemplateAuditLogs = (id) => http.get(`/audit-logs/template/${id}
 // ── Dashboard ──────────────────────────────────────────────
 export const getDashboardStats = () => http.get('/dashboard').then(r => r.data)
 
+/** Live, role-scoped, period-filtered analytics for the Analytics tab. */
+export const getDashboardAnalytics = (days = 30) =>
+  http.get('/dashboard/analytics', { params: { days } }).then(r => r.data)
+
 // ── Onboarding Requests ─────────────────────────────────────
 export const submitOnboardingRequest  = (data)           => http.post('/onboarding', data).then(r => r.data)
 export const getOnboardingRequests    = (status = null)  => http.get('/onboarding', { params: status ? { status } : {} }).then(r => r.data)
@@ -143,6 +158,15 @@ export const validateInviteToken = (token)            => http.get('/auth/validat
 export const acceptInvite        = (token, password)  => http.post('/auth/accept-invite', { token, password }).then(r => r.data)
 export const forgotPassword      = (email)            => http.post('/auth/forgot-password', { email }).then(r => r.data)
 export const resetPassword       = (token, password)  => http.post('/auth/reset-password', { token, password }).then(r => r.data)
+
+// ── MFA / 2FA ──────────────────────────────────────────────
+export const loginMfa        = (payload)    => http.post('/auth/login/mfa', payload).then(r => r.data)
+export const mfaSetup        = ()           => http.post('/auth/mfa/setup').then(r => r.data)
+export const mfaEnable       = (code)       => http.post('/auth/mfa/enable', { code }).then(r => r.data)
+export const mfaDisable      = (code)       => http.post('/auth/mfa/disable', { code })
+export const mfaStatus       = ()           => http.get('/auth/mfa/status').then(r => r.data)
+export const mfaRegenerate   = (code)       => http.post('/auth/mfa/recovery-codes/regenerate', { code }).then(r => r.data)
+export const setOrgMfaPolicy = (id, policy) => http.put(`/organizations/${id}/mfa-policy`, { policy }).then(r => r.data)
 
 // ── Profile (self) ─────────────────────────────────────────
 export const getMyProfile    = ()        => http.get('/profile/me').then(r => r.data)
