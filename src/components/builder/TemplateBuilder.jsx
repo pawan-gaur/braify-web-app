@@ -15,6 +15,27 @@ const DEVICES = [
   { label: 'Custom',        value: 'Custom'         },
 ]
 
+// Keep the toolbar page-size selector and the Settings page-size/orientation in
+// sync. Without this, the canvas device (what you design against) and the
+// settings sent to the PDF renderer (which drive @page size/orientation) can
+// disagree — e.g. design in A4 Landscape but get a portrait PDF.
+const DEVICE_TO_PAGE = {
+  'A4 Portrait':  { pageSize: 'A4',     orientation: 'portrait'  },
+  'A4 Landscape': { pageSize: 'A4',     orientation: 'landscape' },
+  'A3 Portrait':  { pageSize: 'A3',     orientation: 'portrait'  },
+  'A3 Landscape': { pageSize: 'A3',     orientation: 'landscape' },
+  'Letter':       { pageSize: 'Letter', orientation: 'portrait'  },
+  'Legal':        { pageSize: 'Legal',  orientation: 'portrait'  },
+  'Custom':       { pageSize: 'Custom', orientation: 'portrait'  },
+}
+function pageToDevice(pageSize, orientation) {
+  if (pageSize === 'A4') return orientation === 'landscape' ? 'A4 Landscape' : 'A4 Portrait'
+  if (pageSize === 'A3') return orientation === 'landscape' ? 'A3 Landscape' : 'A3 Portrait'
+  if (pageSize === 'Letter') return 'Letter'
+  if (pageSize === 'Legal')  return 'Legal'
+  return 'Custom'
+}
+
 const FONT_SIZES = [8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 22, 24, 28, 32, 36, 48, 72]
 
 const ZOOM_LEVELS = [50, 75, 100, 125, 150, 200]
@@ -295,13 +316,24 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
       }, true)
     })
 
-    editor.on('component:update component:add component:remove', () => {
-      refreshPlaceholders(editor.getHtml())
-    })
+    // Debounce placeholder scanning. getHtml() serializes the WHOLE document and
+    // this event fires on every component mutation — including the rapid-fire
+    // component:update emitted on every mousemove while dragging/resizing an
+    // image. Running getHtml() on each one makes dragging visibly laggy on a
+    // non-trivial template. Placeholders can't change during a drag, so a 300ms
+    // trailing debounce is invisible to the user and removes the lag.
+    let phTimer = null
+    const scheduleRefresh = () => {
+      clearTimeout(phTimer)
+      phTimer = setTimeout(() => {
+        if (editorRef.current) refreshPlaceholders(editor.getHtml())
+      }, 300)
+    }
+    editor.on('component:update component:add component:remove', scheduleRefresh)
     editor.on('rte:enable', () => requestAnimationFrame(() => injectRteExtras(editor)))
     editor.on('rte:disable', () => document.querySelectorAll('.rte-extras').forEach(el => el.remove()))
 
-    return () => { editorRef.current = null; editor.destroy(); mountedRef.current = false }
+    return () => { clearTimeout(phTimer); editorRef.current = null; editor.destroy(); mountedRef.current = false }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── Block search filter ─────────────────────────────────────────────────── */
@@ -326,7 +358,21 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
   const handleDeviceChange = (deviceName) => {
     setActiveDevice(deviceName)
     editorRef.current?.setDevice(deviceName)
+    // Mirror the choice into settings so the generated PDF uses the same page
+    // size/orientation the user is designing against.
+    const page = DEVICE_TO_PAGE[deviceName]
+    if (page) setSettings(prev => ({ ...prev, ...page }))
   }
+
+  /* Keep the canvas device in sync when page size/orientation change in the
+     Settings modal (idempotent — re-selecting the same device is a no-op). */
+  useEffect(() => {
+    const device = pageToDevice(settings.pageSize, settings.orientation)
+    if (device !== activeDevice) {
+      setActiveDevice(device)
+      editorRef.current?.setDevice(device)
+    }
+  }, [settings.pageSize, settings.orientation]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── Zoom ────────────────────────────────────────────────────────────────── */
   const handleZoom = useCallback((newZoom) => {
@@ -740,7 +786,7 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
               title="Zoom out"
             >−</button>
             <select
-              value={ZOOM_LEVELS.includes(zoom) ? zoom : zoom}
+              value={zoom}
               onChange={e => handleZoom(Number(e.target.value))}
               className="bg-transparent text-white text-xs outline-none cursor-pointer w-14 text-center"
             >
@@ -862,7 +908,11 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
             <div id="blocks-panel"  className={activePanel === 'blocks'    ? 'h-full overflow-y-auto' : 'hidden'} />
             <div id="layers-panel"  className={activePanel === 'layers'    ? 'h-full overflow-y-auto' : 'hidden'} />
             <div                    className={activePanel === 'variables' ? 'h-full overflow-hidden flex flex-col' : 'hidden'}>
-              <VariablesPanel />
+              {/* Call as a render function (not <VariablesPanel/>) so its inputs
+                  stay mounted across re-renders — rendering it as an element
+                  gives it a new component identity each render, which remounts
+                  the subtree and drops focus while typing in its fields. */}
+              {VariablesPanel()}
             </div>
           </div>
         </div>

@@ -9,6 +9,7 @@ import {
   getApiKeys, createApiKey, revokeApiKey, toggleApiKey,
   getQuotaConfig, getApiKeyUsage,
   getSubscription, assignSubscription,
+  setOrgMfaPolicy,
   getUsersByOrg,
   getAuditLogs,
   getBranding,
@@ -169,6 +170,20 @@ function OverviewTab({ org, setOrg, orgId }) {
   const [form,    setForm]    = useState({ name: org.name, description: org.description || '', active: org.active })
   const [saving,  setSaving]  = useState(false)
   const [branding, setBranding] = useState(null)
+  const [mfaSaving, setMfaSaving] = useState(false)
+
+  const handleMfaPolicy = async (policy) => {
+    setMfaSaving(true)
+    try {
+      await setOrgMfaPolicy(orgId, policy)
+      setOrg(prev => ({ ...prev, mfaPolicy: policy }))
+      toast.success(`MFA policy set to ${policy}.`)
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err.message || 'Failed to update MFA policy.')
+    } finally {
+      setMfaSaving(false)
+    }
+  }
 
   useEffect(() => {
     getBranding(orgId)
@@ -295,6 +310,28 @@ function OverviewTab({ org, setOrg, orgId }) {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Security — MFA policy (PLATFORM_ADMIN) */}
+      <div className="card p-6">
+        <h3 className="font-bold text-gray-800 dark:text-gray-100 mb-1">Security — Two-Factor Authentication</h3>
+        <p className="text-xs text-gray-400 mb-4">
+          Controls 2FA for everyone in this organization. Turning it off never deletes a user's existing
+          2FA setup — it only suspends the prompt, and reactivates if you turn it back on.
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <select
+            className="form-select w-56"
+            value={org.mfaPolicy || 'DISABLED'}
+            disabled={mfaSaving}
+            onChange={e => handleMfaPolicy(e.target.value)}
+          >
+            <option value="DISABLED">Disabled — no 2FA</option>
+            <option value="OPTIONAL">Optional — users may enable</option>
+            <option value="REQUIRED">Required — all users must enable</option>
+          </select>
+          {mfaSaving && <span className="text-xs text-gray-400">Saving…</span>}
+        </div>
       </div>
     </div>
   )

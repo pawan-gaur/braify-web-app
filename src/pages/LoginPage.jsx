@@ -5,7 +5,7 @@ import useDocumentTitle from '../hooks/useDocumentTitle'
 
 export default function LoginPage() {
   useDocumentTitle('Sign In')
-  const { login } = useAuth()
+  const { login, verifyMfa } = useAuth()
   const navigate  = useNavigate()
   const location  = useLocation()
 
@@ -17,16 +17,41 @@ export default function LoginPage() {
   const [loading,  setLoading]  = useState(false)
   const [error,    setError]    = useState(null)
 
+  // MFA challenge step — set once the password is accepted and MFA is required
+  const [mfaToken, setMfaToken] = useState(null)
+  const [code,     setCode]     = useState('')
+
+  const errMsg = (err) => err?.response?.data?.message || err?.message || 'Something went wrong.'
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!email || !password) { setError('Email and password are required.'); return }
     setLoading(true)
     setError(null)
     try {
-      await login(email.trim(), password)
+      const res = await login(email.trim(), password)
+      if (res?.mfaRequired) {
+        setMfaToken(res.mfaToken)     // switch to the verification-code step
+        return
+      }
       navigate(from, { replace: true })
     } catch (err) {
-      setError(err.message || 'Login failed. Check your credentials.')
+      setError(errMsg(err) || 'Login failed. Check your credentials.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleMfaSubmit = async (e) => {
+    e.preventDefault()
+    if (!code.trim()) { setError('Enter your verification code.'); return }
+    setLoading(true)
+    setError(null)
+    try {
+      await verifyMfa(mfaToken, code.trim())
+      navigate(from, { replace: true })
+    } catch (err) {
+      setError(errMsg(err))
     } finally {
       setLoading(false)
     }
@@ -69,6 +94,7 @@ export default function LoginPage() {
             </div>
           )}
 
+          {!mfaToken && (
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email */}
             <div>
@@ -163,6 +189,56 @@ export default function LoginPage() {
               ) : 'Sign in'}
             </button>
           </form>
+          )}
+
+          {/* MFA verification step */}
+          {mfaToken && (
+          <form onSubmit={handleMfaSubmit} className="space-y-5">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              Enter the 6-digit code from your authenticator app
+              <span className="text-gray-400"> (or a recovery code)</span>.
+            </p>
+            <input
+              type="text"
+              inputMode="text"
+              autoComplete="one-time-code"
+              autoFocus
+              value={code}
+              onChange={e => setCode(e.target.value)}
+              placeholder="123456"
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
+                         bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 tracking-[0.3em]
+                         text-center font-mono text-lg placeholder-gray-400 dark:placeholder-gray-500
+                         outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+            />
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2.5 px-4 rounded-xl text-sm font-semibold text-white
+                         bg-gradient-to-r from-indigo-500 to-violet-600
+                         hover:from-indigo-600 hover:to-violet-700
+                         disabled:opacity-60 disabled:cursor-not-allowed
+                         shadow-md shadow-indigo-500/20 transition-all flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                  </svg>
+                  Verifying…
+                </>
+              ) : 'Verify'}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMfaToken(null); setCode(''); setError(null) }}
+              className="w-full text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              ← Back to sign in
+            </button>
+          </form>
+          )}
         </div>
 
         {/* Default credentials hint

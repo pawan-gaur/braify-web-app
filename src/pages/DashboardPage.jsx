@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getDashboardStats } from '../services/api'
+import { getDashboardStats, getDashboardAnalytics } from '../services/api'
 import { useAuth, ROLES } from '../context/AuthContext'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
@@ -323,6 +323,8 @@ function StatPill({ value, color }) {
     sky:     'bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-400',
     emerald: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400',
     violet:  'bg-violet-50 text-violet-700 dark:bg-violet-900/20 dark:text-violet-400',
+    amber:   'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400',
+    rose:    'bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400',
   }[color] ?? 'bg-gray-100 text-gray-600'
   return (
     <span className={`inline-flex items-center justify-center w-10 h-6 rounded-full text-xs font-bold ${cls}`}>
@@ -778,6 +780,35 @@ export default function DashboardPage() {
     return () => clearInterval(id)
   }, [tab, loadStats])
 
+  /* ── Analytics tab: live role-scoped, period-filtered data ── */
+  const [analytics, setAnalytics] = useState(null)
+
+  // Resolve the selected preset / custom range to a number of days.
+  const periodDays = (() => {
+    if (preset === '7d')  return 7
+    if (preset === '90d') return 90
+    if (preset === 'custom' && from && to) {
+      const ms = new Date(to) - new Date(from)
+      const d = Math.round(ms / 86_400_000) + 1
+      return d > 0 ? d : 30
+    }
+    return 30
+  })()
+
+  const loadAnalytics = useCallback(() => {
+    getDashboardAnalytics(periodDays)
+      .then(setAnalytics)
+      .catch(() => {})
+  }, [periodDays])
+
+  // Fetch on entering the Analytics tab + whenever the period changes, then poll.
+  useEffect(() => {
+    if (tab !== 'analytics') return
+    loadAnalytics()
+    const id = setInterval(loadAnalytics, 30_000)
+    return () => clearInterval(id)
+  }, [tab, loadAnalytics])
+
   /* ── Skeleton (matches new hero layout shape) ── */
   if (loading) return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
@@ -837,9 +868,19 @@ export default function DashboardPage() {
     { label: 'Signed', value: stats?.esignCompleted ?? 0,                           color: '#10b981' },
   ]
 
-  const topTemplates   = stats?.topTemplates   ?? []
-  const leastTemplates = stats?.leastTemplates ?? []
   const topUsers       = stats?.topUsers       ?? []
+
+  /* ── Analytics tab: prefer the live, period-scoped analytics payload ── */
+  const aTopTemplates   = analytics?.topTemplates   ?? []
+  const aLeastTemplates = analytics?.leastTemplates ?? []
+  const aActivity       = analytics?.activity       ?? []
+  const aFunnel = analytics?.esignFunnel
+    ? [
+        { label: 'Sent',   value: analytics.esignFunnel.sent,   color: '#6366f1' },
+        { label: 'Viewed', value: analytics.esignFunnel.viewed, color: '#0ea5e9' },
+        { label: 'Signed', value: analytics.esignFunnel.signed, color: '#10b981' },
+      ]
+    : esignFunnel
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8">
@@ -1033,87 +1074,72 @@ export default function DashboardPage() {
             {/* ② Template usage analytics */}
             <div className="card">
               <div className="flex items-center justify-between mb-4">
-                <SectionHeader title="Template Usage" sub="Most-used PDF & Email templates"/>
+                <SectionHeader title="Template Usage" sub={`Most-used PDF & Email templates — last ${periodDays} days`}/>
                 <ExportPngButton targetRef={chartRef1} filename="template-usage"/>
               </div>
               <div ref={chartRef1} className="space-y-3">
-                {topTemplates.length === 0 ? (
-                  <>
-                    {[
-                      { name: 'Invoice Template', uses: 142 },
-                      { name: 'Contract Draft',   uses: 98  },
-                      { name: 'Offer Letter',     uses: 76  },
-                      { name: 'NDA Agreement',    uses: 54  },
-                      { name: 'Quote Template',   uses: 31  },
-                    ].map((t, i) => (
-                      <HorizBar key={t.name} rank={i + 1} label={t.name} value={t.uses} max={142} color="#6366f1"/>
-                    ))}
-                    <p className="text-[10px] text-gray-400 mt-3 text-center italic">
-                      Sample data — connect template usage tracking API for live data.
-                    </p>
-                  </>
+                {aTopTemplates.length === 0 ? (
+                  <div className="text-center text-gray-400 py-8 text-xs">
+                    No template activity in the selected period.
+                  </div>
                 ) : (
-                  topTemplates.slice(0, 5).map((t, i) => (
+                  aTopTemplates.slice(0, 5).map((t, i) => (
                     <HorizBar key={t.id ?? i} rank={i + 1} label={t.name}
-                      value={t.useCount ?? t.uses ?? 0}
-                      max={topTemplates[0]?.useCount ?? topTemplates[0]?.uses ?? 1}
+                      value={t.uses ?? 0}
+                      max={aTopTemplates[0]?.uses ?? 1}
                       color="#6366f1"/>
                   ))
                 )}
               </div>
 
               {/* Least used */}
-              <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Least Used</p>
-                <div className="space-y-1">
-                  {(leastTemplates.length > 0 ? leastTemplates : [
-                    { name: 'Annual Report v1', uses: 1 },
-                    { name: 'Old NDA 2023',     uses: 2 },
-                    { name: 'Draft Proposal',   uses: 3 },
-                  ]).slice(0, 3).map((t, i) => (
-                    <div key={i} className="flex items-center justify-between text-xs py-1">
-                      <span className="text-gray-500 dark:text-gray-400 truncate">{t.name ?? t.templateName}</span>
-                      <span className="font-bold text-rose-500 shrink-0 ml-2">{t.uses ?? t.useCount ?? 0} uses</span>
-                    </div>
-                  ))}
+              {aLeastTemplates.length > 0 && (
+                <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Least Used</p>
+                  <div className="space-y-1">
+                    {aLeastTemplates.slice(0, 3).map((t, i) => (
+                      <div key={t.id ?? i} className="flex items-center justify-between text-xs py-1">
+                        <span className="text-gray-500 dark:text-gray-400 truncate">{t.name}</span>
+                        <span className="font-bold text-rose-500 shrink-0 ml-2">{t.uses ?? 0} uses</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* ③ Per-user / per-org activity breakdown */}
             <div className="card">
               <SectionHeader
-                title={isPlatformAdmin ? 'Activity by Organisation' : 'Activity by User'}
-                sub={isPlatformAdmin
-                  ? 'Audit actions grouped by tenant — selected period'
-                  : 'Audit actions per team member — selected period'}
+                title="Most Active Users"
+                sub={`Audit actions per person — last ${periodDays} days`}
               />
-              {topUsers.length === 0 ? (
+              {aActivity.length === 0 ? (
                 <div className="text-center text-gray-400 py-8 text-xs">No activity data in selected period</div>
               ) : (
                 <div className="space-y-3">
-                  {topUsers.slice(0, 8).map((u, i) => {
-                    const maxAct = topUsers[0]?.activityCount ?? 1
+                  {aActivity.slice(0, 8).map((u, i) => {
+                    const maxAct = aActivity[0]?.activityCount ?? 1
                     return (
-                      <div key={u.email ?? u.orgName ?? i} className="flex items-center gap-3">
+                      <div key={u.email ?? i} className="flex items-center gap-3">
                         <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0
                           ${i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-gray-200 text-gray-600' : 'bg-gray-100 text-gray-500'}`}>
                           {i + 1}
                         </span>
                         <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-white text-xs font-bold"
                           style={{ background: `hsl(${(i * 60 + 220) % 360}, 65%, 55%)` }}>
-                          {(u.name ?? u.orgName ?? '?').charAt(0).toUpperCase()}
+                          {(u.name ?? '?').charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-center mb-0.5">
-                            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate">{u.name ?? u.orgName}</span>
+                            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate">{u.name}</span>
                             <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 shrink-0 ml-2">{u.activityCount}</span>
                           </div>
                           <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                             <div className="h-full rounded-full bg-indigo-400 transition-all duration-500"
                               style={{ width: `${pct(u.activityCount, maxAct)}%` }}/>
                           </div>
-                          {!isPlatformAdmin && u.email && (
+                          {u.email && u.email !== u.name && (
                             <p className="text-[10px] text-gray-400 truncate mt-0.5">{u.email}</p>
                           )}
                         </div>
@@ -1129,18 +1155,18 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             <div className="card">
               <div className="flex items-center justify-between mb-4">
-                <SectionHeader title="E-Sign Conversion Funnel" sub="Sent → Viewed → Signed rate"/>
+                <SectionHeader title="E-Sign Conversion Funnel" sub={`Sent → Viewed → Signed — last ${periodDays} days`}/>
                 <ExportPngButton targetRef={chartRef2} filename="esign-funnel"/>
               </div>
               <div ref={chartRef2}>
-                <FunnelChart steps={esignFunnel}/>
+                <FunnelChart steps={aFunnel}/>
                 <div className="mt-4 grid grid-cols-3 gap-3">
-                  {esignFunnel.map(step => (
+                  {aFunnel.map(step => (
                     <div key={step.label} className="bg-gray-50 dark:bg-gray-900/40 rounded-xl p-3 text-center">
                       <p className="text-lg font-bold text-gray-800 dark:text-gray-200">{step.value}</p>
                       <p className="text-[11px] text-gray-400">{step.label}</p>
                       <p className="text-xs font-semibold mt-0.5" style={{ color: step.color }}>
-                        {pct(step.value, esignFunnel[0]?.value)}%
+                        {pct(step.value, aFunnel[0]?.value)}%
                       </p>
                     </div>
                   ))}
@@ -1400,6 +1426,27 @@ export default function DashboardPage() {
               sub={`${stats?.esignCompleted ?? 0} completed`} color="teal"/>
           </div>
 
+          {/* ─── Service usage across the platform ─── */}
+          <div className="mb-2"><SectionHeader title="Service Usage" sub="Created, sent, and generated across all organisations"/></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <KpiCard icon="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+              label="Emails Sent" value={stats?.totalEmailsSent ?? 0}
+              sub={`${(stats?.totalBulkEmailJobs ?? 0).toLocaleString()} campaigns`} color="sky"
+              onClick={() => navigate('/bulk-email')}/>
+            <KpiCard icon="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              label="PDF Templates" value={stats?.totalPdfTemplates ?? 0}
+              sub={`${(stats?.totalPdfsGenerated ?? 0).toLocaleString()} PDFs generated`} color="indigo"
+              onClick={() => navigate('/templates')}/>
+            <KpiCard icon="M7 8h10M7 12h6m5 8l-4-3H6a2 2 0 01-2-2V6a2 2 0 012-2h12a2 2 0 012 2v9a2 2 0 01-1 1.73"
+              label="Email Templates" value={stats?.totalEmailTemplates ?? 0}
+              sub="reusable layouts" color="emerald"
+              onClick={() => navigate('/email-templates')}/>
+            <KpiCard icon="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"
+              label="Files Stored" value={stats?.totalFiles ?? 0}
+              sub={`${(stats?.totalStorageMb ?? 0).toLocaleString()} MB`} color="amber"
+              onClick={() => navigate('/files')}/>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             <div className="card">
               <SectionHeader title="New Tenants" sub="Organisations created per month — last 6 months"/>
@@ -1520,7 +1567,7 @@ export default function DashboardPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-gray-50 dark:bg-gray-900/50">
-                      {['Organization', 'Features', 'Users', 'PDF', 'Email', 'E-Sign', 'Total'].map(h => (
+                      {['Organization', 'Features', 'Users', 'PDF Tpl', 'Email Tpl', 'E-Sign', 'Emails Sent', 'PDFs Gen', 'Files'].map(h => (
                         <th key={h} className={`px-5 py-2.5 text-xs font-bold text-gray-500 uppercase tracking-wide ${h === 'Organization' || h === 'Features' ? 'text-left' : 'text-right'}`}>{h}</th>
                       ))}
                     </tr>
@@ -1558,8 +1605,10 @@ export default function DashboardPage() {
                         <td className="px-5 py-3 text-right"><StatPill value={org.pdfTemplates}   color="sky"/></td>
                         <td className="px-5 py-3 text-right"><StatPill value={org.emailTemplates} color="emerald"/></td>
                         <td className="px-5 py-3 text-right"><StatPill value={org.esignDocuments} color="violet"/></td>
-                        <td className="px-5 py-3 text-right font-bold text-gray-700 dark:text-gray-300">
-                          {org.users + org.pdfTemplates + org.emailTemplates + org.esignDocuments}
+                        <td className="px-5 py-3 text-right"><StatPill value={org.emailsSent ?? 0}    color="sky"/></td>
+                        <td className="px-5 py-3 text-right"><StatPill value={org.pdfsGenerated ?? 0} color="amber"/></td>
+                        <td className="px-5 py-3 text-right" title={`${(org.storageMb ?? 0).toLocaleString()} MB stored`}>
+                          <StatPill value={org.files ?? 0} color="rose"/>
                         </td>
                       </tr>
                     ))}

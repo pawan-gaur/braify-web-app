@@ -99,11 +99,10 @@ export function AuthProvider({ children }) {
     }
   }, [token])
 
-  /* ── Login ── */
-  const login = useCallback(async (email, password) => {
-    const deviceInfo = `${navigator.userAgent.split(') ')[0].split('(')[1] || 'Browser'}`
-    const res  = await http.post('/auth/login', { email, password, deviceInfo })
-    const data = res.data
+  const deviceInfo = () => `${navigator.userAgent.split(') ')[0].split('(')[1] || 'Browser'}`
+
+  /* Apply a successful auth response (token + user + features + theme). */
+  const applySession = useCallback((data) => {
     setToken(data.token)
     const userObj = {
       id:                 data.userId,
@@ -115,6 +114,7 @@ export function AuthProvider({ children }) {
       organizationName:   data.organizationName,
       profilePicture:     data.profilePicture,
       mustChangePassword: data.mustChangePassword,
+      mustSetupMfa:       data.mustSetupMfa ?? false,
       features:           data.features ?? [],
       primaryColor:       data.primaryColor ?? null,
       accentColor:        data.accentColor  ?? null,
@@ -125,6 +125,21 @@ export function AuthProvider({ children }) {
     applyTheme(data.primaryColor, data.accentColor)
     return data
   }, [])
+
+  /* ── Login ── */
+  const login = useCallback(async (email, password) => {
+    const res  = await http.post('/auth/login', { email, password, deviceInfo: deviceInfo() })
+    const data = res.data
+    // MFA required: no session yet — caller (LoginPage) collects the code and calls verifyMfa().
+    if (data.mfaRequired) return { mfaRequired: true, mfaToken: data.mfaToken }
+    return applySession(data)
+  }, [applySession])
+
+  /* ── MFA challenge — step 2 of login ── */
+  const verifyMfa = useCallback(async (mfaToken, code) => {
+    const res  = await http.post('/auth/login/mfa', { mfaToken, code, deviceInfo: deviceInfo() })
+    return applySession(res.data)
+  }, [applySession])
 
   /* ── Logout ── */
   const logout = useCallback(async () => {
@@ -187,6 +202,7 @@ export function AuthProvider({ children }) {
     loading,
     isAuthenticated: !!user,
     login,
+    verifyMfa,
     logout,
     can,
     hasFeature,

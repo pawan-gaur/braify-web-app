@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { AppProvider, useApp }  from './context/AppContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
@@ -8,43 +8,58 @@ import ToastContainer   from './components/ui/ToastContainer'
 import ProtectedRoute   from './components/auth/ProtectedRoute'
 import Sidebar          from './components/layout/Sidebar'
 import Navbar           from './components/layout/Navbar'
-import LoginPage            from './pages/LoginPage'
-import TemplatesPage        from './pages/TemplatesPage'
-import BuilderPage          from './pages/BuilderPage'
-import GeneratePage         from './pages/GeneratePage'
-import AuditLogPage         from './pages/AuditLogPage'
-import EmailTemplatesPage   from './pages/EmailTemplatesPage'
-import EmailBuilderPage     from './pages/EmailBuilderPage'
-import OrganizationsPage    from './pages/OrganizationsPage'
-import UsersPage            from './pages/UsersPage'
-import SessionsPage         from './pages/SessionsPage'
-import ProfilePage          from './pages/ProfilePage'
-import AcceptInvitePage     from './pages/AcceptInvitePage'
-import ForgotPasswordPage   from './pages/ForgotPasswordPage'
-import ResetPasswordPage    from './pages/ResetPasswordPage'
-import DashboardPage        from './pages/DashboardPage'
-import LandingPage          from './pages/LandingPage'
-import ESignDocumentsPage   from './pages/ESignDocumentsPage'
-import ESignBuilderPage     from './pages/ESignBuilderPage'
-import ESignBulkPage        from './pages/ESignBulkPage'
-import ESignDetailPage      from './pages/ESignDetailPage'
-import ESignSigningPage     from './pages/ESignSigningPage'
-import BulkEmailJobsPage    from './pages/BulkEmailJobsPage'
-import BulkEmailSendPage    from './pages/BulkEmailSendPage'
-import BulkEmailDetailPage  from './pages/BulkEmailDetailPage'
-import ESignVerifyPage      from './pages/ESignVerifyPage'
-import GetStartedPage       from './pages/GetStartedPage'
-import OnboardingRequestsPage from './pages/OnboardingRequestsPage'
-import OrgSettingsPage       from './pages/BrandingPage'
-import UsagePage             from './pages/UsagePage'
-import SharedTemplatesPage   from './pages/SharedTemplatesPage'
-import ApiDocsPage           from './pages/ApiDocsPage'
-import OrgDetailPage         from './pages/OrgDetailPage'
-import ApiKeysPage           from './pages/ApiKeysPage'
-import FilesPage             from './pages/FilesPage'
-import FeatureDetailPage     from './pages/FeatureDetailPage'
 import PageTransition        from './components/ui/PageTransition'
 import TitleManager          from './components/ui/TitleManager'
+
+// ── Eager — public entry, kept in the main chunk for instant first paint ──
+import LoginPage            from './pages/LoginPage'
+import LandingPage          from './pages/LandingPage'
+
+// ── Lazy — each page becomes its own chunk, loaded only when its route is hit.
+//    This is what splits the former single ~4.4 MB bundle (grapesjs, swagger-ui,
+//    xlsx, pdfjs all live behind their routes now). ──
+const TemplatesPage          = lazy(() => import('./pages/TemplatesPage'))
+const BuilderPage            = lazy(() => import('./pages/BuilderPage'))
+const GeneratePage           = lazy(() => import('./pages/GeneratePage'))
+const AuditLogPage           = lazy(() => import('./pages/AuditLogPage'))
+const EmailTemplatesPage     = lazy(() => import('./pages/EmailTemplatesPage'))
+const EmailBuilderPage       = lazy(() => import('./pages/EmailBuilderPage'))
+const OrganizationsPage      = lazy(() => import('./pages/OrganizationsPage'))
+const UsersPage              = lazy(() => import('./pages/UsersPage'))
+const SessionsPage           = lazy(() => import('./pages/SessionsPage'))
+const ProfilePage            = lazy(() => import('./pages/ProfilePage'))
+const AcceptInvitePage       = lazy(() => import('./pages/AcceptInvitePage'))
+const ForgotPasswordPage     = lazy(() => import('./pages/ForgotPasswordPage'))
+const ResetPasswordPage      = lazy(() => import('./pages/ResetPasswordPage'))
+const DashboardPage          = lazy(() => import('./pages/DashboardPage'))
+const ESignDocumentsPage     = lazy(() => import('./pages/ESignDocumentsPage'))
+const ESignBuilderPage       = lazy(() => import('./pages/ESignBuilderPage'))
+const ESignBulkPage          = lazy(() => import('./pages/ESignBulkPage'))
+const ESignDetailPage        = lazy(() => import('./pages/ESignDetailPage'))
+const ESignSigningPage       = lazy(() => import('./pages/ESignSigningPage'))
+const BulkEmailJobsPage      = lazy(() => import('./pages/BulkEmailJobsPage'))
+const BulkEmailSendPage      = lazy(() => import('./pages/BulkEmailSendPage'))
+const BulkEmailDetailPage    = lazy(() => import('./pages/BulkEmailDetailPage'))
+const ESignVerifyPage        = lazy(() => import('./pages/ESignVerifyPage'))
+const GetStartedPage         = lazy(() => import('./pages/GetStartedPage'))
+const OnboardingRequestsPage = lazy(() => import('./pages/OnboardingRequestsPage'))
+const OrgSettingsPage        = lazy(() => import('./pages/BrandingPage'))
+const UsagePage              = lazy(() => import('./pages/UsagePage'))
+const SharedTemplatesPage    = lazy(() => import('./pages/SharedTemplatesPage'))
+const ApiDocsPage            = lazy(() => import('./pages/ApiDocsPage'))
+const OrgDetailPage          = lazy(() => import('./pages/OrgDetailPage'))
+const ApiKeysPage            = lazy(() => import('./pages/ApiKeysPage'))
+const FilesPage              = lazy(() => import('./pages/FilesPage'))
+const FeatureDetailPage      = lazy(() => import('./pages/FeatureDetailPage'))
+
+/* Centered spinner shown while a lazy route chunk loads. */
+function RouteFallback() {
+  return (
+    <div className="flex justify-center items-center min-h-[60vh]">
+      <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"/>
+    </div>
+  )
+}
 
 /**
  * Smart router for /esign/:id
@@ -99,6 +114,7 @@ function Shell() {
       <Navbar  />
       <main className={`flex-1 ${sideW} pt-14 transition-[margin-left] duration-300 ease-spring min-w-0`}>
         <PageTransition>
+        <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/"        element={<DashboardPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
@@ -150,6 +166,7 @@ function Shell() {
           {/* Catch-all inside shell */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </Suspense>
         </PageTransition>
       </main>
     </div>
@@ -161,6 +178,7 @@ function AppRoutes() {
   const { isAuthenticated, loading } = useAuth()
 
   return (
+    <Suspense fallback={<RouteFallback />}>
     <Routes>
       {/* Public landing page */}
       <Route
@@ -202,6 +220,7 @@ function AppRoutes() {
         }
       />
     </Routes>
+    </Suspense>
   )
 }
 

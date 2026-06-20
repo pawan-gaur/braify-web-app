@@ -256,6 +256,19 @@
    ───────────────────────────────────────────────────────── */
 .gjs-cv-canvas { background: #e8eaf5 !important; }
 
+/* ── Scrollable PDF canvas ──────────────────────────────────────────────────
+   PDF pages use fixed-height devices (A4 = 1123px). GrapesJS's canvas is
+   overflow:hidden and centers the page frame, so a page taller than the
+   viewport gets clipped top & bottom with no way to reach it. Scoped to
+   #gjs-canvas (the PDF builder; the email canvas is #email-gjs-canvas and is
+   left untouched), this lets the canvas scroll to the full page height. The
+   page frame moves into normal flow so the canvas gets a real scroll height;
+   GrapesJS repositions its tools/resize-handles on scroll, so they stay
+   aligned (verified). */
+#gjs-canvas .gjs-cv-canvas        { overflow: auto !important; }
+#gjs-canvas .gjs-cv-canvas__frames { position: relative !important; height: auto !important; min-height: 100% !important; }
+#gjs-canvas .gjs-frame-wrapper     { position: relative !important; margin: 20px auto !important; }
+
 /* Toolbar (component action bar) */
 .gjs-toolbar {
   background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;

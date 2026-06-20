@@ -51,6 +51,7 @@ const AUDIT_ICONS = {
 }
 
 const POLL_MS = 3000
+const RECIP_PAGE_SIZE = 100   // recipients rendered per page (jobs can have thousands)
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function Spinner() {
@@ -68,6 +69,7 @@ export default function BulkEmailDetailPage() {
   const [auditLoaded,  setAuditLoaded]  = useState(false)
   const [loading,      setLoading]      = useState(true)
   const [tab,          setTab]          = useState('overview')
+  const [recipPage,    setRecipPage]    = useState(0)   // recipients tab pagination
   const pollRef = useRef(null)
 
   const TERMINAL = ['COMPLETED', 'PARTIAL', 'FAILED', 'CANCELLED']
@@ -427,7 +429,7 @@ export default function BulkEmailDetailPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                  {job.rows.map(r => (
+                  {job.rows.slice(recipPage * RECIP_PAGE_SIZE, (recipPage + 1) * RECIP_PAGE_SIZE).map(r => (
                     <tr key={r.rowIndex} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                       <td className="px-5 py-3 text-gray-500">{r.rowIndex + 1}</td>
                       <td className="px-5 py-3 text-gray-800 dark:text-gray-200 font-medium max-w-[200px] truncate">
@@ -461,6 +463,26 @@ export default function BulkEmailDetailPage() {
                   ))}
                 </tbody>
               </table>
+              {job.rows.length > RECIP_PAGE_SIZE && (
+                <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-500">
+                  <span>
+                    {(recipPage * RECIP_PAGE_SIZE + 1).toLocaleString()}–
+                    {Math.min((recipPage + 1) * RECIP_PAGE_SIZE, job.rows.length).toLocaleString()} of {job.rows.length.toLocaleString()}
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      className="px-3 py-1 rounded-lg border border-gray-200 dark:border-gray-600 disabled:opacity-40 hover:border-primary"
+                      disabled={recipPage === 0}
+                      onClick={() => setRecipPage(p => Math.max(0, p - 1))}
+                    >Prev</button>
+                    <button
+                      className="px-3 py-1 rounded-lg border border-gray-200 dark:border-gray-600 disabled:opacity-40 hover:border-primary"
+                      disabled={(recipPage + 1) * RECIP_PAGE_SIZE >= job.rows.length}
+                      onClick={() => setRecipPage(p => p + 1)}
+                    >Next</button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
