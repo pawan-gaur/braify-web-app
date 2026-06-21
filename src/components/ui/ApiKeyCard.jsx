@@ -1,7 +1,7 @@
 import { fmtDate, fmtRelative } from '../../utils/date'
 
 const FEATURE_BADGE = {
-  PDF_TEMPLATES:   { label: 'PDF Templates',   cls: 'bg-indigo-100 text-indigo-700' },
+  PDF_TEMPLATES:   { label: 'PDF Templates',   cls: 'bg-brand-100 text-brand-700' },
   EMAIL_TEMPLATES: { label: 'Email Templates', cls: 'bg-sky-100 text-sky-700'       },
   E_SIGN:          { label: 'E-Sign',          cls: 'bg-emerald-100 text-emerald-700' },
 }
@@ -75,7 +75,7 @@ export default function ApiKeyCard({ apiKey, onToggle, onRevoke, isToggling = fa
 
       {/* ── Created by ── */}
       {createdBy && (
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-ink-4">
           Created by <span className="font-medium text-gray-600 dark:text-gray-300">{createdBy}</span>
         </p>
       )}
@@ -90,8 +90,8 @@ export default function ApiKeyCard({ apiKey, onToggle, onRevoke, isToggling = fa
             aria-checked={active}
             disabled={isToggling}
             onClick={() => onToggle && onToggle(id)}
-            className={`relative w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1
-              ${active ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'}
+            className={`relative w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-1
+              ${active ? 'bg-brand-600' : 'bg-gray-300 dark:bg-gray-600'}
               ${isToggling ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
           >
             <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200
@@ -127,8 +127,8 @@ export default function ApiKeyCard({ apiKey, onToggle, onRevoke, isToggling = fa
 
 function Stat({ label, value }) {
   return (
-    <div className="bg-gray-50 dark:bg-gray-700/40 rounded-xl px-3 py-2">
-      <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">{label}</p>
+    <div className="bg-ink-8 dark:bg-gray-700/40 rounded-xl px-3 py-2">
+      <p className="text-[10px] text-ink-4 font-semibold uppercase tracking-wide">{label}</p>
       <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mt-0.5 truncate">{value}</p>
     </div>
   )

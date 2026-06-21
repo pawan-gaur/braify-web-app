@@ -11,6 +11,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { esignVerifyDocument } from '../services/api'
+import { IconCheck } from '../components/ui/icons'
 
 export default function ESignVerifyPage() {
   const { id } = useParams()
@@ -30,7 +31,7 @@ export default function ESignVerifyPage() {
       {/* Brand */}
       <div className="flex items-center gap-2 mb-8">
         <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-          style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)' }}>
+          style={{ background: 'linear-gradient(135deg,#6D52E8,#5a3fd6)' }}>
           <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
@@ -39,10 +40,10 @@ export default function ESignVerifyPage() {
         <span className="text-xl font-bold text-gray-900">Braify e-Sign</span>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-md border border-gray-200 w-full max-w-md p-8">
+      <div className="card w-full max-w-md p-8">
         {loading && (
           <div className="flex justify-center py-10">
-            <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"/>
+            <div className="w-10 h-10 border-4 border-accent border-t-transparent rounded-full animate-spin"/>
           </div>
         )}
 
@@ -78,7 +79,9 @@ export default function ESignVerifyPage() {
                 </div>
               )}
               <h1 className="text-2xl font-bold text-gray-900">
-                {data.verified ? 'Document Verified ✓' : 'Not Yet Complete'}
+                {data.verified
+                  ? <span className="inline-flex items-center justify-center gap-2">Document Verified <IconCheck className="w-6 h-6" /></span>
+                  : 'Not Yet Complete'}
               </h1>
               <p className="text-gray-500 text-sm mt-1">
                 {data.verified
@@ -127,7 +130,7 @@ export default function ESignVerifyPage() {
       </div>
 
       <p className="text-xs text-gray-400 mt-6">
-        Powered by <span className="font-semibold text-purple-600">Braify e-Sign</span>
+        Powered by <span className="font-semibold text-accent">Braify e-Sign</span>
       </p>
     </div>
   )

@@ -5,6 +5,7 @@ import { getApiKeys, getAllApiKeys, createApiKey, revokeApiKey, toggleApiKey } f
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import ApiKeyCard from '../components/ui/ApiKeyCard'
+import { IconArrowRight } from '../components/ui/icons'
 import { fmtDate } from '../utils/date'
 
 const CRUMBS = [
@@ -14,7 +15,7 @@ const CRUMBS = [
 ]
 
 const ALL_FEATURES = [
-  { key: 'PDF_TEMPLATES',   label: 'PDF Templates',   cls: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'  },
+  { key: 'PDF_TEMPLATES',   label: 'PDF Templates',   cls: 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300'  },
   { key: 'EMAIL_TEMPLATES', label: 'Email Templates', cls: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300'        },
   { key: 'E_SIGN',          label: 'E-Sign',          cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' },
   { key: 'FILE_STORAGE',    label: 'File Storage',    cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'    },
@@ -119,21 +120,21 @@ function AdminApiKeysView() {
       {/* Header */}
       <div className="flex items-center justify-between mt-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">API Keys</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-ink dark:text-white">API Keys</h1>
+          <p className="text-sm text-ink-3 mt-1">
             All API keys across every organisation.
-            <span className="ml-2 inline-flex items-center gap-1 text-xs font-semibold bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300 px-2 py-0.5 rounded-full">
+            <span className="ml-2 inline-flex items-center gap-1 text-xs font-semibold bg-accent-100 text-accent-700 dark:bg-accent-900/40 dark:text-accent-300 px-2 py-0.5 rounded-full">
               Platform Admin
             </span>
           </p>
         </div>
-        <div className="text-sm text-gray-400">
+        <div className="text-sm text-ink-4">
           {allKeys.length} total key{allKeys.length !== 1 ? 's' : ''}
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl mb-6 w-fit">
+      <div className="flex gap-1 p-1 bg-ink-8 dark:bg-gray-800 rounded-xl mb-6 w-fit">
         {[
           { id: 'keys',      label: 'All Keys',     icon: 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z' },
           { id: 'reference', label: 'API Reference', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
@@ -143,8 +144,8 @@ function AdminApiKeysView() {
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all
               ${activeTab === tab.id
-                ? 'bg-white dark:bg-gray-700 text-purple-700 dark:text-purple-300 shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                ? 'bg-gradient-accent text-white shadow-soft'
+                : 'text-ink-3 hover:text-ink dark:text-gray-400 dark:hover:text-gray-200'
               }`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -162,7 +163,7 @@ function AdminApiKeysView() {
           {/* Filters bar */}
           <div className="flex flex-wrap gap-3 mb-5">
             <div className="relative flex-1 min-w-[200px]">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
               </svg>
               <input
@@ -199,7 +200,7 @@ function AdminApiKeysView() {
             {(search || filterOrg !== 'all' || filterStatus !== 'all') && (
               <button
                 onClick={() => { setSearch(''); setFilterOrg('all'); setFilterStatus('all') }}
-                className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="text-xs text-ink-4 hover:text-ink-2 dark:hover:text-gray-200 px-3 py-2 rounded-lg hover:bg-ink-8 dark:hover:bg-gray-700 transition-colors"
               >
                 Clear filters
               </button>
@@ -207,19 +208,19 @@ function AdminApiKeysView() {
           </div>
 
           {loading ? (
-            <div className="flex items-center justify-center py-24 gap-3 text-gray-400">
-              <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"/>
+            <div className="flex items-center justify-center py-24 gap-3 text-ink-4">
+              <div className="w-8 h-8 border-4 border-accent-500 border-t-transparent rounded-full animate-spin"/>
               Loading API keys…
             </div>
           ) : grouped.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-gray-50 dark:bg-gray-800 flex items-center justify-center mb-4">
+              <div className="w-14 h-14 rounded-2xl bg-ink-8 dark:bg-gray-800 flex items-center justify-center mb-4">
                 <svg className="w-7 h-7 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                     d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
                 </svg>
               </div>
-              <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">
+              <p className="text-sm font-semibold text-ink-3 dark:text-gray-400">
                 {search || filterOrg !== 'all' || filterStatus !== 'all'
                   ? 'No keys match your filters.'
                   : 'No API keys have been created yet across any organisation.'}
@@ -260,8 +261,8 @@ function OrgKeyGroup({ orgId, orgName, keys, toggling, revoking, onToggle, onRev
         onClick={() => setOpen(o => !o)}
         className="w-full flex items-center gap-3 px-5 py-4 bg-gray-50 dark:bg-gray-800/80 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left"
       >
-        <div className="w-8 h-8 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center flex-shrink-0">
-          <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="w-8 h-8 rounded-xl bg-brand-100 dark:bg-brand-900/40 flex items-center justify-center flex-shrink-0">
+          <svg className="w-4 h-4 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
               d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
           </svg>
@@ -281,9 +282,10 @@ function OrgKeyGroup({ orgId, orgName, keys, toggling, revoking, onToggle, onRev
         <a
           href={`/admin/organizations/${orgId}`}
           onClick={e => e.stopPropagation()}
-          className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-semibold mr-2"
+          className="inline-flex items-center gap-1.5 text-xs text-brand-600 dark:text-brand-400 hover:underline font-semibold mr-2"
         >
-          View org →
+          View org
+          <IconArrowRight />
         </a>
         <svg
           className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
@@ -379,8 +381,8 @@ function OrgApiKeysView() {
       {/* Header */}
       <div className="flex items-center justify-between mt-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">API Keys</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage programmatic access to your organisation.</p>
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-ink dark:text-white">API Keys</h1>
+          <p className="text-sm text-ink-3 mt-1">Manage programmatic access to your organisation.</p>
         </div>
         {activeTab === 'keys' && (
           <button onClick={() => setShowCreate(true)} className="btn btn-primary gap-2">
@@ -393,7 +395,7 @@ function OrgApiKeysView() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl mb-6 w-fit">
+      <div className="flex gap-1 p-1 bg-ink-8 dark:bg-gray-800 rounded-xl mb-6 w-fit">
         {[
           { id: 'keys',      label: 'My Keys',      icon: 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z' },
           { id: 'reference', label: 'API Reference', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
@@ -403,8 +405,8 @@ function OrgApiKeysView() {
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all
               ${activeTab === tab.id
-                ? 'bg-white dark:bg-gray-700 text-purple-700 dark:text-purple-300 shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                ? 'bg-gradient-accent text-white shadow-soft'
+                : 'text-ink-3 hover:text-ink dark:text-gray-400 dark:hover:text-gray-200'
               }`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -418,8 +420,8 @@ function OrgApiKeysView() {
       {/* Tab: My Keys */}
       {activeTab === 'keys' && (
         loading ? (
-          <div className="flex items-center justify-center py-24 gap-3 text-gray-400">
-            <svg className="animate-spin h-5 w-5 text-indigo-500" viewBox="0 0 24 24" fill="none">
+          <div className="flex items-center justify-center py-24 gap-3 text-ink-4">
+            <svg className="animate-spin h-5 w-5 text-brand-500" viewBox="0 0 24 24" fill="none">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
             </svg>
@@ -465,8 +467,8 @@ function OrgApiKeysView() {
 function EmptyState({ onGenerate }) {
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center mb-4">
-        <svg className="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="w-16 h-16 rounded-2xl bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center mb-4">
+        <svg className="w-8 h-8 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
             d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
         </svg>
@@ -530,7 +532,7 @@ function CodeBlock({ code, lang = 'bash' }) {
 function MethodBadge({ method }) {
   const colours = {
     GET:    'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400',
-    POST:   'bg-indigo-100  text-indigo-700  dark:bg-indigo-900/40  dark:text-indigo-400',
+    POST:   'bg-brand-100  text-brand-700  dark:bg-brand-900/40  dark:text-brand-400',
     DELETE: 'bg-rose-100    text-rose-700    dark:bg-rose-900/40    dark:text-rose-400',
     PATCH:  'bg-amber-100   text-amber-700   dark:bg-amber-900/40   dark:text-amber-400',
   }
@@ -588,8 +590,8 @@ function EndpointDoc({ method, path, title, description, requestBody, responseBo
                   onClick={() => setCodeTab(id)}
                   className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-all
                     ${codeTab === id
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
+                      ? 'bg-accent text-white'
+                      : 'bg-ink-8 dark:bg-gray-700 text-ink-3 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
                     }`}
                 >
                   {label}
@@ -608,8 +610,8 @@ function EndpointDoc({ method, path, title, description, requestBody, responseBo
 function SectionHeading({ icon, badge, children }) {
   return (
     <div className="flex items-center gap-2 mb-4">
-      <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center flex-shrink-0">
-        <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="w-7 h-7 rounded-lg bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center flex-shrink-0">
+        <svg className="w-4 h-4 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={icon}/>
         </svg>
       </div>
@@ -636,7 +638,7 @@ function ApiReferenceTab() {
         </SectionHeading>
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
           All external API requests must include your API key in the{' '}
-          <code className="text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded text-xs font-mono">X-API-Key</code>{' '}
+          <code className="text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/30 px-1.5 py-0.5 rounded text-xs font-mono">X-API-Key</code>{' '}
           header. Keys are prefixed with <code className="font-mono text-xs bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">brfy_</code> and are shown only once at creation time.
           E-Sign creator endpoints use <code className="font-mono text-xs bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">Authorization: Bearer &lt;jwt&gt;</code> — client signing and verify are public.
         </p>
@@ -666,7 +668,7 @@ function ApiReferenceTab() {
       <section>
         <SectionHeading
           icon="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-          badge={{ label: 'PDF_TEMPLATES', cls: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400' }}
+          badge={{ label: 'PDF_TEMPLATES', cls: 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-400' }}
         >
           PDF Templates
         </SectionHeading>
@@ -929,7 +931,7 @@ Accepted form parts: file (required), folder, documentType, documentExpiryDate (
         </div>
       </section>
 
-      <div className="rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 px-5 py-4 text-sm text-indigo-700 dark:text-indigo-300">
+      <div className="rounded-xl bg-brand-50 dark:bg-brand-900/20 border border-brand-100 dark:border-brand-800 px-5 py-4 text-sm text-brand-700 dark:text-brand-300">
         <strong>Need help?</strong> Every API request is logged. Visit the <strong>Usage</strong> tab on your organisation dashboard to monitor call counts, storage usage, and per-key statistics.
       </div>
     </div>
@@ -995,7 +997,7 @@ function CreateKeyModal({ orgId, orgFeatures, onClose, onCreated }) {
               <div className="space-y-2">
                 {availableFeatures.map(f => (
                   <label key={f.key} className="flex items-center gap-3 cursor-pointer">
-                    <input type="checkbox" className="rounded accent-indigo-600 w-4 h-4"
+                    <input type="checkbox" className="rounded accent-brand-600 w-4 h-4"
                       checked={features.includes(f.key)} onChange={() => toggleFeature(f.key)}/>
                     <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${f.cls}`}>{f.label}</span>
                   </label>
@@ -1070,7 +1072,7 @@ function KeyCreatedModal({ rawKey, onClose }) {
               <button
                 onClick={copy}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all
-                  ${copied ? 'bg-emerald-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+                  ${copied ? 'bg-emerald-600 text-white' : 'bg-brand-600 hover:bg-brand-700 text-white'}`}
               >
                 {copied ? (
                   <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/></svg>Copied!</>

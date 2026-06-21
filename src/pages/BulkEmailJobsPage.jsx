@@ -17,6 +17,7 @@ import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import ViewToggle, { useView } from '../components/ui/ViewToggle'
 import { fmtDateTimeGB as fmtDate } from '../utils/date'
+import { IconX, IconChevronsLeft, IconChevronsRight, IconChevronLeft, IconChevronRight } from '../components/ui/icons'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const POLL_MS          = 5000
@@ -90,7 +91,7 @@ function CopyIdButton({ id }) {
     <button
       onClick={handleCopy}
       title={copied ? 'Copied!' : 'Copy full ID'}
-      className="p-0.5 rounded text-gray-300 hover:text-purple-500 dark:hover:text-purple-400 transition-colors shrink-0"
+      className="p-0.5 rounded text-gray-300 hover:text-accent-500 dark:hover:text-accent-400 transition-colors shrink-0"
     >
       {copied ? (
         <svg className="w-3 h-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -109,7 +110,7 @@ function CopyIdButton({ id }) {
 function Spinner() {
   return (
     <div className="flex justify-center py-20">
-      <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"/>
+      <div className="w-8 h-8 border-4 border-accent-500 border-t-transparent rounded-full animate-spin"/>
     </div>
   )
 }
@@ -130,7 +131,7 @@ function PaginationBar({ page, totalPages, totalElements, size, onPage, onSize }
             onChange={e => onSize(Number(e.target.value))}
             className="px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-600
                        bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300
-                       focus:outline-none focus:ring-2 focus:ring-purple-400"
+                       focus:outline-none focus:ring-2 focus:ring-accent-400"
           >
             {PAGE_SIZE_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
           </select>
@@ -141,11 +142,11 @@ function PaginationBar({ page, totalPages, totalElements, size, onPage, onSize }
         <button disabled={page === 0} onClick={() => onPage(0)}
           className="px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-600
                      disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          title="First">«</button>
+          title="First"><IconChevronsLeft className="w-4 h-4" /></button>
         <button disabled={page === 0} onClick={() => onPage(page - 1)}
           className="px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-600
                      disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          title="Previous">‹</button>
+          title="Previous"><IconChevronLeft className="w-4 h-4" /></button>
         {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
           let p
           if (totalPages <= 7)           p = i
@@ -157,7 +158,7 @@ function PaginationBar({ page, totalPages, totalElements, size, onPage, onSize }
             <button key={p} onClick={() => onPage(p)}
               className={`px-3 py-1 rounded-lg border text-xs font-semibold transition-colors
                 ${page === p
-                  ? 'bg-purple-600 border-purple-600 text-white'
+                  ? 'bg-accent-600 border-accent-600 text-white'
                   : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
             >{p + 1}</button>
           )
@@ -165,11 +166,11 @@ function PaginationBar({ page, totalPages, totalElements, size, onPage, onSize }
         <button disabled={page >= totalPages-1} onClick={() => onPage(page + 1)}
           className="px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-600
                      disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          title="Next">›</button>
+          title="Next"><IconChevronRight className="w-4 h-4" /></button>
         <button disabled={page >= totalPages-1} onClick={() => onPage(totalPages - 1)}
           className="px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-600
                      disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          title="Last">»</button>
+          title="Last"><IconChevronsRight className="w-4 h-4" /></button>
       </div>
     </div>
   )
@@ -288,9 +289,7 @@ export default function BulkEmailJobsPage() {
         </div>
         <button
           onClick={() => navigate('/bulk-email/send')}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white
-                     shadow-sm hover:opacity-90 active:scale-95 transition-all"
-          style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)' }}
+          className="btn btn-accent"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -316,7 +315,7 @@ export default function BulkEmailJobsPage() {
             onChange={e => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700
                        bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm
-                       focus:outline-none focus:ring-2 focus:ring-purple-500"
+                       focus:outline-none focus:ring-2 focus:ring-accent-500"
           />
         </div>
 
@@ -326,7 +325,7 @@ export default function BulkEmailJobsPage() {
           onChange={e => applyStatusFilter(e.target.value)}
           className="px-3 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-700
                      bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300
-                     focus:outline-none focus:ring-2 focus:ring-purple-500"
+                     focus:outline-none focus:ring-2 focus:ring-accent-500"
         >
           <option value="">All Statuses</option>
           <option value="PENDING">Pending</option>
@@ -367,7 +366,7 @@ export default function BulkEmailJobsPage() {
             <>
               <p className="text-gray-500 dark:text-gray-400 text-lg font-medium">No campaigns match your filters</p>
               <button onClick={() => { setSearch(''); applyStatusFilter('') }}
-                className="mt-3 text-sm text-purple-600 hover:underline">
+                className="mt-3 text-sm text-accent-600 hover:underline">
                 Clear filters
               </button>
             </>
@@ -379,8 +378,7 @@ export default function BulkEmailJobsPage() {
               </p>
               <button
                 onClick={() => navigate('/bulk-email/send')}
-                className="mt-4 px-5 py-2.5 rounded-xl text-white text-sm font-semibold transition-all hover:opacity-90"
-                style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)' }}
+                className="btn btn-accent mt-4"
               >
                 Send Bulk Email
               </button>
@@ -594,7 +592,7 @@ export default function BulkEmailJobsPage() {
                         <span className="text-xs text-gray-500 whitespace-nowrap">
                           {job.sentCount}/{job.totalCount}
                           {job.failedCount > 0 && (
-                            <span className="text-red-500 ml-1">· {job.failedCount}✗</span>
+                            <span className="text-red-500 ml-1 inline-flex items-center gap-0.5">· {job.failedCount}<IconX className="w-3 h-3 inline" /></span>
                           )}
                         </span>
                       </div>
@@ -609,8 +607,8 @@ export default function BulkEmailJobsPage() {
                     <td className="px-4 py-3.5 text-right" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1.5">
                         <button onClick={() => navigate(`/bulk-email/${job.id}`)}
-                          className="p-1.5 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/30
-                                     text-gray-400 hover:text-purple-600 transition-colors"
+                          className="p-1.5 rounded-lg hover:bg-accent-50 dark:hover:bg-accent-900/30
+                                     text-gray-400 hover:text-accent-600 transition-colors"
                           title="View details">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}

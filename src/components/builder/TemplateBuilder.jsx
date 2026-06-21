@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import grapesjs from 'grapesjs'
 import { EDITOR_CONFIG } from './grapes-config'
 import PreviewDataModal from '../ui/PreviewDataModal'
+import { IconCheck } from '../ui/icons'
 import '../../styles/builder.css'
 
 /* ── Constants ────────────────────────────────────────────────────────────── */
@@ -840,11 +841,11 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
             Export
           </button>
           <button
-            className="text-xs px-2.5 py-1.5 rounded-lg bg-sidebar-hover border border-sidebar-border text-sidebar-muted hover:text-white transition-colors"
+            className="text-xs px-2.5 py-1.5 rounded-lg bg-sidebar-hover border border-sidebar-border text-sidebar-muted hover:text-white transition-colors inline-flex items-center gap-1.5"
             onClick={handleCopyHtml}
             title="Copy HTML to clipboard"
           >
-            {copied ? '✓ Copied' : 'Copy HTML'}
+            {copied ? <><IconCheck className="w-3.5 h-3.5" />Copied</> : 'Copy HTML'}
           </button>
 
           {/* Separator */}

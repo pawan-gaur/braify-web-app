@@ -29,7 +29,7 @@ function CopyIdButton({ id }) {
     <button
       onClick={handleCopy}
       title={copied ? 'Copied!' : 'Copy full ID'}
-      className="p-0.5 rounded text-gray-300 hover:text-primary dark:hover:text-primary transition-colors shrink-0"
+      className="p-0.5 rounded text-ink-4 hover:text-primary dark:hover:text-primary transition-colors shrink-0"
     >
       {copied ? (
         <svg className="w-3 h-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -52,14 +52,14 @@ function SortTh({ label, field, sortKey, onSort }) {
     <th
       onClick={() => onSort(active && d === 'asc' ? `${field}_desc` : `${field}_asc`)}
       className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide cursor-pointer select-none
-                 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                 text-ink-3 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"
     >
       <span className="flex items-center gap-1.5">
         {label}
         {active ? (
           d === 'asc'
-            ? <svg className="w-3 h-3 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7"/></svg>
-            : <svg className="w-3 h-3 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7"/></svg>
+            ? <svg className="w-3 h-3 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7"/></svg>
+            : <svg className="w-3 h-3 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7"/></svg>
         ) : (
           <svg className="w-3 h-3 opacity-25" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/>
@@ -158,8 +158,8 @@ export default function TemplatesPage() {
       {/* Header */}
       <div className="flex items-center justify-between mt-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">PDF Templates</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-ink dark:text-white">PDF Templates</h1>
+          <p className="text-sm text-ink-3 mt-1">
             {templates.length} template{templates.length !== 1 ? 's' : ''} saved
           </p>
         </div>
@@ -172,15 +172,15 @@ export default function TemplatesPage() {
       </div>
 
       {/* Page Tabs */}
-      <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 mb-6 bg-ink-8 dark:bg-gray-800 rounded-xl p-1 w-fit">
         {PAGE_TABS.map(tab => (
           <button
             key={tab.id}
             onClick={() => setPageTab(tab.id)}
             className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
               pageTab === tab.id
-                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                ? 'bg-gradient-accent text-white shadow-soft'
+                : 'text-ink-3 dark:text-gray-400 hover:text-ink dark:hover:text-gray-200'
             }`}
           >
             {tab.label}
@@ -196,7 +196,7 @@ export default function TemplatesPage() {
       {/* ── My Templates tab ── */}
       {pageTab === 'mine' && (
         loading ? (
-          <div className="flex items-center justify-center py-20 text-gray-400">
+          <div className="flex items-center justify-center py-20 text-ink-4">
             <svg className="animate-spin h-6 w-6 mr-3 text-primary" viewBox="0 0 24 24" fill="none">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
@@ -206,12 +206,12 @@ export default function TemplatesPage() {
         ) : templates.length === 0 ? (
           <EmptyState onNew={() => navigate('/builder')} onBrowse={() => setPageTab('samples')} />
         ) : view === 'table' ? (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
+          <div className="card p-0 border border-ink-7 dark:border-gray-700 overflow-hidden">
 
             {/* ── Table Toolbar ── */}
-            <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-900/30">
+            <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-ink-7 dark:border-gray-700 bg-ink-8/70 dark:bg-gray-900/30">
               <div className="relative flex-1 min-w-[160px] max-w-sm">
-                <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none"
+                <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink-4 pointer-events-none"
                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                     d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
@@ -221,17 +221,17 @@ export default function TemplatesPage() {
                   placeholder="Search templates…"
                   value={tableSearch}
                   onChange={e => setTableSearch(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-600
-                             bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400
-                             focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-ink-7 dark:border-gray-600
+                             bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-ink-4
+                             focus:outline-none focus:ring-2 focus:ring-brand-400"
                 />
               </div>
               <select
                 value={pageSizeFilter}
                 onChange={e => setPageSizeFilter(e.target.value)}
-                className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-600
+                className="px-2.5 py-1.5 text-xs rounded-lg border border-ink-7 dark:border-gray-600
                            bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300
-                           focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                           focus:outline-none focus:ring-2 focus:ring-brand-400"
               >
                 <option value="">All Sizes</option>
                 {pageSizes.map(s => <option key={s} value={s}>{s}</option>)}
@@ -239,9 +239,9 @@ export default function TemplatesPage() {
               <select
                 value={tableSortKey}
                 onChange={e => setTableSortKey(e.target.value)}
-                className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-600
+                className="px-2.5 py-1.5 text-xs rounded-lg border border-ink-7 dark:border-gray-600
                            bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300
-                           focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                           focus:outline-none focus:ring-2 focus:ring-brand-400"
               >
                 <option value="updatedAt_desc">Updated: Newest</option>
                 <option value="updatedAt_asc">Updated: Oldest</option>
@@ -267,12 +267,12 @@ export default function TemplatesPage() {
             </div>
 
             <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+              <thead className="bg-ink-8 dark:bg-gray-900/50 border-b border-ink-7 dark:border-gray-700">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">ID</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-ink-3 dark:text-gray-400 uppercase tracking-wide">ID</th>
                   <SortTh label="Name"    field="name"      sortKey={tableSortKey} onSort={setTableSortKey} />
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Page Size</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Placeholders</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-ink-3 dark:text-gray-400 uppercase tracking-wide">Page Size</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-ink-3 dark:text-gray-400 uppercase tracking-wide">Placeholders</th>
                   <SortTh label="Updated" field="updatedAt" sortKey={tableSortKey} onSort={setTableSortKey} />
                   <th className="px-4 py-3"></th>
                 </tr>
@@ -323,11 +323,11 @@ export default function TemplatesPage() {
                           <button
                             onClick={() => navigate(`/generate?templateId=${t.id}`)}
                             className="px-3 py-1.5 text-xs font-semibold rounded-lg text-white transition-all hover:opacity-90"
-                            style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)' }}
+                            style={{ background: 'linear-gradient(135deg,#6D52E8,#6D52E8)' }}
                             title="Generate PDF"
                           >Generate</button>
                           <button onClick={() => setPreviewTemplate(t)}
-                            className="p-1.5 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-gray-400 hover:text-indigo-600 transition-colors"
+                            className="p-1.5 rounded-lg hover:bg-brand-50 dark:hover:bg-brand-900/30 text-ink-4 hover:text-brand-600 transition-colors"
                             title="Preview">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -367,7 +367,7 @@ export default function TemplatesPage() {
                 })}
               </tbody>
             </table>
-            <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-400">
+            <div className="px-4 py-3 border-t border-ink-7 dark:border-gray-700 text-xs text-ink-4">
               {tableVisible.length} template{tableVisible.length !== 1 ? 's' : ''}
               {tableVisible.length !== templates.length && ` (filtered from ${templates.length})`}
             </div>
@@ -423,18 +423,18 @@ function SampleGallery({ view, onOpen }) {
 
   return (
     <div>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+      <p className="text-sm text-ink-3 dark:text-gray-400 mb-6">
         Choose a pre-built template to start with. It will open in the builder so you can customise it.
       </p>
 
       {view === 'table' ? (
         /* ── List / Table view ── */
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
+        <div className="card p-0 border border-ink-7 dark:border-gray-700 overflow-hidden">
           <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+            <thead className="bg-ink-8 dark:bg-gray-900/50 border-b border-ink-7 dark:border-gray-700">
               <tr>
                 {['Template', 'Category', 'Tags', 'Page', 'Fields', ''].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-ink-3 dark:text-gray-400 uppercase tracking-wide">
                     {h}
                   </th>
                 ))}
@@ -500,7 +500,7 @@ function SampleGallery({ view, onOpen }) {
               ))}
             </tbody>
           </table>
-          <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-400">
+          <div className="px-4 py-3 border-t border-ink-7 dark:border-gray-700 text-xs text-ink-4">
             {allTemplates.length} sample template{allTemplates.length !== 1 ? 's' : ''}
           </div>
         </div>
@@ -552,8 +552,7 @@ function SampleGallery({ view, onOpen }) {
 function StarterCard({ template, category, onOpen }) {
   return (
     <div
-      className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700
-                 shadow-card hover:shadow-card-hover transition-all duration-200 overflow-hidden flex flex-col group"
+      className="card card-hover p-0 overflow-hidden flex flex-col group"
     >
       {/* Thumbnail */}
       <div
@@ -577,8 +576,8 @@ function StarterCard({ template, category, onOpen }) {
       {/* Body */}
       <div className="p-4 flex flex-col flex-1 gap-2">
         <div>
-          <h3 className="font-bold text-gray-900 dark:text-white text-sm leading-snug">{template.name}</h3>
-          <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{template.description}</p>
+          <h3 className="font-bold text-ink dark:text-white text-sm leading-snug">{template.name}</h3>
+          <p className="text-xs text-ink-4 mt-0.5 line-clamp-2">{template.description}</p>
         </div>
 
         {/* Tags */}
@@ -595,7 +594,7 @@ function StarterCard({ template, category, onOpen }) {
         </div>
 
         {/* Placeholder count */}
-        <div className="text-[11px] text-gray-400 mt-auto">
+        <div className="text-[11px] text-ink-4 mt-auto">
           {template.placeholders.length} dynamic fields
         </div>
 
@@ -616,19 +615,17 @@ function TemplateCard({ template, onEdit, onGenerate, onDelete = null, onVersion
   const date = fmtDate(template.updatedAt)
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-card hover:shadow-card-hover
-                    transition-shadow duration-200 flex flex-col overflow-hidden
-                    border border-gray-100 dark:border-gray-700">
+    <div className="card card-hover p-0 flex flex-col overflow-hidden">
 
       {/* Clickable preview thumbnail area */}
       <button
         onClick={onPreview}
         className="group relative h-28 w-full overflow-hidden bg-gradient-to-br
-                   from-indigo-50 to-violet-50 dark:from-indigo-950/40 dark:to-violet-950/40
+                   from-brand-50 to-accent-50 dark:from-brand-900/40 dark:to-accent-700/40
                    flex items-center justify-center focus:outline-none"
         title="Preview template"
       >
-        <svg className="w-14 h-14 text-indigo-100 dark:text-indigo-900/60 transition-transform
+        <svg className="w-14 h-14 text-brand-100 dark:text-brand-900/60 transition-transform
                         duration-200 group-hover:scale-110"
           fill="currentColor" viewBox="0 0 24 24">
           <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/>
@@ -636,11 +633,11 @@ function TemplateCard({ template, onEdit, onGenerate, onDelete = null, onVersion
             fill="none" strokeLinecap="round"/>
         </svg>
 
-        <div className="absolute inset-0 bg-indigo-600/0 group-hover:bg-indigo-600/10
+        <div className="absolute inset-0 bg-brand-600/0 group-hover:bg-brand-600/10
                         transition-colors duration-200 flex items-center justify-center">
           <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200
                            flex items-center gap-1.5 bg-white dark:bg-gray-800 shadow-md
-                           text-indigo-600 dark:text-indigo-400 text-xs font-bold
+                           text-brand-600 dark:text-brand-400 text-xs font-bold
                            px-3 py-1.5 rounded-full">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -665,7 +662,7 @@ function TemplateCard({ template, onEdit, onGenerate, onDelete = null, onVersion
               {template.name}
             </h3>
             {template.description && (
-              <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{template.description}</p>
+              <p className="text-xs text-ink-4 mt-0.5 line-clamp-2">{template.description}</p>
             )}
           </div>
           <span className="badge badge-indigo shrink-0">{template.pageSize || 'A4'}</span>
@@ -689,14 +686,14 @@ function TemplateCard({ template, onEdit, onGenerate, onDelete = null, onVersion
           </div>
         )}
 
-        <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-100 dark:border-gray-700">
-          <p className="text-xs text-gray-300 dark:text-gray-500">Updated {date}</p>
+        <div className="flex items-center justify-between mt-auto pt-2 border-t border-ink-7 dark:border-gray-700">
+          <p className="text-xs text-ink-4 dark:text-gray-500">Updated {date}</p>
           {template.currentVersion > 0 && (
             <button
               onClick={onVersions}
               className="text-[10px] font-semibold px-2 py-0.5 rounded-full
-                         bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500 dark:text-indigo-400
-                         hover:bg-indigo-100 transition-colors flex items-center gap-1"
+                         bg-brand-50 dark:bg-brand-900/20 text-brand-500 dark:text-brand-400
+                         hover:bg-brand-100 transition-colors flex items-center gap-1"
               title="View version history"
             >
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -712,8 +709,8 @@ function TemplateCard({ template, onEdit, onGenerate, onDelete = null, onVersion
           <button className="btn btn-primary btn-sm flex-1 justify-center" onClick={onGenerate}>
             Generate PDF
           </button>
-          <button className="btn btn-ghost btn-sm px-2 text-indigo-500 hover:bg-indigo-50 hover:text-indigo-600
-                             dark:hover:bg-indigo-900/20"
+          <button className="btn btn-ghost btn-sm px-2 text-brand-500 hover:bg-brand-50 hover:text-brand-600
+                             dark:hover:bg-brand-900/20"
             onClick={onPreview} title="Preview template">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}

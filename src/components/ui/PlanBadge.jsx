@@ -1,6 +1,6 @@
 const PLAN_STYLES = {
   FREE:         { label: 'Free',         cls: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' },
-  PROFESSIONAL: { label: 'Professional', cls: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' },
+  PROFESSIONAL: { label: 'Professional', cls: 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300' },
   ENTERPRISE:   { label: 'Enterprise',   cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
 }
 

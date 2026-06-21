@@ -14,7 +14,7 @@ const CRUMBS = [
 const PERM_META = {
   VIEW: { label: 'View',       cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
   USE:  { label: 'Use',        cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' },
-  EDIT: { label: 'Edit (fork)', cls: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300' },
+  EDIT: { label: 'Edit (fork)', cls: 'bg-accent-100 text-accent-700 dark:bg-accent-700/40 dark:text-accent-200' },
 }
 
 const TYPE_META = {
@@ -92,9 +92,9 @@ function ReceivedCard({ share, onUse }) {
         {share.permission !== 'VIEW' && (
           <button
             onClick={handleAction}
-            className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600
-                       text-gray-600 dark:text-gray-300 hover:border-indigo-400 hover:text-indigo-600
-                       dark:hover:border-indigo-500 dark:hover:text-indigo-400 transition-colors font-medium"
+            className="text-xs px-3 py-1.5 rounded-lg border border-ink-7 dark:border-gray-600
+                       text-gray-600 dark:text-gray-300 hover:border-brand-400 hover:text-brand-600
+                       dark:hover:border-brand-500 dark:hover:text-brand-400 transition-colors font-medium"
           >
             {actionLabel}
           </button>
@@ -196,14 +196,14 @@ export default function SharedTemplatesPage() {
       <Breadcrumbs items={CRUMBS} />
 
       <div className="mt-4 mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Shared Templates</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-ink dark:text-white">Shared Templates</h1>
+        <p className="text-sm text-ink-3 mt-1">
           Templates shared between organisations for cross-team collaboration.
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl w-fit mb-6">
+      <div className="flex gap-1 p-1 bg-ink-8 dark:bg-gray-800 rounded-xl w-fit mb-6">
         {[
           { id: 'received', label: 'Shared with me', count: received.length },
           { id: 'sent',     label: 'Shared by me',   count: sent.length },
@@ -213,14 +213,14 @@ export default function SharedTemplatesPage() {
             onClick={() => setTab(t.id)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all
               ${tab === t.id
-                ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-white shadow-sm'
-                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                ? 'bg-gradient-accent text-white shadow-soft'
+                : 'text-ink-3 hover:text-ink dark:hover:text-gray-300'
               }`}
           >
             {t.label}
             {t.count > 0 && (
               <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold
-                ${tab === t.id ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300' : 'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}>
+                ${tab === t.id ? 'bg-white/25 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}>
                 {t.count}
               </span>
             )}
@@ -270,12 +270,12 @@ export default function SharedTemplatesPage() {
           <div className="card p-0 overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-                  <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Template</th>
-                  <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Shared with</th>
-                  <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Permission</th>
-                  <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Shared by</th>
-                  <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Note</th>
+                <tr className="border-b border-ink-7 dark:border-gray-700 bg-ink-8 dark:bg-gray-900/50">
+                  <th className="text-left px-5 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">Template</th>
+                  <th className="text-left px-5 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">Shared with</th>
+                  <th className="text-left px-5 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">Permission</th>
+                  <th className="text-left px-5 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">Shared by</th>
+                  <th className="text-left px-5 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">Note</th>
                   <th className="px-5 py-3" />
                 </tr>
               </thead>

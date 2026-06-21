@@ -5,6 +5,7 @@ import useDocumentTitle from '../hooks/useDocumentTitle'
 import { useToast } from '../context/ToastContext'
 import { useAuth, ROLES } from '../context/AuthContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
+import { IconArrowLeft, IconArrowRight } from '../components/ui/icons'
 
 const CRUMBS = [
   { label: 'Dashboard', to: '/' },
@@ -16,14 +17,14 @@ const ACTION_BADGE = {
   CREATED:          'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
   UPDATED:          'bg-blue-100   text-blue-700   dark:bg-blue-900/30   dark:text-blue-400',
   DELETED:          'bg-rose-100   text-rose-700   dark:bg-rose-900/30   dark:text-rose-400',
-  RESTORED:         'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400',
+  RESTORED:         'bg-accent-100 text-accent-700 dark:bg-accent-900/30 dark:text-accent-400',
   PASSWORD_CHANGED: 'bg-amber-100  text-amber-700  dark:bg-amber-900/30  dark:text-amber-400',
-  AVATAR_UPDATED:   'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+  AVATAR_UPDATED:   'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400',
   DEACTIVATED:      'bg-red-100    text-red-700    dark:bg-red-900/30    dark:text-red-400',
   ACTIVATED:        'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
   SESSION_REVOKED:  'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
   SENT:             'bg-teal-100   text-teal-700   dark:bg-teal-900/30   dark:text-teal-400',
-  FEATURES_UPDATED: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+  FEATURES_UPDATED: 'bg-accent-100 text-accent-700 dark:bg-accent-900/30 dark:text-accent-400',
   CANCELLED:        'bg-gray-100   text-gray-600   dark:bg-gray-700/40   dark:text-gray-400',
 }
 
@@ -45,8 +46,8 @@ const ACTION_ICON = {
 
 // ── Resource type meta ──────────────────────────────────────────────────────
 const RESOURCE_LABEL = {
-  TEMPLATE:       { label: 'PDF Template',   color: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400' },
-  EMAIL_TEMPLATE: { label: 'Email Template', color: 'bg-violet-50 text-violet-600 dark:bg-violet-900/20 dark:text-violet-400' },
+  TEMPLATE:       { label: 'PDF Template',   color: 'bg-brand-50 text-brand-600 dark:bg-brand-900/20 dark:text-brand-400' },
+  EMAIL_TEMPLATE: { label: 'Email Template', color: 'bg-accent-50 text-accent-600 dark:bg-accent-900/20 dark:text-accent-400' },
   USER:           { label: 'User / Profile', color: 'bg-sky-50    text-sky-600    dark:bg-sky-900/20    dark:text-sky-400' },
   ORGANIZATION:   { label: 'Organization',   color: 'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400' },
   E_SIGN:         { label: 'E-Sign',         color: 'bg-teal-50   text-teal-600   dark:bg-teal-900/20   dark:text-teal-400' },
@@ -229,8 +230,8 @@ function ChangeDetail({ entry }) {
 
       return (
         <>
-          <div className="px-5 py-3 bg-purple-50/60 dark:bg-purple-900/10 border-t border-purple-100 dark:border-purple-900/20">
-            <p className="text-[11px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wide mb-2">
+          <div className="px-5 py-3 bg-accent-50/60 dark:bg-accent-900/10 border-t border-accent-100 dark:border-accent-900/20">
+            <p className="text-[11px] font-bold text-accent-600 dark:text-accent-400 uppercase tracking-wide mb-2">
               Feature Changes
             </p>
             <div className="flex flex-wrap gap-2">
@@ -411,10 +412,10 @@ function resolveOrgName(entry, orgs, me) {
 // ── Stats mini-card ─────────────────────────────────────────────────────────
 function StatCard({ label, value, color }) {
   return (
-    <div className="flex-1 min-w-[110px] bg-white dark:bg-gray-800 rounded-xl border border-gray-100
+    <div className="flex-1 min-w-[110px] bg-white dark:bg-gray-800 rounded-xl border border-ink-7
                     dark:border-gray-700 px-4 py-3 flex flex-col gap-0.5 shadow-sm">
       <span className={`text-xl font-bold ${color}`}>{value ?? '—'}</span>
-      <span className="text-[11px] text-gray-400 font-medium">{label}</span>
+      <span className="text-[11px] text-ink-4 font-medium">{label}</span>
     </div>
   )
 }
@@ -553,14 +554,13 @@ export default function AuditLogPage() {
       {/* ── Header ── */}
       <div className="flex items-start justify-between mt-4 mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Audit Log</h1>
-          <p className="text-sm text-gray-500 mt-1 max-w-2xl">{scopeLabel(me?.role)}</p>
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-ink dark:text-white">Audit Log</h1>
+          <p className="text-sm text-ink-3 mt-1 max-w-2xl">{scopeLabel(me?.role)}</p>
         </div>
         <button
           onClick={handleExport}
           disabled={exporting}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 text-white
-                     text-sm font-semibold hover:bg-purple-700 transition disabled:opacity-60 shrink-0"
+          className="btn btn-primary gap-2 shrink-0"
         >
           {exporting
             ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/>
@@ -588,8 +588,8 @@ export default function AuditLogPage() {
         <select
           value={typeFilter}
           onChange={e => setTypeFilter(e.target.value)}
-          className="text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700
-                     bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200
+          className="text-sm px-3 py-1.5 rounded-lg border border-ink-7 dark:border-gray-700
+                     bg-white dark:bg-gray-800 text-ink-2 dark:text-gray-200
                      focus:outline-none focus:ring-2 focus:ring-primary/30"
         >
           {RESOURCE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
@@ -613,30 +613,30 @@ export default function AuditLogPage() {
           placeholder="Filter by performer email…"
           defaultValue={performedByFilt}
           onChange={handlePerformedByChange}
-          className="text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700
-                     bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200
+          className="text-sm px-3 py-1.5 rounded-lg border border-ink-7 dark:border-gray-700
+                     bg-white dark:bg-gray-800 text-ink-2 dark:text-gray-200
                      focus:outline-none focus:ring-2 focus:ring-primary/30 w-52"
         />
 
         <div className="flex items-center gap-1.5">
-          <label className="text-xs text-gray-400">From</label>
+          <label className="text-xs text-ink-4">From</label>
           <input
             type="datetime-local"
             value={fromDate}
             onChange={e => setFromDate(e.target.value)}
-            className="text-sm px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700
-                       bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200
+            className="text-sm px-2.5 py-1.5 rounded-lg border border-ink-7 dark:border-gray-700
+                       bg-white dark:bg-gray-800 text-ink-2 dark:text-gray-200
                        focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
         <div className="flex items-center gap-1.5">
-          <label className="text-xs text-gray-400">To</label>
+          <label className="text-xs text-ink-4">To</label>
           <input
             type="datetime-local"
             value={toDate}
             onChange={e => setToDate(e.target.value)}
-            className="text-sm px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700
-                       bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200
+            className="text-sm px-2.5 py-1.5 rounded-lg border border-ink-7 dark:border-gray-700
+                       bg-white dark:bg-gray-800 text-ink-2 dark:text-gray-200
                        focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
@@ -644,13 +644,13 @@ export default function AuditLogPage() {
         {hasFilters && (
           <button
             onClick={clearFilters}
-            className="text-xs text-gray-400 hover:text-primary transition-colors"
+            className="text-xs text-ink-4 hover:text-primary transition-colors"
           >
             Clear all
           </button>
         )}
 
-        <span className="ml-auto text-xs text-gray-400 font-medium">{data.totalElements.toLocaleString()} events</span>
+        <span className="ml-auto text-xs text-ink-4 font-medium">{data.totalElements.toLocaleString()} events</span>
       </div>
 
       {/* ── Action filter pills (server-side) ── */}
@@ -661,8 +661,8 @@ export default function AuditLogPage() {
             onClick={() => setActionFilter(a)}
             className={`text-xs px-3 py-1.5 rounded-full font-semibold border transition-all ${
               actionFilter === a
-                ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
-                : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-purple-500 hover:text-purple-600 dark:hover:text-purple-400'
+                ? 'bg-gradient-accent text-white border-transparent shadow-soft'
+                : 'bg-white dark:bg-gray-800 text-ink-3 dark:text-gray-400 border-ink-7 dark:border-gray-700 hover:border-accent-500 hover:text-accent-600 dark:hover:text-accent-400'
             }`}
           >
             {a.replace(/_/g, ' ')}
@@ -673,17 +673,17 @@ export default function AuditLogPage() {
       {/* ── Log table ── */}
       <div className="card p-0 overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-20 text-gray-400 gap-3">
-            <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"/>
+          <div className="flex items-center justify-center py-20 text-ink-4 gap-3">
+            <div className="w-8 h-8 border-4 border-accent-500 border-t-transparent rounded-full animate-spin"/>
             Loading audit log…
           </div>
         ) : data.content.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-            <svg className="w-10 h-10 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="flex flex-col items-center justify-center py-20 text-ink-4">
+            <svg className="w-10 h-10 mb-3 text-ink-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                 d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
             </svg>
-            <p className="text-sm">No events match the current filters.</p>
+            <p className="text-sm text-ink-4">No events match the current filters.</p>
             {hasFilters && (
               <button onClick={clearFilters} className="mt-2 text-xs text-primary hover:underline">
                 Clear filters
@@ -693,15 +693,15 @@ export default function AuditLogPage() {
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+              <tr className="border-b border-ink-7 dark:border-gray-700 bg-ink-8 dark:bg-gray-900/50">
                 <th className="w-6 px-3 py-3" />
-                <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Action</th>
-                <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Resource</th>
-                <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Type</th>
-                <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Organization</th>
-                <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Performed By</th>
-                <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Severity</th>
-                <th className="text-left px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Timestamp</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">Action</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">Resource</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">Type</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">Organization</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">Performed By</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">Severity</th>
+                <th className="text-left px-4 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">Timestamp</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -721,14 +721,14 @@ export default function AuditLogPage() {
                     <tr
                       key={entry.id}
                       className={`border-t border-gray-50 dark:border-gray-800 transition-colors group
-                        ${isExpanded ? 'bg-gray-50 dark:bg-gray-800/40' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'}
+                        ${isExpanded ? 'bg-ink-8 dark:bg-gray-800/40' : 'hover:bg-ink-8 dark:hover:bg-gray-700/30'}
                         ${expandable ? 'cursor-pointer' : ''}`}
                       onClick={() => expandable && toggleExpand(entry.id)}
                     >
                       {/* Expand chevron */}
                       <td className="w-6 pl-3 pr-0 py-3.5">
                         {expandable ? (
-                          <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`}
+                          <svg className={`w-3.5 h-3.5 text-ink-4 transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`}
                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
                           </svg>
@@ -755,10 +755,10 @@ export default function AuditLogPage() {
 
                       {/* Resource */}
                       <td className="px-4 py-3.5">
-                        <p className="font-medium text-gray-800 dark:text-gray-200 leading-tight max-w-[200px] truncate">
+                        <p className="font-medium text-ink dark:text-gray-200 leading-tight max-w-[200px] truncate">
                           {entry.templateName || '—'}
                         </p>
-                        <p className="text-[11px] text-gray-400 font-mono mt-0.5 truncate max-w-[200px]">
+                        <p className="text-[11px] text-ink-4 font-mono mt-0.5 truncate max-w-[200px]">
                           {entry.templateId}
                         </p>
                       </td>
@@ -773,10 +773,10 @@ export default function AuditLogPage() {
                       {/* Organization */}
                       <td className="px-4 py-3.5">
                         {orgName === '—' ? (
-                          <span className="text-gray-300 dark:text-gray-600 text-xs">—</span>
+                          <span className="text-ink-4 dark:text-gray-600 text-xs">—</span>
                         ) : (
-                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300
-                                           bg-gray-100 dark:bg-gray-700/50 px-2 py-0.5 rounded-md
+                          <span className="text-xs font-medium text-ink-2 dark:text-gray-300
+                                           bg-ink-8 dark:bg-gray-700/50 px-2 py-0.5 rounded-md
                                            max-w-[140px] truncate inline-block">
                             {orgName}
                           </span>
@@ -785,11 +785,11 @@ export default function AuditLogPage() {
 
                       {/* Performed by */}
                       <td className="px-4 py-3.5">
-                        <p className="text-xs text-gray-700 dark:text-gray-300">
+                        <p className="text-xs text-ink-2 dark:text-gray-300">
                           {entry.performedByName || entry.performedBy || 'system'}
                         </p>
                         {entry.performedByName && entry.performedBy && (
-                          <p className="text-[10px] text-gray-400 mt-0.5">{entry.performedBy}</p>
+                          <p className="text-[10px] text-ink-4 mt-0.5">{entry.performedBy}</p>
                         )}
                       </td>
 
@@ -802,7 +802,7 @@ export default function AuditLogPage() {
                       </td>
 
                       {/* Timestamp */}
-                      <td className="px-4 py-3.5 text-gray-500 dark:text-gray-400 text-xs whitespace-nowrap">
+                      <td className="px-4 py-3.5 text-ink-3 dark:text-gray-400 text-xs whitespace-nowrap">
                         {fmtDate(entry.timestamp)}
                       </td>
 
@@ -812,8 +812,8 @@ export default function AuditLogPage() {
                           <button
                             onClick={() => openResource(entry)}
                             className="opacity-0 group-hover:opacity-100 transition-opacity
-                                       text-xs px-2.5 py-1 rounded-lg border border-gray-200
-                                       dark:border-gray-600 text-gray-500 dark:text-gray-400
+                                       text-xs px-2.5 py-1 rounded-lg border border-ink-7
+                                       dark:border-gray-600 text-ink-3 dark:text-gray-400
                                        hover:border-primary hover:text-primary"
                           >
                             Open
@@ -841,18 +841,19 @@ export default function AuditLogPage() {
       {/* ── Pagination ── */}
       {data.totalPages > 1 && (
         <div className="flex items-center justify-between mt-4">
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-ink-4">
             Page {page + 1} of {data.totalPages} · {data.totalElements.toLocaleString()} events
           </p>
           <div className="flex items-center gap-1">
             <button
               disabled={page === 0}
               onClick={() => setPage(p => p - 1)}
-              className="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700
-                         text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800
-                         hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-ink-7 dark:border-gray-700
+                         text-ink-2 dark:text-gray-300 bg-white dark:bg-gray-800
+                         hover:bg-ink-8 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              ← Previous
+              <IconArrowLeft />
+              Previous
             </button>
             {/* Numbered page pills — show up to 5 around current page */}
             {Array.from({ length: Math.min(data.totalPages, 5) }, (_, i) => {
@@ -864,8 +865,8 @@ export default function AuditLogPage() {
                   onClick={() => setPage(p)}
                   className={`w-8 h-8 text-sm font-semibold rounded-lg transition-colors
                     ${p === page
-                      ? 'bg-purple-600 text-white shadow-sm'
-                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      ? 'bg-gradient-accent text-white shadow-soft'
+                      : 'text-ink-2 dark:text-gray-300 hover:bg-ink-8 dark:hover:bg-gray-700'
                     }`}
                 >
                   {p + 1}
@@ -875,11 +876,12 @@ export default function AuditLogPage() {
             <button
               disabled={page >= data.totalPages - 1}
               onClick={() => setPage(p => p + 1)}
-              className="px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-700
-                         text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800
-                         hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-ink-7 dark:border-gray-700
+                         text-ink-2 dark:text-gray-300 bg-white dark:bg-gray-800
+                         hover:bg-ink-8 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              Next →
+              Next
+              <IconArrowRight />
             </button>
           </div>
         </div>

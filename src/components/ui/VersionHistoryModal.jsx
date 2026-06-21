@@ -6,12 +6,13 @@ import {
   restoreEmailTemplateVersion,
 } from "../../services/api";
 import { useToast } from "../../context/ToastContext";
+import { IconCheck } from "./icons";
 
 const ACTION_STYLE = {
   CREATED:  "bg-emerald-100 text-emerald-700",
   UPDATED:  "bg-blue-100   text-blue-700",
   DELETED:  "bg-rose-100   text-rose-700",
-  RESTORED: "bg-violet-100 text-violet-700",
+  RESTORED: "bg-accent-100 text-accent-700",
 };
 
 import { fmtDateTime as fmtDate } from '../../utils/date'
@@ -115,17 +116,17 @@ export default function VersionHistoryModal({ template, kind = "pdf", onClose, o
                 onClick={() => { setCompareMode(m => !m); setCompareSelected([]) }}
                 className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
                   compareMode
-                    ? "bg-indigo-600 border-indigo-600 text-white"
-                    : "border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-indigo-400 hover:text-indigo-600"
+                    ? "bg-brand-600 border-brand-600 text-white"
+                    : "border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-brand-400 hover:text-brand-600"
                 }`}
               >
-                {compareMode ? "✓ Comparing" : "Compare versions"}
+                {compareMode ? <span className="inline-flex items-center gap-1.5"><IconCheck className="w-3.5 h-3.5" />Comparing</span> : "Compare versions"}
               </button>
             )}
             {compareMode && canCompare && !comparing && (
               <button
                 onClick={() => setComparing(true)}
-                className="text-xs px-3 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+                className="text-xs px-3 py-1.5 rounded-lg bg-brand-600 text-white hover:bg-brand-700 transition-colors"
               >
                 Show diff →
               </button>
@@ -153,8 +154,8 @@ export default function VersionHistoryModal({ template, kind = "pdf", onClose, o
 
         {/* ── Compare hint banner ── */}
         {compareMode && !comparing && (
-          <div className="px-6 py-2.5 bg-indigo-50 dark:bg-indigo-900/20 border-b border-indigo-100 dark:border-indigo-800 shrink-0">
-            <p className="text-xs text-indigo-700 dark:text-indigo-400 font-medium">
+          <div className="px-6 py-2.5 bg-brand-50 dark:bg-brand-900/20 border-b border-brand-100 dark:border-brand-800 shrink-0">
+            <p className="text-xs text-brand-700 dark:text-brand-400 font-medium">
               {compareSelected.length === 0 && "Select two versions to compare them side-by-side."}
               {compareSelected.length === 1 && `v${compareSelected[0]} selected — select one more version.`}
               {compareSelected.length === 2 && `Ready to compare v${compareSelected[0]} ↔ v${compareSelected[1]}.`}
@@ -244,9 +245,9 @@ export default function VersionHistoryModal({ template, kind = "pdf", onClose, o
                         {/* Card */}
                         <div className={`mb-3 p-3 rounded-xl border transition-colors
                                          ${isCurrent
-                                           ? "border-primary/30 bg-indigo-50/50 dark:bg-indigo-900/10"
+                                           ? "border-primary/30 bg-brand-50/50 dark:bg-brand-900/10"
                                            : isChecked
-                                           ? "border-indigo-400 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20"
+                                           ? "border-brand-400 dark:border-brand-600 bg-brand-50 dark:bg-brand-900/20"
                                            : "border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800"}`}>
 
                           <div className="flex items-start justify-between gap-3">
@@ -257,8 +258,8 @@ export default function VersionHistoryModal({ template, kind = "pdf", onClose, o
                                   type="checkbox"
                                   checked={isChecked}
                                   onChange={() => toggleCompare(v.version)}
-                                  className="mt-1 w-4 h-4 rounded border-gray-300 text-indigo-600
-                                             focus:ring-indigo-500 cursor-pointer shrink-0"
+                                  className="mt-1 w-4 h-4 rounded border-gray-300 text-brand-600
+                                             focus:ring-brand-500 cursor-pointer shrink-0"
                                 />
                               )}
                               <div className="flex-1 min-w-0">
@@ -298,8 +299,8 @@ export default function VersionHistoryModal({ template, kind = "pdf", onClose, o
                                   onClick={() => handleRestore(v)}
                                   disabled={restoring === v.version}
                                   className="text-xs px-2 py-1 rounded-lg text-white
-                                             bg-gradient-to-r from-indigo-500 to-violet-500
-                                             hover:from-indigo-600 hover:to-violet-600
+                                             bg-gradient-to-r from-brand-500 to-accent-500
+                                             hover:from-brand-600 hover:to-accent-600
                                              disabled:opacity-50 transition-all"
                                 >
                                   {restoring === v.version ? "Restoring…" : "Restore"}
@@ -369,10 +370,10 @@ function VersionPanel({ version, side, isCurrent }) {
                        flex items-center justify-between
                        ${side === "left"
                           ? "bg-blue-50 dark:bg-blue-900/10"
-                          : "bg-violet-50 dark:bg-violet-900/10"}`}>
+                          : "bg-accent-50 dark:bg-accent-900/10"}`}>
         <div className="flex items-center gap-2">
           <span className={`text-sm font-bold ${
-            side === "left" ? "text-blue-700 dark:text-blue-300" : "text-violet-700 dark:text-violet-300"
+            side === "left" ? "text-blue-700 dark:text-blue-300" : "text-accent-700 dark:text-accent-300"
           }`}>v{version.version}</span>
           {isCurrent && (
             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary text-white">

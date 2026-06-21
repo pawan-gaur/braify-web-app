@@ -11,6 +11,7 @@ import {
 } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
+import { IconX, IconCheck, IconArrowRight, IconArrowLeft } from '../components/ui/icons'
 
 const FIELD_TYPES = [
   { type: 'SIGNATURE', label: 'Signature',  color: '#7c3aed', bg: '#ede9fe' },
@@ -438,7 +439,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
             <div key={src}
                  className={`rounded-xl border-2 transition-colors
                    ${enabled
-                     ? 'border-purple-500 bg-purple-50/40 dark:bg-purple-900/10'
+                     ? 'border-accent-500 bg-accent-50/40 dark:bg-accent-700/10'
                      : 'border-gray-200 dark:border-gray-700'}`}>
 
               {/* Header / toggle */}
@@ -454,7 +455,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                   <p className="text-xs text-gray-500 dark:text-gray-400">{meta.desc}</p>
                 </div>
                 <div className={`w-10 h-5 rounded-full shrink-0 relative transition-colors
-                                 ${enabled ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-600'}`}>
+                                 ${enabled ? 'bg-accent-600' : 'bg-gray-200 dark:bg-gray-600'}`}>
                   <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform
                                    ${enabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
                 </div>
@@ -468,7 +469,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                   {src === 'single' && (
                     <>
                       <label className={`mt-3 flex items-center gap-3 border-2 border-dashed rounded-xl p-3
-                                         cursor-pointer hover:border-purple-400 transition-colors
+                                         cursor-pointer hover:border-accent-400 transition-colors
                                          ${formErrors.pdf ? 'border-red-400' : 'border-gray-300 dark:border-gray-600'}`}>
                         <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -495,14 +496,14 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                     <div className="space-y-3 mt-3">
                       {templatesLoading ? (
                         <div className="flex items-center justify-center py-8">
-                          <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mr-2"/>
+                          <div className="w-5 h-5 border-2 border-accent-500 border-t-transparent rounded-full animate-spin mr-2"/>
                           <span className="text-sm text-gray-500">Loading templates…</span>
                         </div>
                       ) : templates.length === 0 ? (
                         <div className="text-center py-6 text-gray-500">
                           <p className="text-sm">No PDF templates found.</p>
-                          <a href="/templates" className="text-xs text-purple-600 hover:underline mt-1 inline-block">
-                            Create a template first →
+                          <a href="/templates" className="text-xs text-accent-600 hover:underline mt-1 inline-flex items-center gap-1.5">
+                            Create a template first <IconArrowRight className="w-3.5 h-3.5" />
                           </a>
                         </div>
                       ) : (
@@ -518,7 +519,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                               placeholder="Search templates…"
                               className="w-full pl-9 pr-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg
                                          bg-white dark:bg-gray-700 text-sm focus:outline-none focus:ring-2
-                                         focus:ring-purple-500 text-gray-900 dark:text-white" />
+                                         focus:ring-accent-500 text-gray-900 dark:text-white" />
                           </div>
                           <div className="grid grid-cols-2 gap-2 max-h-44 overflow-y-auto pr-1">
                             {templates
@@ -527,7 +528,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                                 <button key={tpl.id} type="button" onClick={() => onTemplateSelect(tpl)}
                                   className={`p-2.5 rounded-lg border-2 text-left transition-colors
                                     ${selectedTemplateId === tpl.id
-                                      ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
+                                      ? 'border-accent-500 bg-accent-50 dark:bg-accent-700/20'
                                       : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}`}>
                                   <div className="flex items-start justify-between gap-1">
                                     <div className="min-w-0">
@@ -538,7 +539,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                                       </p>
                                     </div>
                                     {selectedTemplateId === tpl.id && (
-                                      <svg className="w-3.5 h-3.5 text-purple-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <svg className="w-3.5 h-3.5 text-accent-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/>
                                       </svg>
                                     )}
@@ -627,8 +628,8 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                       <div className="flex items-center gap-3">
                         <button type="button" onClick={onTestApi}
                           disabled={!fileApi.url || fileApiLoading}
-                          className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 text-white rounded-lg
-                                     hover:bg-purple-700 disabled:opacity-50 text-xs font-medium transition-colors">
+                          className="flex items-center gap-2 px-3 py-1.5 bg-accent-600 text-white rounded-lg
+                                     hover:bg-accent-700 disabled:opacity-50 text-xs font-medium transition-colors">
                           {fileApiLoading
                             ? <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"/>Testing…</>
                             : <>
@@ -669,19 +670,19 @@ export default function ESignBuilderPage({ initialDocStatus }) {
 
         {/* Fallback priority (2+ sources enabled) */}
         {activeSources.length > 1 && (
-          <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-200 dark:border-indigo-800">
-            <p className="text-xs font-semibold text-indigo-800 dark:text-indigo-300 mb-1">
+          <div className="p-3 bg-brand-50 dark:bg-brand-900/20 rounded-xl border border-brand-200 dark:border-brand-800">
+            <p className="text-xs font-semibold text-brand-800 dark:text-brand-300 mb-1">
               Fallback Priority
             </p>
-            <p className="text-xs text-indigo-600 dark:text-indigo-400 mb-2">
+            <p className="text-xs text-brand-600 dark:text-brand-400 mb-2">
               Source #1 is tried first. If it fails the next is tried automatically.
             </p>
             <div className="space-y-1.5">
               {activeSources.map((src, idx) => (
                 <div key={src}
                      className="flex items-center gap-2 bg-white dark:bg-gray-800 rounded-lg px-3 py-2
-                                border border-indigo-100 dark:border-indigo-800/40">
-                  <span className="w-5 h-5 bg-indigo-600 text-white rounded-full text-xs font-bold
+                                border border-brand-100 dark:border-brand-800/40">
+                  <span className="w-5 h-5 bg-brand-600 text-white rounded-full text-xs font-bold
                                    flex items-center justify-center shrink-0">{idx + 1}</span>
                   <span className="flex items-center gap-1.5 text-xs font-medium text-gray-800 dark:text-gray-200 flex-1">
                     <svg className="w-3.5 h-3.5 shrink-0 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -692,17 +693,17 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                   <div className="flex flex-col gap-0.5">
                     <button type="button" onClick={() => movePriorityInActive(src, -1)}
                       disabled={idx === 0}
-                      className="p-0.5 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/40
+                      className="p-0.5 rounded hover:bg-brand-100 dark:hover:bg-brand-900/40
                                  disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-                      <svg className="w-3 h-3 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-3 h-3 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7"/>
                       </svg>
                     </button>
                     <button type="button" onClick={() => movePriorityInActive(src, 1)}
                       disabled={idx === activeSources.length - 1}
-                      className="p-0.5 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/40
+                      className="p-0.5 rounded hover:bg-brand-100 dark:hover:bg-brand-900/40
                                  disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-                      <svg className="w-3 h-3 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-3 h-3 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7"/>
                       </svg>
                     </button>
@@ -743,11 +744,11 @@ export default function ESignBuilderPage({ initialDocStatus }) {
               <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold
                               transition-colors duration-200
                               ${i === step
-                                ? 'bg-purple-600 text-white'
+                                ? 'bg-accent-600 text-white'
                                 : i < step
                                   ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
                                   : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'}`}>
-                <span>{i < step ? '✓' : i + 1}</span>
+                <span>{i < step ? <IconCheck className="w-4 h-4" /> : i + 1}</span>
                 <span>{s}</span>
               </div>
               {i < STEPS.length - 1 && (
@@ -781,7 +782,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
             {/* ── Email Template (optional) ── */}
             <div className={`rounded-xl border-2 transition-colors
               ${emailPickerOpen
-                ? 'border-purple-500 bg-purple-50/40 dark:bg-purple-900/10'
+                ? 'border-accent-500 bg-accent-50/40 dark:bg-accent-700/10'
                 : 'border-gray-200 dark:border-gray-700'}`}>
 
               {/* Toggle header */}
@@ -804,7 +805,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                   </p>
                 </div>
                 <div className={`w-10 h-5 rounded-full shrink-0 relative transition-colors
-                                 ${emailPickerOpen ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-600'}`}>
+                                 ${emailPickerOpen ? 'bg-accent-600' : 'bg-gray-200 dark:bg-gray-600'}`}>
                   <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform
                                    ${emailPickerOpen ? 'translate-x-5' : 'translate-x-0.5'}`} />
                 </div>
@@ -815,14 +816,14 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                 <div className="px-4 pb-4 pt-0 border-t border-gray-200/70 dark:border-gray-700/60 space-y-3">
                   {emailTemplatesLoading ? (
                     <div className="flex items-center justify-center py-8">
-                      <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mr-2"/>
+                      <div className="w-5 h-5 border-2 border-accent-500 border-t-transparent rounded-full animate-spin mr-2"/>
                       <span className="text-sm text-gray-500">Loading email templates…</span>
                     </div>
                   ) : emailTemplates.length === 0 ? (
                     <div className="text-center py-6 text-gray-500">
                       <p className="text-sm">No email templates found.</p>
-                      <a href="/email-templates" className="text-xs text-purple-600 hover:underline mt-1 inline-block">
-                        Create an email template first →
+                      <a href="/email-templates" className="text-xs text-accent-600 hover:underline mt-1 inline-flex items-center gap-1.5">
+                        Create an email template first <IconArrowRight className="w-3.5 h-3.5" />
                       </a>
                     </div>
                   ) : (
@@ -838,7 +839,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                           placeholder="Search email templates…"
                           className="w-full pl-9 pr-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg
                                      bg-white dark:bg-gray-700 text-sm focus:outline-none focus:ring-2
-                                     focus:ring-purple-500 text-gray-900 dark:text-white" />
+                                     focus:ring-accent-500 text-gray-900 dark:text-white" />
                       </div>
 
                       {/* None option */}
@@ -846,7 +847,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                         onClick={() => { setSelectedEmailTemplateId(''); setSelectedEmailTemplate(null) }}
                         className={`w-full p-2.5 rounded-lg border-2 text-left transition-colors
                           ${!selectedEmailTemplateId
-                            ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
+                            ? 'border-accent-500 bg-accent-50 dark:bg-accent-700/20'
                             : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}`}>
                         <p className="text-xs font-medium text-gray-600 dark:text-gray-300">
                           Default invitation email
@@ -862,7 +863,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                               onClick={() => { setSelectedEmailTemplateId(tpl.id); setSelectedEmailTemplate(tpl) }}
                               className={`p-2.5 rounded-lg border-2 text-left transition-colors
                                 ${selectedEmailTemplateId === tpl.id
-                                  ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
+                                  ? 'border-accent-500 bg-accent-50 dark:bg-accent-700/20'
                                   : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}`}>
                               <div className="flex items-start justify-between gap-1">
                                 <div className="min-w-0">
@@ -872,7 +873,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                                   </p>
                                 </div>
                                 {selectedEmailTemplateId === tpl.id && (
-                                  <svg className="w-3.5 h-3.5 text-purple-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <svg className="w-3.5 h-3.5 text-accent-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/>
                                   </svg>
                                 )}
@@ -890,7 +891,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                         </p>
                       )}
 
-                      <p className="text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20
+                      <p className="text-xs text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/20
                                     px-3 py-2 rounded-lg">
                         Tip: Use <code className="font-mono">{'{{clientName}}'}</code>,{' '}
                         <code className="font-mono">{'{{documentTitle}}'}</code>,{' '}
@@ -931,16 +932,14 @@ export default function ESignBuilderPage({ initialDocStatus }) {
             <FormField label={`Link valid for (days): ${form.tokenValidDays}`}>
               <input type="range" min={1} max={30} value={form.tokenValidDays}
                 onChange={e => setForm(f => ({ ...f, tokenValidDays: +e.target.value }))}
-                className="w-full accent-purple-600"/>
+                className="w-full accent-accent-600"/>
             </FormField>
           </div>
 
           <button
             onClick={handleCreate}
             disabled={creating}
-            className="mt-6 w-full py-3 rounded-xl text-white font-semibold transition-all
-                       disabled:opacity-60 hover:opacity-90 active:scale-95"
-            style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)' }}
+            className="btn btn-accent w-full mt-6"
           >
             {creating ? 'Creating…' : 'Continue → Place Fields'}
           </button>
@@ -977,12 +976,12 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                       className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold
                                   border-2 transition-all
                                   ${selectedType === t.type
-                                    ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                                    ? 'border-accent-500 bg-accent-50 dark:bg-accent-700/30 text-accent-700 dark:text-accent-300'
                                     : 'border-transparent bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
                       <span className="w-3 h-3 rounded-sm shrink-0" style={{ background: t.color }}/>
                       {t.label}
                       {selectedType === t.type && (
-                        <span className="ml-auto text-purple-500">
+                        <span className="ml-auto text-accent-500">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/>
                           </svg>
@@ -1018,12 +1017,14 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                 <button
                   onClick={handleSaveFields}
                   disabled={saving || !docId || fields.length === 0}
-                  className="mt-4 w-full py-2.5 rounded-xl text-white text-sm font-semibold
-                             transition-all disabled:opacity-50 hover:opacity-90 active:scale-95"
-                  style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)' }}
+                  className="btn btn-accent btn-sm w-full mt-4"
                   title={!docId ? 'Complete Step 1 first' : fields.length === 0 ? 'Place at least one field' : ''}
                 >
-                  {saving ? 'Saving…' : `Save & Continue → (${fields.length} field${fields.length !== 1 ? 's' : ''})`}
+                  {saving ? 'Saving…' : (
+                    <span className="inline-flex items-center gap-1.5">
+                      Save & Continue <IconArrowRight className="w-4 h-4" /> ({fields.length} field{fields.length !== 1 ? 's' : ''})
+                    </span>
+                  )}
                 </button>
               </div>
             </div>
@@ -1079,7 +1080,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                                      borderRadius: '50%', background: typeDef?.color, color: '#fff',
                                      border: 'none', cursor: 'pointer', fontSize: 12, lineHeight: '18px',
                                      textAlign: 'center', display: 'flex', alignItems: 'center',
-                                     justifyContent: 'center' }}>×</button>
+                                     justifyContent: 'center' }}><IconX className="w-3 h-3" /></button>
                           <div
                             style={{ position: 'absolute', bottom: -4, right: -4, width: 12, height: 12,
                                      background: typeDef?.color, borderRadius: 2, cursor: 'se-resize' }}
@@ -1111,7 +1112,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                         border border-gray-200 dark:border-gray-700">
           <div className="text-center mb-8">
             <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)' }}>
+              style={{ background: 'linear-gradient(135deg,#6D52E8,#2F5BF0)' }}>
               <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
@@ -1135,9 +1136,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
           </div>
 
           <button onClick={handleSend} disabled={sending}
-            className="w-full py-3 rounded-xl text-white font-semibold transition-all
-                       disabled:opacity-60 hover:opacity-90 active:scale-95"
-            style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)' }}>
+            className="btn btn-accent w-full">
             {sending ? 'Sending…' : (
               <span className="flex items-center justify-center gap-2">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1149,8 +1148,8 @@ export default function ESignBuilderPage({ initialDocStatus }) {
           </button>
           <button onClick={() => setStep(1)}
             className="mt-3 w-full py-2.5 rounded-xl text-sm text-gray-500 hover:text-gray-700
-                       dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
-            ← Back to Field Placement
+                       dark:text-gray-400 dark:hover:text-gray-200 transition-colors inline-flex items-center justify-center gap-1.5">
+            <IconArrowLeft className="w-4 h-4" /> Back to Field Placement
           </button>
         </div>
       )}
@@ -1161,7 +1160,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
 /* ── helpers ── */
 const inputCls = `w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
   bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm
-  focus:outline-none focus:ring-2 focus:ring-purple-500`
+  focus:outline-none focus:ring-2 focus:ring-accent-500`
 
 const labelCls = 'block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 uppercase tracking-wide'
 

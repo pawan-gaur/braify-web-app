@@ -100,12 +100,12 @@
      CARD — Refined: smaller shadow, hairline border
      ─────────────────────────────────────────────────────────── */
   .card {
-    @apply bg-white rounded-card p-5 shadow-soft
+    @apply bg-white rounded-[18px] p-5 shadow-bento
            border border-ink-7 transition-all duration-250 ease-spring;
     @apply dark:bg-gray-800 dark:border-gray-700;
   }
   .card-hover {
-    @apply hover:shadow-float hover:-translate-y-0.5;
+    @apply hover:shadow-lift hover:-translate-y-1;
   }
   .card-flat {
     @apply bg-white rounded-card border border-ink-7;
@@ -115,6 +115,57 @@
   /* Glass surface — frosted blur over content */
   .glass {
     @apply bg-white/70 backdrop-blur-md border border-white/40 shadow-soft;
+    @apply dark:bg-white/5 dark:border-white/10;
+  }
+
+  /* ─────────────────────────────────────────────────────────────
+     REVAMP — Bento / gradient / glass language
+     ─────────────────────────────────────────────────────────── */
+
+  /* Soft pastel cloud background for full app pages */
+  .app-wash {
+    background-image: theme('backgroundImage.app-wash');
+    background-attachment: fixed;
+  }
+  .dark .app-wash {
+    background-image: theme('backgroundImage.app-wash-dark');
+  }
+
+  /* Airy white card with bento elevation + bigger radius */
+  .bento {
+    @apply bg-white rounded-bento p-5 border border-ink-7 shadow-bento
+           transition-all duration-250 ease-spring;
+    @apply dark:bg-gray-800 dark:border-gray-700;
+  }
+  .bento-hover {
+    @apply hover:shadow-lift hover:-translate-y-1;
+  }
+
+  /* Pastel-tinted bento surfaces (light mode only; flat in dark) */
+  .bento-violet { @apply bg-wash-violet dark:bg-gray-800; }
+  .bento-blue   { @apply bg-wash-blue   dark:bg-gray-800; }
+  .bento-peach  { @apply bg-wash-peach  dark:bg-gray-800; }
+  .bento-mint   { @apply bg-wash-mint   dark:bg-gray-800; }
+
+  /* Blue→violet gradient feature surface (e.g. usage / highlight cards) */
+  .surface-accent {
+    @apply bg-gradient-accent text-white rounded-bento shadow-accentGlow;
+  }
+
+  /* Gradient accent button */
+  .btn-accent {
+    @apply bg-gradient-accent text-white shadow-soft hover:shadow-float hover:opacity-95;
+  }
+
+  /* Frosted mini-panel that sits inside a bento card */
+  .glass-mini {
+    @apply bg-white/65 backdrop-blur-sm border border-white/70 rounded-input p-3 shadow-soft;
+    @apply dark:bg-white/5 dark:border-white/10;
+  }
+
+  /* Gradient text for display headings */
+  .text-gradient {
+    @apply bg-gradient-accent bg-clip-text text-transparent;
   }
 
   /* ─────────────────────────────────────────────────────────────

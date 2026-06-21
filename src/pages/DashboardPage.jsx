@@ -6,6 +6,7 @@ import useDocumentTitle from '../hooks/useDocumentTitle'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import { FEATURE_META } from '../config/features'
 import { fmtDateTime as fmtDate } from '../utils/date'
+import { IconTrendUp, IconTrendDown, IconArrowRight } from '../components/ui/icons'
 
 const CRUMBS = [{ label: 'Dashboard' }]
 
@@ -46,36 +47,39 @@ function useCountUp(target, { duration = 800 } = {}) {
 function HeroMetric({ value, label, trend, sub, max, onClick }) {
   const animated = useCountUp(value)
   const percent = max ? Math.min(100, Math.round((value / max) * 100)) : null
-  const barColor = percent != null && percent > 90 ? 'bg-danger'
-                 : percent != null && percent > 75 ? 'bg-warning'
-                 : 'bg-brand'
+  const barColor = percent != null && percent > 90 ? 'bg-rose-300'
+                 : percent != null && percent > 75 ? 'bg-amber-300'
+                 : 'bg-white'
 
   return (
     <div
       onClick={onClick}
-      className={`card relative overflow-hidden ${onClick ? 'cursor-pointer card-hover' : ''}`}
+      className={`surface-accent relative overflow-hidden p-6 h-full
+                  transition-all duration-250 ease-spring
+                  ${onClick ? 'cursor-pointer hover:-translate-y-1' : ''}`}
     >
-      <p className="text-eyebrow">{label}</p>
-      <div className="mt-3 flex items-baseline gap-3 flex-wrap">
-        <span className="text-6xl md:text-7xl font-semibold text-ink tracking-tightest tabular-nums leading-none">
+      {/* decorative glow */}
+      <div className="absolute -top-16 -right-10 w-56 h-56 rounded-full bg-white/15 blur-2xl pointer-events-none"/>
+      <p className="text-xs font-bold uppercase tracking-wider text-white/80 relative">{label}</p>
+      <div className="mt-3 flex items-baseline gap-3 flex-wrap relative">
+        <span className="text-6xl md:text-7xl font-extrabold text-white tracking-tightest tabular-nums leading-none">
           {animated.toLocaleString()}
         </span>
         {trend != null && (
-          <span className={`inline-flex items-center gap-1 text-sm font-semibold px-2.5 py-1 rounded-full
-            ${trend >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-            {trend >= 0 ? '↗' : '↘'} {Math.abs(trend)}%
+          <span className="inline-flex items-center gap-1 text-sm font-bold px-2.5 py-1 rounded-full bg-white/20 text-white">
+            {trend >= 0 ? <IconTrendUp className="w-3.5 h-3.5"/> : <IconTrendDown className="w-3.5 h-3.5"/>} {Math.abs(trend)}%
           </span>
         )}
       </div>
-      {sub && <p className="text-sm text-ink-3 mt-2">{sub}</p>}
+      {sub && <p className="text-sm text-white/85 mt-2 relative">{sub}</p>}
 
       {percent != null && (
-        <div className="mt-5">
-          <div className="flex items-center justify-between text-xs text-ink-3 mb-1.5">
+        <div className="mt-5 relative">
+          <div className="flex items-center justify-between text-xs text-white/80 mb-1.5">
             <span>{percent}% of monthly quota</span>
             <span className="tabular-nums">{value?.toLocaleString()} / {max?.toLocaleString()}</span>
           </div>
-          <div className="h-1.5 rounded-full bg-ink-7 overflow-hidden">
+          <div className="h-1.5 rounded-full bg-white/25 overflow-hidden">
             <div
               className={`h-full ${barColor} transition-[width] duration-700 ease-spring`}
               style={{ width: `${percent}%` }}
@@ -124,7 +128,7 @@ function TodayPanel({ stats, isOrgAdmin, onNavigate }) {
       tone: 'danger',
       icon: 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
       title: `${esignOverdue} e-sign ${esignOverdue === 1 ? 'document is' : 'documents are'} overdue`,
-      action: 'Review →',
+      action: 'Review',
       to: '/esign',
     })
   }
@@ -133,7 +137,7 @@ function TodayPanel({ stats, isOrgAdmin, onNavigate }) {
       tone: 'brand',
       icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
       title: `${esignPending} ${esignPending === 1 ? 'document is' : 'documents are'} awaiting signature`,
-      action: 'View →',
+      action: 'View',
       to: '/esign',
     })
   }
@@ -142,7 +146,7 @@ function TodayPanel({ stats, isOrgAdmin, onNavigate }) {
       tone: 'warning',
       icon: 'M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1a3 3 0 006 0v-1a8 8 0 10-3.4 6.6',
       title: `${pendingInvites} pending team ${pendingInvites === 1 ? 'invite' : 'invites'}`,
-      action: 'Manage →',
+      action: 'Manage',
       to: '/users',
     })
   }
@@ -151,7 +155,7 @@ function TodayPanel({ stats, isOrgAdmin, onNavigate }) {
       tone: 'warning',
       icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
       title: `You're at ${quotaPct}% of your monthly quota`,
-      action: 'Upgrade →',
+      action: 'Upgrade',
       to: '/usage',
     })
   }
@@ -198,8 +202,9 @@ function TodayPanel({ stats, isOrgAdmin, onNavigate }) {
                 </svg>
               </div>
               <p className="flex-1 text-sm text-ink-2 leading-snug">{it.title}</p>
-              <span className="text-xs font-semibold text-brand opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-brand opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                 {it.action}
+                <IconArrowRight className="w-3.5 h-3.5"/>
               </span>
             </li>
           )
@@ -211,13 +216,14 @@ function TodayPanel({ stats, isOrgAdmin, onNavigate }) {
 
 /* ── Colour palette ──────────────────────────────────────────────────────── */
 const PALETTE = {
-  indigo:  { bg: 'bg-indigo-50  dark:bg-indigo-900/20',  icon: 'text-indigo-500',  bar: 'bg-indigo-500',  ring: 'bg-indigo-500',  hex: '#6366f1' },
-  violet:  { bg: 'bg-violet-50  dark:bg-violet-900/20',  icon: 'text-violet-500',  bar: 'bg-violet-500',  ring: 'bg-violet-500',  hex: '#8b5cf6' },
-  emerald: { bg: 'bg-emerald-50 dark:bg-emerald-900/20', icon: 'text-emerald-500', bar: 'bg-emerald-500', ring: 'bg-emerald-500', hex: '#10b981' },
-  sky:     { bg: 'bg-sky-50     dark:bg-sky-900/20',     icon: 'text-sky-500',     bar: 'bg-sky-500',     ring: 'bg-sky-500',     hex: '#0ea5e9' },
-  amber:   { bg: 'bg-amber-50   dark:bg-amber-900/20',   icon: 'text-amber-500',   bar: 'bg-amber-500',   ring: 'bg-amber-500',   hex: '#f59e0b' },
-  rose:    { bg: 'bg-rose-50    dark:bg-rose-900/20',    icon: 'text-rose-500',    bar: 'bg-rose-500',    ring: 'bg-rose-500',    hex: '#f43f5e' },
-  teal:    { bg: 'bg-teal-50    dark:bg-teal-900/20',    icon: 'text-teal-500',    bar: 'bg-teal-500',    ring: 'bg-teal-500',    hex: '#14b8a6' },
+  indigo:  { bg: 'bg-brand-50   dark:bg-brand-900/20',   icon: 'text-brand',       bar: 'bg-brand',       ring: 'bg-brand',       hex: '#2F5BF0', grad: 'from-[#2F5BF0] to-[#6D52E8]' },
+  violet:  { bg: 'bg-accent-50  dark:bg-accent-900/20',  icon: 'text-accent',      bar: 'bg-accent',      ring: 'bg-accent',      hex: '#6D52E8', grad: 'from-[#8B6DF7] to-[#5B3FD6]' },
+  emerald: { bg: 'bg-emerald-50 dark:bg-emerald-900/20', icon: 'text-emerald-500', bar: 'bg-emerald-500', ring: 'bg-emerald-500', hex: '#10b981', grad: 'from-[#16B981] to-[#0EA5E9]' },
+  sky:     { bg: 'bg-sky-50     dark:bg-sky-900/20',     icon: 'text-sky-500',     bar: 'bg-sky-500',     ring: 'bg-sky-500',     hex: '#0ea5e9', grad: 'from-[#38BDF8] to-[#2F5BF0]' },
+  amber:   { bg: 'bg-amber-50   dark:bg-amber-900/20',   icon: 'text-amber-500',   bar: 'bg-amber-500',   ring: 'bg-amber-500',   hex: '#f59e0b', grad: 'from-[#FB923C] to-[#FBBF24]' },
+  rose:    { bg: 'bg-rose-50    dark:bg-rose-900/20',    icon: 'text-rose-500',    bar: 'bg-rose-500',    ring: 'bg-rose-500',    hex: '#f43f5e', grad: 'from-[#FB7185] to-[#EC4899]' },
+  teal:    { bg: 'bg-teal-50    dark:bg-teal-900/20',    icon: 'text-teal-500',    bar: 'bg-teal-500',    ring: 'bg-teal-500',    hex: '#14b8a6', grad: 'from-[#2DD4BF] to-[#16B981]' },
+  slate:   { bg: 'bg-slate-100  dark:bg-slate-800/40',   icon: 'text-slate-500',   bar: 'bg-slate-400',   ring: 'bg-slate-400',   hex: '#64748b', grad: 'from-[#94A3B8] to-[#64748B]' },
 }
 
 const DATE_PRESETS = [
@@ -231,10 +237,10 @@ const ACTION_COLOR = {
   CREATED:          'bg-emerald-100 text-emerald-700',
   UPDATED:          'bg-blue-100 text-blue-700',
   DELETED:          'bg-rose-100 text-rose-700',
-  RESTORED:         'bg-violet-100 text-violet-700',
+  RESTORED:         'bg-accent-100 text-accent-700',
   PASSWORD_CHANGED: 'bg-amber-100 text-amber-700',
   SENT:             'bg-sky-100 text-sky-700',
-  FEATURES_UPDATED: 'bg-indigo-100 text-indigo-700',
+  FEATURES_UPDATED: 'bg-brand-100 text-brand-700',
   CANCELLED:        'bg-red-100 text-red-700',
 }
 
@@ -246,24 +252,24 @@ function KpiCard({ icon, label, value, sub, color = 'indigo', onClick, badge }) 
   const c = PALETTE[color]
   return (
     <div onClick={onClick}
-      className={`card flex items-center gap-4 ${onClick ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}>
-      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${c.bg}`}>
-        <svg className={`w-6 h-6 ${c.icon}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      className={`bento flex items-center gap-4 ${onClick ? 'bento-hover cursor-pointer' : ''}`}>
+      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0
+                       bg-gradient-to-br ${c.grad} shadow-soft`}>
+        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={icon}/>
         </svg>
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</p>
-        <p className="text-3xl font-bold text-gray-900 dark:text-white leading-tight mt-0.5 flex items-center gap-2">
+        <p className="text-[11px] font-bold text-ink-4 uppercase tracking-wider">{label}</p>
+        <p className="text-3xl font-extrabold text-ink dark:text-white tracking-tight leading-tight mt-0.5 flex items-center gap-2">
           {value ?? <span className="inline-block w-12 h-7 bg-gray-100 dark:bg-gray-700 rounded animate-pulse"/>}
           {badge != null && badge > 0 && (
             <span className="inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5
                              rounded-full text-[11px] font-bold bg-amber-500 text-white">{badge}</span>
           )}
         </p>
-        {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+        {sub && <p className="text-xs text-ink-4 mt-0.5">{sub}</p>}
       </div>
-      <div className={`w-1 h-10 rounded-full ${c.ring} opacity-40 shrink-0`}/>
     </div>
   )
 }
@@ -272,8 +278,8 @@ function SectionHeader({ title, sub, action }) {
   return (
     <div className="flex items-end justify-between mb-4">
       <div>
-        <h2 className="text-sm font-bold text-gray-800 dark:text-gray-100">{title}</h2>
-        {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+        <h2 className="text-[15px] font-bold text-ink dark:text-gray-100 tracking-tight">{title}</h2>
+        {sub && <p className="text-xs text-ink-4 mt-0.5">{sub}</p>}
       </div>
       {action}
     </div>
@@ -282,21 +288,21 @@ function SectionHeader({ title, sub, action }) {
 
 function MiniStat({ label, value, color = 'gray', icon }) {
   const colorMap = {
-    indigo:  'text-indigo-600 dark:text-indigo-400',
+    indigo:  'text-brand dark:text-brand-400',
     emerald: 'text-emerald-600 dark:text-emerald-400',
     amber:   'text-amber-600 dark:text-amber-400',
     rose:    'text-rose-600 dark:text-rose-400',
     sky:     'text-sky-600 dark:text-sky-400',
-    violet:  'text-violet-600 dark:text-violet-400',
-    gray:    'text-gray-600 dark:text-gray-400',
+    violet:  'text-accent dark:text-accent-400',
+    gray:    'text-ink-2 dark:text-gray-400',
   }
   return (
-    <div className="bg-gray-50 dark:bg-gray-900/40 rounded-xl p-4 text-center">
+    <div className="bg-ink-8 dark:bg-gray-900/40 rounded-input p-4 text-center">
       {icon && <div className="flex justify-center mb-2">{icon}</div>}
-      <p className={`text-2xl font-bold ${colorMap[color] ?? colorMap.gray}`}>
+      <p className={`text-2xl font-extrabold tracking-tight ${colorMap[color] ?? colorMap.gray}`}>
         {value ?? <span className="inline-block w-10 h-6 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"/>}
       </p>
-      <p className="text-[11px] text-gray-400 font-medium mt-0.5">{label}</p>
+      <p className="text-[11px] text-ink-4 font-medium mt-0.5">{label}</p>
     </div>
   )
 }
@@ -307,11 +313,11 @@ function ProgressBar({ label, value, max, color = 'indigo', suffix = '' }) {
   return (
     <div>
       <div className="flex justify-between text-xs mb-1">
-        <span className="font-medium text-gray-600 dark:text-gray-400">{label}</span>
-        <span className="text-gray-500">{value}{suffix}</span>
+        <span className="font-medium text-ink-2 dark:text-gray-400">{label}</span>
+        <span className="text-ink-4">{value}{suffix}</span>
       </div>
-      <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full ${c.bar} transition-all duration-500`} style={{ width: `${p}%` }}/>
+      <div className="h-2 bg-ink-8 dark:bg-gray-700 rounded-full overflow-hidden">
+        <div className={`h-full rounded-full bg-gradient-to-r ${c.grad} transition-all duration-500`} style={{ width: `${p}%` }}/>
       </div>
     </div>
   )
@@ -319,13 +325,13 @@ function ProgressBar({ label, value, max, color = 'indigo', suffix = '' }) {
 
 function StatPill({ value, color }) {
   const cls = {
-    indigo:  'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400',
+    indigo:  'bg-brand-100 text-brand-700 dark:bg-brand-900/20 dark:text-brand-400',
     sky:     'bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-400',
     emerald: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400',
-    violet:  'bg-violet-50 text-violet-700 dark:bg-violet-900/20 dark:text-violet-400',
+    violet:  'bg-accent-100 text-accent-700 dark:bg-accent-900/20 dark:text-accent-400',
     amber:   'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400',
     rose:    'bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-400',
-  }[color] ?? 'bg-gray-100 text-gray-600'
+  }[color] ?? 'bg-ink-8 text-ink-3'
   return (
     <span className={`inline-flex items-center justify-center w-10 h-6 rounded-full text-xs font-bold ${cls}`}>
       {value}
@@ -335,7 +341,7 @@ function StatPill({ value, color }) {
 
 /* ── Charts ──────────────────────────────────────────────────────────────── */
 
-function BarChart({ data = [], color = '#6366f1', label, exportRef }) {
+function BarChart({ data = [], color = '#2F5BF0', label, exportRef }) {
   const max    = Math.max(...data.map(d => d.count), 1)
   const W      = 100 / Math.max(data.length, 1)
   const BAR_W  = Math.min(W * 0.55, 14)
@@ -398,7 +404,7 @@ function GroupedBarChart({ pdfData = [], emailData = [], exportRef }) {
           const eH  = Math.max((eD.count / max) * HEIGHT, eD.count > 0 ? 4 : 0)
           return (
             <g key={i}>
-              <rect x={gX}      y={HEIGHT - pH} width={13} height={Math.max(pH, 0)} fill="#6366f1" rx="2" opacity="0.85">
+              <rect x={gX}      y={HEIGHT - pH} width={13} height={Math.max(pH, 0)} fill="#2F5BF0" rx="2" opacity="0.85">
                 <title>{d.count} PDF in {d.label}</title>
               </rect>
               <rect x={gX + 15} y={HEIGHT - eH} width={13} height={Math.max(eH, 0)} fill="#10b981" rx="2" opacity="0.85">
@@ -465,22 +471,22 @@ function FunnelChart({ steps = [], exportRef }) {
           <div key={step.label}>
             {dropPct !== null && (
               <div className="flex items-center gap-2 my-1 pl-4">
-                <div className="w-px h-4 bg-gray-200 dark:bg-gray-700"/>
-                <span className="text-[10px] text-rose-500 font-semibold">↓ {dropPct}% drop-off</span>
+                <div className="w-px h-4 bg-ink-6 dark:bg-gray-700"/>
+                <span className="inline-flex items-center gap-1 text-[10px] text-rose-500 font-semibold"><IconTrendDown className="w-3 h-3"/> {dropPct}% drop-off</span>
               </div>
             )}
             <div className="flex items-center gap-3">
               <div className="w-20 text-right shrink-0">
-                <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">{step.label}</span>
+                <span className="text-xs font-semibold text-ink-2 dark:text-gray-400">{step.label}</span>
               </div>
-              <div className="flex-1 relative h-9 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+              <div className="flex-1 relative h-9 bg-ink-8 dark:bg-gray-800 rounded-lg overflow-hidden">
                 <div className="h-full rounded-lg flex items-center px-3 transition-all duration-700"
                   style={{ width: `${width}%`, background: step.color }}>
                   <span className="text-white text-xs font-bold">{step.value}</span>
                 </div>
               </div>
               <div className="w-12 text-right shrink-0">
-                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                <span className="text-xs font-bold text-ink dark:text-gray-300">
                   {pct(step.value, steps[0]?.value)}%
                 </span>
               </div>
@@ -493,17 +499,17 @@ function FunnelChart({ steps = [], exportRef }) {
 }
 
 /* ── Horizontal bar (template ranking) ───────────────────────────────────── */
-function HorizBar({ label, value, max, rank, color = '#6366f1' }) {
+function HorizBar({ label, value, max, rank, color = 'linear-gradient(90deg,#2F5BF0,#6D52E8)' }) {
   const w = max > 0 ? Math.max((value / max) * 100, value > 0 ? 4 : 0) : 0
   return (
     <div className="flex items-center gap-3">
-      <span className="w-5 text-xs font-bold text-gray-400 text-right shrink-0">{rank}</span>
+      <span className="w-5 text-xs font-bold text-ink-4 text-right shrink-0">{rank}</span>
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-center mb-0.5">
-          <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{label}</span>
-          <span className="text-xs font-bold text-gray-500 shrink-0 ml-2">{value}</span>
+          <span className="text-xs font-medium text-ink-2 dark:text-gray-300 truncate">{label}</span>
+          <span className="text-xs font-bold text-brand shrink-0 ml-2">{value}</span>
         </div>
-        <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+        <div className="h-2 bg-ink-8 dark:bg-gray-700 rounded-full overflow-hidden">
           <div className="h-full rounded-full transition-all duration-500"
             style={{ width: `${w}%`, background: color }}/>
         </div>
@@ -516,13 +522,13 @@ function HorizBar({ label, value, max, rank, color = '#6366f1' }) {
 function DateRangePicker({ preset, setPreset, from, setFrom, to, setTo }) {
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+      <div className="flex items-center gap-1 glass rounded-lg p-1">
         {DATE_PRESETS.map(p => (
           <button key={p.id} onClick={() => setPreset(p.id)}
             className={`px-3 py-1 rounded-md text-xs font-semibold transition-all
               ${preset === p.id
-                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>
+                ? 'bg-gradient-accent text-white shadow-soft'
+                : 'text-ink-3 hover:text-ink dark:hover:text-gray-300'}`}>
             {p.label}
           </button>
         ))}
@@ -565,7 +571,7 @@ function ExportPngButton({ targetRef, filename = 'chart' }) {
   return (
     <button onClick={handle}
       className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700
-                 text-xs font-semibold text-gray-500 hover:text-indigo-600 hover:border-indigo-300 transition-colors">
+                 text-xs font-semibold text-ink-3 hover:text-brand hover:border-brand-300 transition-colors">
       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
           d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
@@ -600,7 +606,7 @@ function ScheduledReportsPanel({ orgId }) {
           </div>
           <button onClick={() => update({ enabled: !cfg.enabled })}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-              ${cfg.enabled ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-700'}`}>
+              ${cfg.enabled ? 'bg-brand' : 'bg-gray-200 dark:bg-gray-700'}`}>
             <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform
               ${cfg.enabled ? 'translate-x-6' : 'translate-x-1'}`}/>
           </button>
@@ -615,7 +621,7 @@ function ScheduledReportsPanel({ orgId }) {
                   <button key={f} onClick={() => update({ frequency: f })}
                     className={`flex-1 py-2 rounded-xl text-sm font-semibold border-2 transition-all capitalize
                       ${cfg.frequency === f
-                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                        ? 'border-brand bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-300'
                         : 'border-gray-200 dark:border-gray-700 text-gray-500'}`}>
                     {f}
                   </button>
@@ -631,7 +637,7 @@ function ScheduledReportsPanel({ orgId }) {
                     <button key={d} onClick={() => update({ dayOfWeek: d })}
                       className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all
                         ${cfg.dayOfWeek === d
-                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                          ? 'border-brand bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-300'
                           : 'border-gray-200 dark:border-gray-700 text-gray-500'}`}>
                       {d.slice(0, 3)}
                     </button>
@@ -647,7 +653,7 @@ function ScheduledReportsPanel({ orgId }) {
                   <button key={f} onClick={() => update({ format: f })}
                     className={`flex-1 py-2 rounded-xl text-sm font-semibold border-2 transition-all
                       ${cfg.format === f
-                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                        ? 'border-brand bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-300'
                         : 'border-gray-200 dark:border-gray-700 text-gray-500'}`}>
                     {f}
                   </button>
@@ -661,7 +667,7 @@ function ScheduledReportsPanel({ orgId }) {
                 placeholder="reports@yourcompany.com"
                 className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5
                            text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300
-                           focus:outline-none focus:ring-2 focus:ring-indigo-400"/>
+                           focus:outline-none focus:ring-2 focus:ring-brand"/>
             </div>
           </>
         )}
@@ -714,7 +720,7 @@ function LiveActivityFeed({ stats, onNavigate }) {
             {live ? 'Live' : 'Live off'}
           </button>
           <button onClick={() => onNavigate('/audit-log')}
-            className="text-xs text-indigo-600 hover:underline font-medium">Full log →</button>
+            className="inline-flex items-center gap-1 text-xs text-brand hover:underline font-medium">Full log <IconArrowRight className="w-3.5 h-3.5"/></button>
         </div>
       </div>
       {!items.length
@@ -833,8 +839,8 @@ export default function DashboardPage() {
     if (prev === 0) return null
     const t = Math.round(((last - prev) / prev) * 100)
     return t >= 0
-      ? <span className="text-emerald-500 font-semibold text-xs">↑ {t}% vs last month</span>
-      : <span className="text-rose-500 font-semibold text-xs">↓ {Math.abs(t)}% vs last month</span>
+      ? <span className="inline-flex items-center gap-1 text-emerald-500 font-semibold text-xs"><IconTrendUp className="w-3.5 h-3.5"/> {t}% vs last month</span>
+      : <span className="inline-flex items-center gap-1 text-rose-500 font-semibold text-xs"><IconTrendDown className="w-3.5 h-3.5"/> {Math.abs(t)}% vs last month</span>
   }
 
   const TABS_ORG = [
@@ -863,7 +869,7 @@ export default function DashboardPage() {
   ].filter(s => s.value > 0)
 
   const esignFunnel = [
-    { label: 'Sent',   value: esignSent,                                            color: '#6366f1' },
+    { label: 'Sent',   value: esignSent,                                            color: '#2F5BF0' },
     { label: 'Viewed', value: stats?.esignViewed ?? Math.round(esignSent * 0.82),   color: '#0ea5e9' },
     { label: 'Signed', value: stats?.esignCompleted ?? 0,                           color: '#10b981' },
   ]
@@ -876,7 +882,7 @@ export default function DashboardPage() {
   const aActivity       = analytics?.activity       ?? []
   const aFunnel = analytics?.esignFunnel
     ? [
-        { label: 'Sent',   value: analytics.esignFunnel.sent,   color: '#6366f1' },
+        { label: 'Sent',   value: analytics.esignFunnel.sent,   color: '#2F5BF0' },
         { label: 'Viewed', value: analytics.esignFunnel.viewed, color: '#0ea5e9' },
         { label: 'Signed', value: analytics.esignFunnel.signed, color: '#10b981' },
       ]
@@ -886,11 +892,11 @@ export default function DashboardPage() {
     <div className="max-w-7xl mx-auto px-6 py-8">
       <Breadcrumbs items={CRUMBS}/>
 
-      {/* ── Header — Apple-style large title ── */}
+      {/* ── Header — bold display title with gradient name ── */}
       <div className="mt-4 mb-8 flex items-end justify-between gap-4 flex-wrap animate-fade-in-up">
         <div>
-          <h1 className="display-2 text-ink dark:text-white">
-            {greeting()}, {user?.firstName}
+          <h1 className="display-2 text-ink dark:text-white font-extrabold">
+            {greeting()}, <span className="text-gradient">{user?.firstName}</span>
           </h1>
           <p className="text-sm text-ink-3 mt-1.5">
             {isPlatformAdmin
@@ -913,13 +919,13 @@ export default function DashboardPage() {
       </div>
 
       {/* ── Tab bar ── */}
-      <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 mb-6 w-fit overflow-x-auto">
+      <div className="flex gap-1 glass rounded-xl p-1 mb-6 w-fit overflow-x-auto">
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap
               ${tab === t.id
-                ? 'bg-white dark:bg-gray-700 text-purple-700 dark:text-purple-300 shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}>
+                ? 'bg-gradient-accent text-white shadow-soft'
+                : 'text-ink-3 dark:text-gray-400 hover:text-ink dark:hover:text-gray-200'}`}>
             {t.icon}
             {t.label}
           </button>
@@ -1087,7 +1093,7 @@ export default function DashboardPage() {
                     <HorizBar key={t.id ?? i} rank={i + 1} label={t.name}
                       value={t.uses ?? 0}
                       max={aTopTemplates[0]?.uses ?? 1}
-                      color="#6366f1"/>
+                      color="#2F5BF0"/>
                   ))
                 )}
               </div>
@@ -1133,10 +1139,10 @@ export default function DashboardPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-center mb-0.5">
                             <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate">{u.name}</span>
-                            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 shrink-0 ml-2">{u.activityCount}</span>
+                            <span className="text-xs font-bold text-brand dark:text-brand-400 shrink-0 ml-2">{u.activityCount}</span>
                           </div>
                           <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                            <div className="h-full rounded-full bg-indigo-400 transition-all duration-500"
+                            <div className="h-full rounded-full bg-brand transition-all duration-500"
                               style={{ width: `${pct(u.activityCount, maxAct)}%` }}/>
                           </div>
                           {u.email && u.email !== u.name && (
@@ -1186,8 +1192,8 @@ export default function DashboardPage() {
               <ExportPngButton targetRef={chartRef2} filename="esign-funnel"/>
               <ExportPngButton targetRef={chartRef3} filename="activity-breakdown"/>
               <button onClick={() => window.print()}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-300
-                           text-xs font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors">
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-brand-300
+                           text-xs font-semibold text-brand hover:bg-brand-50 transition-colors">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                     d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
@@ -1205,7 +1211,7 @@ export default function DashboardPage() {
       {tab === 'esign' && (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-            <MiniStat label="Total Docs"  value={stats?.esignTotal}     color="indigo"  icon={<svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>}/>
+            <MiniStat label="Total Docs"  value={stats?.esignTotal}     color="indigo"  icon={<svg className="w-5 h-5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>}/>
             <MiniStat label="Sent"        value={esignSent}             color="sky"     icon={<svg className="w-5 h-5 text-sky-400"    fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>}/>
             <MiniStat label="Completed"   value={stats?.esignCompleted} color="emerald" icon={<svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}/>
             <MiniStat label="Pending"     value={stats?.esignPending}   color="amber"   icon={<svg className="w-5 h-5 text-amber-400"   fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}/>
@@ -1235,7 +1241,7 @@ export default function DashboardPage() {
               <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div>
-                    <p className="text-base font-bold text-indigo-600 dark:text-indigo-400">{esignSent}</p>
+                    <p className="text-base font-bold text-brand dark:text-brand-400">{esignSent}</p>
                     <p className="text-[10px] text-gray-400">Sent</p>
                   </div>
                   <div>
@@ -1307,7 +1313,7 @@ export default function DashboardPage() {
                     Signing token has expired but documents haven't been submitted. Consider resending.
                   </p>
                 </div>
-                <button onClick={() => navigate('/esign')} className="text-xs font-semibold text-rose-700 dark:text-rose-400 hover:underline shrink-0">Review →</button>
+                <button onClick={() => navigate('/esign')} className="inline-flex items-center gap-1 text-xs font-semibold text-rose-700 dark:text-rose-400 hover:underline shrink-0">Review <IconArrowRight className="w-3.5 h-3.5"/></button>
               </div>
             </div>
           )}
@@ -1322,7 +1328,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             <div className="card">
               <SectionHeader title="Top Active Users" sub="By audit log activity — last 30 days"
-                action={<button onClick={() => navigate('/users')} className="text-xs text-primary hover:underline font-medium">All users →</button>}
+                action={<button onClick={() => navigate('/users')} className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium">All users <IconArrowRight className="w-3.5 h-3.5"/></button>}
               />
               {!topUsers.length
                 ? <div className="flex items-center justify-center py-10 text-gray-400 text-xs">No activity in the last 30 days</div>
@@ -1343,7 +1349,7 @@ export default function DashboardPage() {
                           <p className="text-[11px] text-gray-400 truncate">{u.email}</p>
                         </div>
                         <div className="text-right shrink-0">
-                          <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{u.activityCount}</p>
+                          <p className="text-sm font-bold text-brand dark:text-brand-400">{u.activityCount}</p>
                           <p className="text-[10px] text-gray-400">actions</p>
                         </div>
                       </li>
@@ -1356,17 +1362,17 @@ export default function DashboardPage() {
             <div className="card">
               <SectionHeader title="Team Summary" sub="Current member status"/>
               <div className="grid grid-cols-2 gap-3 mb-6">
-                <MiniStat label="Total Members" value={stats?.totalUsers}     color="indigo" icon={<svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>}/>
+                <MiniStat label="Total Members" value={stats?.totalUsers}     color="indigo" icon={<svg className="w-5 h-5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>}/>
                 <MiniStat label="Pending Setup" value={stats?.pendingInvites} color="amber"  icon={<svg className="w-5 h-5 text-amber-400"   fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>}/>
               </div>
               <SectionHeader title="User Growth" sub="New members per month"/>
-              <BarChart data={stats?.userGrowth ?? []} color="#8b5cf6"/>
+              <BarChart data={stats?.userGrowth ?? []} color="#6D52E8"/>
             </div>
           </div>
 
           <div className="card">
             <SectionHeader title="Recent Team Actions"
-              action={<button onClick={() => navigate('/audit-log')} className="text-xs text-primary hover:underline font-medium">Full audit log →</button>}
+              action={<button onClick={() => navigate('/audit-log')} className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium">Full audit log <IconArrowRight className="w-3.5 h-3.5"/></button>}
             />
             {!stats?.recentActivity?.length
               ? <div className="text-center text-gray-400 py-8 text-xs">No recent actions</div>
@@ -1450,7 +1456,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             <div className="card">
               <SectionHeader title="New Tenants" sub="Organisations created per month — last 6 months"/>
-              <BarChart data={stats?.tenantGrowth ?? []} color="#8b5cf6"/>
+              <BarChart data={stats?.tenantGrowth ?? []} color="#6D52E8"/>
             </div>
             <div className="card">
               <SectionHeader title="Feature Adoption" sub="Active orgs with each module enabled"/>
@@ -1464,7 +1470,7 @@ export default function DashboardPage() {
                       return (
                         <div key={key}>
                           <div className="flex items-center gap-2 mb-1.5">
-                            <div className="w-4 h-4 shrink-0" style={{ color: meta?.color ?? '#6366f1' }}>
+                            <div className="w-4 h-4 shrink-0" style={{ color: meta?.color ?? '#2F5BF0' }}>
                               <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={meta?.icon ?? 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4'}/>
                               </svg>
@@ -1474,7 +1480,7 @@ export default function DashboardPage() {
                           </div>
                           <div className="h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                             <div className="h-full rounded-full transition-all duration-500"
-                              style={{ width: `${pct(count, total)}%`, background: meta?.color ?? '#6366f1' }}/>
+                              style={{ width: `${pct(count, total)}%`, background: meta?.color ?? '#2F5BF0' }}/>
                           </div>
                         </div>
                       )
@@ -1488,7 +1494,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <div className="card lg:col-span-2">
               <SectionHeader title="Top Active Users (Platform)" sub="By audit actions — last 30 days"
-                action={<button onClick={() => navigate('/users')} className="text-xs text-primary hover:underline font-medium">All users →</button>}
+                action={<button onClick={() => navigate('/users')} className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium">All users <IconArrowRight className="w-3.5 h-3.5"/></button>}
               />
               {!topUsers.length
                 ? <div className="text-center text-gray-400 py-6 text-xs">No activity in the last 30 days</div>
@@ -1508,7 +1514,7 @@ export default function DashboardPage() {
                           <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{u.name}</p>
                           <p className="text-[11px] text-gray-400 truncate">{u.email}</p>
                         </div>
-                        <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 shrink-0">{u.activityCount}</span>
+                        <span className="text-sm font-bold text-brand dark:text-brand-400 shrink-0">{u.activityCount}</span>
                       </li>
                     ))}
                   </ol>
@@ -1520,7 +1526,7 @@ export default function DashboardPage() {
               <SectionHeader title="Platform E-Sign" sub="Cross-org signing summary"/>
               <div className="space-y-3">
                 {[
-                  { label: 'Total Documents', value: stats?.esignTotal ?? 0,     color: 'text-indigo-600 dark:text-indigo-400' },
+                  { label: 'Total Documents', value: stats?.esignTotal ?? 0,     color: 'text-brand dark:text-brand-400' },
                   { label: 'Completed',        value: stats?.esignCompleted ?? 0, color: 'text-emerald-600 dark:text-emerald-400' },
                   { label: 'Pending',          value: stats?.esignPending ?? 0,   color: 'text-amber-600 dark:text-amber-400' },
                   { label: 'Overdue',          value: stats?.esignOverdue ?? 0,   color: 'text-rose-600 dark:text-rose-400' },
@@ -1549,9 +1555,15 @@ export default function DashboardPage() {
       {tab === 'tenants' && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <MiniStat label="Active Tenants"     value={stats?.activeOrganizations}   color="emerald" icon={<svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}/>
-            <MiniStat label="Inactive Tenants"   value={stats?.inactiveOrganizations} color="gray"    icon={<svg className="w-5 h-5 text-gray-400"    fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}/>
-            <MiniStat label="Pending Onboarding" value={stats?.pendingOnboarding}     color="amber"   icon={<svg className="w-5 h-5 text-amber-400"   fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}/>
+            <KpiCard color="emerald" label="Active Tenants" value={stats?.activeOrganizations}
+              sub="Live organisations"
+              icon="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            <KpiCard color="slate" label="Inactive Tenants" value={stats?.inactiveOrganizations}
+              sub="Suspended"
+              icon="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            <KpiCard color="amber" label="Pending Onboarding" value={stats?.pendingOnboarding}
+              sub="Awaiting approval"
+              icon="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </div>
 
           {stats?.orgBreakdown?.length > 0 && (
@@ -1561,7 +1573,7 @@ export default function DashboardPage() {
                   <h2 className="text-sm font-bold text-gray-800 dark:text-gray-100">Organization Breakdown</h2>
                   <p className="text-xs text-gray-400 mt-0.5">Per-tenant resource and feature summary</p>
                 </div>
-                <button onClick={() => navigate('/organizations')} className="text-xs text-primary hover:underline font-medium">Manage →</button>
+                <button onClick={() => navigate('/organizations')} className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium">Manage <IconArrowRight className="w-3.5 h-3.5"/></button>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -1577,7 +1589,7 @@ export default function DashboardPage() {
                       <tr key={org.organizationId} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                         <td className="px-5 py-3">
                           <div className="flex items-center gap-2.5">
-                            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-400 to-violet-500
+                            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-400 to-accent-500
                                             flex items-center justify-center text-white text-[11px] font-bold shrink-0">
                               {org.organizationName?.[0]?.toUpperCase()}
                             </div>
@@ -1646,7 +1658,7 @@ export default function DashboardPage() {
                         <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{u.name}</p>
                         <p className="text-[11px] text-gray-400 truncate">{u.email}</p>
                       </div>
-                      <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400 shrink-0">{u.activityCount}</span>
+                      <span className="text-sm font-bold text-brand dark:text-brand-400 shrink-0">{u.activityCount}</span>
                     </li>
                   ))}
                 </ol>

@@ -15,9 +15,9 @@ const ACTION_BADGE = {
   CREATED:          'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
   UPDATED:          'bg-blue-100   text-blue-700   dark:bg-blue-900/30   dark:text-blue-400',
   DELETED:          'bg-rose-100   text-rose-700   dark:bg-rose-900/30   dark:text-rose-400',
-  RESTORED:         'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400',
+  RESTORED:         'bg-accent-100 text-accent-700 dark:bg-accent-900/30 dark:text-accent-400',
   PASSWORD_CHANGED: 'bg-amber-100  text-amber-700  dark:bg-amber-900/30  dark:text-amber-400',
-  AVATAR_UPDATED:   'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+  AVATAR_UPDATED:   'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400',
   DEACTIVATED:      'bg-red-100    text-red-700    dark:bg-red-900/30    dark:text-red-400',
   ACTIVATED:        'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
   SESSION_REVOKED:  'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
@@ -32,7 +32,7 @@ function Avatar({ user, size = 'lg' }) {
   }
   const initials = `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase()
   return (
-    <div className={`${s} rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold`}>
+    <div className={`${s} rounded-full bg-gradient-to-br from-brand-500 to-accent-600 flex items-center justify-center text-white font-bold`}>
       {initials}
     </div>
   )
@@ -150,11 +150,11 @@ export default function ProfilePage() {
             disabled={uploadingAvatar}
             className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-white dark:bg-gray-700 border-2
                        border-gray-100 dark:border-gray-600 flex items-center justify-center
-                       shadow hover:bg-indigo-50 transition-colors"
+                       shadow hover:bg-brand-50 transition-colors"
             title="Change photo"
           >
             {uploadingAvatar
-              ? <svg className="animate-spin w-3.5 h-3.5 text-indigo-500" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+              ? <svg className="animate-spin w-3.5 h-3.5 text-brand-500" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
               : <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>}
           </button>
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
@@ -165,7 +165,7 @@ export default function ProfilePage() {
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">{user?.email}</p>
           <div className="flex items-center gap-2 mt-2">
-            <span className="badge badge-indigo text-[11px]">{ROLE_LABEL[user?.role] || user?.role}</span>
+            <span className="badge badge-brand text-[11px]">{ROLE_LABEL[user?.role] || user?.role}</span>
             {user?.organizationName && (
               <span className="badge badge-violet text-[11px]">{user?.organizationName}</span>
             )}
@@ -179,7 +179,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 mb-6 w-fit">
+      <div className="flex gap-1 p-1 rounded-xl bg-ink-8 dark:bg-gray-800 border border-ink-7 dark:border-gray-700 mb-6 w-fit">
         {[
           { id: 'info',     label: 'Personal Info' },
           { id: 'password', label: 'Change Password' },
@@ -191,8 +191,8 @@ export default function ProfilePage() {
             onClick={() => setTab(t.id)}
             className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all
               ${tab === t.id
-                ? 'bg-white dark:bg-gray-700 text-purple-700 dark:text-purple-300 shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
+                ? 'bg-gradient-accent text-white shadow-soft'
+                : 'text-ink-3 hover:text-ink dark:text-gray-400 dark:hover:text-gray-200'}`}
           >
             {t.label}
           </button>
@@ -290,7 +290,7 @@ export default function ProfilePage() {
         <div className="card p-0 overflow-hidden">
           {loadingLogs ? (
             <div className="flex items-center justify-center py-16 text-gray-400 gap-3">
-              <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"/>
+              <div className="w-5 h-5 border-2 border-accent-500 border-t-transparent rounded-full animate-spin"/>
               Loading activity…
             </div>
           ) : auditLogs.length === 0 ? (

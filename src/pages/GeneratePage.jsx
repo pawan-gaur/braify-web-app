@@ -5,6 +5,7 @@ import useDocumentTitle from '../hooks/useDocumentTitle'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import ViewToggle, { useView } from '../components/ui/ViewToggle'
+import { IconX } from '../components/ui/icons'
 
 export default function GeneratePage() {
   useDocumentTitle('Generate PDF')
@@ -78,8 +79,8 @@ export default function GeneratePage() {
 
       {/* Page header */}
       <div className="mt-4 mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Generate PDF</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-ink dark:text-white">Generate PDF</h1>
+        <p className="text-sm text-ink-3 mt-1">
           Select a template, fill in the data, then download or preview.
         </p>
       </div>
@@ -110,7 +111,7 @@ export default function GeneratePage() {
               /* Card grid picker */
               <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto pr-0.5">
                 {templates.length === 0 && (
-                  <p className="text-xs text-gray-400 py-2 text-center">No templates found</p>
+                  <p className="text-xs text-ink-4 py-2 text-center">No templates found</p>
                 )}
                 {templates.map(t => (
                   <button
@@ -118,22 +119,22 @@ export default function GeneratePage() {
                     onClick={() => setSelectedId(t.id)}
                     className={`flex items-center gap-3 w-full text-left px-3 py-2.5 rounded-xl border transition-all
                       ${selectedId === t.id
-                        ? 'border-purple-400 bg-purple-50 dark:bg-purple-900/20 dark:border-purple-500'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-purple-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                        ? 'border-accent-400 bg-accent-50 dark:bg-accent-700/20 dark:border-accent-500'
+                        : 'border-ink-7 dark:border-gray-700 hover:border-accent-300 hover:bg-ink-8 dark:hover:bg-gray-700/50'
                       }`}
                   >
                     {/* Mini icon */}
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                      selectedId === t.id ? 'bg-purple-100 dark:bg-purple-900/40' : 'bg-gray-100 dark:bg-gray-700'
+                      selectedId === t.id ? 'bg-accent-100 dark:bg-accent-700/40' : 'bg-ink-8 dark:bg-gray-700'
                     }`}>
-                      <svg className={`w-4 h-4 ${selectedId === t.id ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`}
+                      <svg className={`w-4 h-4 ${selectedId === t.id ? 'text-accent-600 dark:text-accent-400' : 'text-ink-4'}`}
                         fill="currentColor" viewBox="0 0 24 24">
                         <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/>
                       </svg>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm font-semibold truncate ${
-                        selectedId === t.id ? 'text-purple-700 dark:text-purple-300' : 'text-gray-800 dark:text-gray-200'
+                        selectedId === t.id ? 'text-accent-700 dark:text-accent-300' : 'text-gray-800 dark:text-gray-200'
                       }`}>{t.name}</p>
                       <div className="flex gap-1.5 mt-0.5 flex-wrap">
                         <span className="text-[10px] font-medium text-gray-400">{t.pageSize || 'A4'}</span>
@@ -143,7 +144,7 @@ export default function GeneratePage() {
                       </div>
                     </div>
                     {selectedId === t.id && (
-                      <svg className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-accent-600 dark:text-accent-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/>
                       </svg>
                     )}
@@ -244,10 +245,11 @@ export default function GeneratePage() {
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                 <span className="font-semibold text-sm text-gray-700">PDF Preview</span>
                 <button
-                  className="btn btn-ghost btn-sm text-gray-400"
+                  className="btn btn-ghost btn-sm text-gray-400 inline-flex items-center gap-1.5"
                   onClick={() => { URL.revokeObjectURL(previewUrl); setPreviewUrl(null) }}
                 >
-                  ✕ Close
+                  <IconX className="w-4 h-4" />
+                  Close
                 </button>
               </div>
               <iframe

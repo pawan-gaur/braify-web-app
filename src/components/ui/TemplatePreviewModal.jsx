@@ -70,7 +70,7 @@ export default function TemplatePreviewModal({ template, onClose }) {
                         border-b border-gray-100 dark:border-gray-700 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
             {/* Eye icon */}
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/30
+            <div className="w-8 h-8 rounded-lg bg-brand-50 dark:bg-brand-900/30
                             flex items-center justify-center shrink-0">
               <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -84,7 +84,7 @@ export default function TemplatePreviewModal({ template, onClose }) {
               <h2 className="text-sm font-bold text-gray-800 dark:text-gray-100 truncate">
                 {template.name}
               </h2>
-              <p className="text-[11px] text-gray-400 mt-0.5">
+              <p className="text-[11px] text-ink-4 mt-0.5">
                 {template.pageSize} · {template.orientation}
                 {template.placeholders?.length > 0 && (
                   <span className="ml-1">
@@ -156,7 +156,7 @@ export default function TemplatePreviewModal({ template, onClose }) {
               <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                 Preview failed
               </p>
-              <p className="text-xs text-gray-400 max-w-xs">{error}</p>
+              <p className="text-xs text-ink-4 max-w-xs">{error}</p>
             </div>
           )}
 

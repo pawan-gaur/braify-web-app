@@ -25,8 +25,8 @@ import { fmtDate, fmtDateTime, fmtRelative } from '../utils/date'
 /* ── Spinner ── */
 function Spinner() {
   return (
-    <div className="flex items-center justify-center py-16 gap-3 text-gray-400">
-      <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"/>
+    <div className="flex items-center justify-center py-16 gap-3 text-ink-4">
+      <div className="w-8 h-8 border-4 border-accent-500 border-t-transparent rounded-full animate-spin"/>
       Loading…
     </div>
   )
@@ -40,7 +40,7 @@ const PLANS = [
 ]
 
 const FEATURE_BADGE = {
-  PDF_TEMPLATES:   { label: 'PDF Templates',   cls: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' },
+  PDF_TEMPLATES:   { label: 'PDF Templates',   cls: 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300' },
   EMAIL_TEMPLATES: { label: 'Email Templates', cls: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300'       },
   E_SIGN:          { label: 'E-Sign',          cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' },
 }
@@ -112,7 +112,7 @@ export default function OrgDetailPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/organizations')}
-            className="w-8 h-8 flex items-center justify-center rounded-xl text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-xl text-ink-4 hover:bg-ink-8 dark:hover:bg-gray-700 transition-colors"
             title="Back"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -121,27 +121,27 @@ export default function OrgDetailPage() {
           </button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{org.name}</h1>
+              <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-ink dark:text-white">{org.name}</h1>
               <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${org.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                 {org.active ? 'Active' : 'Inactive'}
               </span>
               <PlanBadge plan={org.subscriptionPlan || 'FREE'} />
             </div>
-            <code className="text-xs text-gray-400 mt-0.5">{org.code}</code>
+            <code className="text-xs text-ink-4 mt-0.5">{org.code}</code>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="bg-gray-100 dark:bg-gray-800/60 rounded-xl p-1 flex gap-1 flex-wrap mb-6">
+      <div className="bg-ink-8 dark:bg-gray-800/60 rounded-xl p-1 flex gap-1 flex-wrap mb-6">
         {TABS.map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all
               ${activeTab === tab
-                ? 'bg-white dark:bg-gray-700 shadow-sm text-purple-700 dark:text-purple-300'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                ? 'bg-gradient-accent text-white shadow-soft'
+                : 'text-ink-3 hover:text-ink dark:text-gray-400 dark:hover:text-gray-200'
               }`}
           >
             {tab}
@@ -210,7 +210,7 @@ function OverviewTab({ org, setOrg, orgId }) {
     }
   }
 
-  const color = branding?.primaryColor || '#6366f1'
+  const color = branding?.primaryColor || '#2F5BF0'
 
   return (
     <div className="space-y-5">
@@ -221,8 +221,8 @@ function OverviewTab({ org, setOrg, orgId }) {
           {!editing && (
             <button
               onClick={() => setEditing(true)}
-              className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600
-                         text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors"
+              className="text-xs px-3 py-1.5 rounded-lg border border-ink-7 dark:border-gray-600
+                         text-ink-3 hover:border-brand-400 hover:text-brand-600 transition-colors"
             >
               Edit
             </button>
@@ -256,7 +256,7 @@ function OverviewTab({ org, setOrg, orgId }) {
                 aria-checked={form.active}
                 onClick={() => setForm(f => ({ ...f, active: !f.active }))}
                 className={`relative w-10 h-5 rounded-full transition-colors
-                  ${form.active ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'}`}
+                  ${form.active ? 'bg-brand-600' : 'bg-gray-300 dark:bg-gray-600'}`}
               >
                 <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform
                   ${form.active ? 'translate-x-5' : 'translate-x-0'}`}/>
@@ -501,7 +501,7 @@ function ApiKeysTab({ org, orgId }) {
       <div className="flex items-center justify-between gap-3 flex-wrap">
         {/* API reference hint */}
         <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-          <svg className="w-4 h-4 text-indigo-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-brand-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
           </svg>
@@ -509,7 +509,7 @@ function ApiKeysTab({ org, orgId }) {
           <span>
             Usage instructions are in{' '}
             <a href="/settings/api-keys" target="_blank" rel="noreferrer"
-              className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">
+              className="text-brand-600 dark:text-brand-400 font-semibold hover:underline">
               Settings → API Keys → API Reference
             </a>.
           </span>
@@ -524,12 +524,12 @@ function ApiKeysTab({ org, orgId }) {
 
       {keys.length === 0 ? (
         <div className="card p-12 flex flex-col items-center text-center">
-          <svg className="w-10 h-10 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-10 h-10 text-ink-4 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
               d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
           </svg>
-          <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1">No API keys</p>
-          <p className="text-xs text-gray-400">This organization has no API keys yet.</p>
+          <p className="text-sm font-semibold text-ink-2 dark:text-gray-300 mb-1">No API keys</p>
+          <p className="text-xs text-ink-4">This organization has no API keys yet.</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -575,7 +575,7 @@ function AdminCreateKeyModal({ orgId, orgFeatures, onClose, onCreated }) {
   const [saving,   setSaving]   = useState(false)
 
   const allFeatMeta = [
-    { key: 'PDF_TEMPLATES',   label: 'PDF Templates',   cls: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' },
+    { key: 'PDF_TEMPLATES',   label: 'PDF Templates',   cls: 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300' },
     { key: 'EMAIL_TEMPLATES', label: 'Email Templates', cls: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300'       },
     { key: 'E_SIGN',          label: 'E-Sign',          cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' },
   ]
@@ -627,7 +627,7 @@ function AdminCreateKeyModal({ orgId, orgFeatures, onClose, onCreated }) {
               <div className="space-y-2">
                 {available.map(f => (
                   <label key={f.key} className="flex items-center gap-3 cursor-pointer">
-                    <input type="checkbox" className="rounded accent-indigo-600 w-4 h-4"
+                    <input type="checkbox" className="rounded accent-brand w-4 h-4"
                       checked={features.includes(f.key)} onChange={() => toggleFeature(f.key)}/>
                     <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${f.cls}`}>{f.label}</span>
                   </label>
@@ -687,7 +687,7 @@ function KeyCreatedModal({ rawKey, onClose }) {
             {rawKey && (
               <button onClick={copy}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all
-                  ${copied ? 'bg-emerald-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}>
+                  ${copied ? 'bg-emerald-600 text-white' : 'bg-brand-600 hover:bg-brand-700 text-white'}`}>
                 {copied ? 'Copied!' : 'Copy to Clipboard'}
               </button>
             )}
@@ -724,7 +724,7 @@ function UsageTab({ orgId }) {
 
   if (loading) return <Spinner />
 
-  const featureColors = { PDF_TEMPLATES: '#4f46e5', EMAIL_TEMPLATES: '#0891b2', E_SIGN: '#059669' }
+  const featureColors = { PDF_TEMPLATES: '#2F5BF0', EMAIL_TEMPLATES: '#0891b2', E_SIGN: '#059669' }
   const featureLabels = { PDF_TEMPLATES: 'PDF Templates', EMAIL_TEMPLATES: 'Email Templates', E_SIGN: 'E-Sign' }
 
   return (
@@ -749,7 +749,7 @@ function UsageTab({ orgId }) {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {Object.entries(keyUsage).map(([feat, count]) => (
               <div key={feat} className="bg-gray-50 dark:bg-gray-700/40 rounded-xl p-4 text-center">
-                <p className="text-2xl font-bold" style={{ color: featureColors[feat] || '#6366f1' }}>
+                <p className="text-2xl font-bold" style={{ color: featureColors[feat] || '#2F5BF0' }}>
                   {Number(count).toLocaleString()}
                 </p>
                 <p className="text-xs text-gray-500 mt-1 font-semibold">
@@ -851,11 +851,11 @@ function SubscriptionTab({ org, setOrg, orgId }) {
               key={p.value}
               className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all
                 ${plan === p.value
-                  ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
-                  : 'border-gray-100 dark:border-gray-700 hover:border-gray-200'}`}
+                  ? 'border-brand-400 bg-brand-50 dark:bg-brand-900/20'
+                  : 'border-ink-7 dark:border-gray-700 hover:border-gray-200'}`}
             >
               <input type="radio" name="plan" value={p.value} checked={plan === p.value}
-                onChange={() => setPlan(p.value)} className="mt-0.5 accent-indigo-600"/>
+                onChange={() => setPlan(p.value)} className="mt-0.5 accent-brand"/>
               <div className="flex-1">
                 <PlanBadge plan={p.value} />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{p.desc}</p>
@@ -912,8 +912,8 @@ function UsersTab({ orgId }) {
   return (
     <div className="card p-0 overflow-hidden">
       {users.length === 0 ? (
-        <div className="flex flex-col items-center py-16 text-gray-400">
-          <svg className="w-10 h-10 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="flex flex-col items-center py-16 text-ink-4">
+          <svg className="w-10 h-10 mb-3 text-ink-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
               d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
           </svg>
@@ -922,21 +922,21 @@ function UsersTab({ orgId }) {
       ) : (
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+            <tr className="border-b border-ink-7 dark:border-gray-700 bg-ink-8 dark:bg-gray-900/50">
               {['Name', 'Email', 'Role', 'Status', 'Last Login'].map(h => (
-                <th key={h} className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">{h}</th>
+                <th key={h} className="text-left px-5 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
             {users.map(u => (
-              <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+              <tr key={u.id} className="hover:bg-ink-8 dark:hover:bg-gray-700/30">
                 <td className="px-5 py-3.5">
-                  <p className="font-semibold text-gray-800 dark:text-gray-200">
+                  <p className="font-semibold text-ink dark:text-gray-200">
                     {u.firstName} {u.lastName}
                   </p>
                 </td>
-                <td className="px-5 py-3.5 text-gray-500">{u.email}</td>
+                <td className="px-5 py-3.5 text-ink-3">{u.email}</td>
                 <td className="px-5 py-3.5">
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
                     {u.role}
@@ -948,7 +948,7 @@ function UsersTab({ orgId }) {
                     {u.active !== false ? 'Active' : 'Inactive'}
                   </span>
                 </td>
-                <td className="px-5 py-3.5 text-xs text-gray-400">
+                <td className="px-5 py-3.5 text-xs text-ink-4">
                   {u.lastLoginAt ? fmtRelative(u.lastLoginAt) : '—'}
                 </td>
               </tr>
@@ -984,8 +984,8 @@ function ActivityTab({ orgId }) {
   return (
     <div className="card p-0 overflow-hidden">
       {logs.length === 0 ? (
-        <div className="flex flex-col items-center py-16 text-gray-400">
-          <svg className="w-10 h-10 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="flex flex-col items-center py-16 text-ink-4">
+          <svg className="w-10 h-10 mb-3 text-ink-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
               d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
           </svg>
@@ -994,27 +994,27 @@ function ActivityTab({ orgId }) {
       ) : (
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+            <tr className="border-b border-ink-7 dark:border-gray-700 bg-ink-8 dark:bg-gray-900/50">
               {['Timestamp', 'Action', 'User', 'Details'].map(h => (
-                <th key={h} className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">{h}</th>
+                <th key={h} className="text-left px-5 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
             {logs.map((log, i) => (
-              <tr key={log.id ?? i} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                <td className="px-5 py-3.5 text-xs text-gray-400 whitespace-nowrap">
+              <tr key={log.id ?? i} className="hover:bg-ink-8 dark:hover:bg-gray-700/30">
+                <td className="px-5 py-3.5 text-xs text-ink-4 whitespace-nowrap">
                   {fmtDateTime(log.performedAt ?? log.createdAt)}
                 </td>
                 <td className="px-5 py-3.5">
-                  <span className="text-xs font-mono bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-gray-600 dark:text-gray-300">
+                  <span className="text-xs font-mono bg-ink-8 dark:bg-gray-700 px-2 py-0.5 rounded text-ink-2 dark:text-gray-300">
                     {log.action}
                   </span>
                 </td>
-                <td className="px-5 py-3.5 text-gray-600 dark:text-gray-300 text-xs">
+                <td className="px-5 py-3.5 text-ink-2 dark:text-gray-300 text-xs">
                   {log.performedBy ?? log.userEmail ?? '—'}
                 </td>
-                <td className="px-5 py-3.5 text-xs text-gray-400 max-w-[260px] truncate" title={log.details ?? log.description ?? ''}>
+                <td className="px-5 py-3.5 text-xs text-ink-4 max-w-[260px] truncate" title={log.details ?? log.description ?? ''}>
                   {log.details ?? log.description ?? '—'}
                 </td>
               </tr>

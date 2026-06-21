@@ -41,7 +41,7 @@ export default function ColorPicker({ value = '#6366f1', onChange, label = 'Prim
       <div className="flex items-center gap-3 mt-1">
         {/* Native colour wheel */}
         <label
-          className="w-10 h-10 rounded-xl border-2 border-gray-200 dark:border-gray-700
+          className="w-10 h-10 rounded-xl border-2 border-ink-7 dark:border-gray-700
                      cursor-pointer overflow-hidden shrink-0 shadow-sm hover:shadow transition-shadow"
           title="Click to pick a colour"
         >

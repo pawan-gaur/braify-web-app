@@ -22,7 +22,7 @@ function fmtMonth(year, month) {
 }
 
 /** Micro bar-chart row for usage history */
-function UsageHistoryChart({ history, field, label, color = '#6366f1', unit = '' }) {
+function UsageHistoryChart({ history, field, label, color = '#2F5BF0', unit = '' }) {
   if (!history?.length) return null
   const max = Math.max(...history.map(h => h[field] || 0), 1)
 
@@ -87,8 +87,8 @@ export default function UsagePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh] gap-3 text-gray-400">
-        <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"/>
+      <div className="flex items-center justify-center min-h-[60vh] gap-3 text-ink-4">
+        <div className="w-8 h-8 border-4 border-accent-500 border-t-transparent rounded-full animate-spin"/>
         Loading usage data…
       </div>
     )
@@ -103,8 +103,8 @@ export default function UsagePage() {
 
       <div className="flex items-center justify-between mt-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Usage &amp; Quotas</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-ink dark:text-white">Usage &amp; Quotas</h1>
+          <p className="text-sm text-ink-3 mt-1">
             Monitor your organisation's resource consumption and current limits.
           </p>
         </div>
@@ -182,13 +182,13 @@ export default function UsagePage() {
               history={history}
               field="docsGenerated"
               label="PDFs generated"
-              color="#6366f1"
+              color="#2F5BF0"
             />
             <UsageHistoryChart
               history={history}
               field="esignSent"
               label="E-Sign documents sent"
-              color="#8b5cf6"
+              color="#6D52E8"
             />
             <UsageHistoryChart
               history={history}

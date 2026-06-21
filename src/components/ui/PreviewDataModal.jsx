@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import { IconCheck } from './icons'
 
 /* ─────────────────────────────────────────────────────────────────────────────
    Template Engine — client-side Handlebars-style substitution
@@ -349,7 +350,7 @@ export default function PreviewDataModal({ getHtml, getCss, meta, onClose }) {
         {/* ── Header ── */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent-500 to-brand-600
                             flex items-center justify-center">
               <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -372,8 +373,8 @@ export default function PreviewDataModal({ getHtml, getCss, meta, onClose }) {
             <button
               onClick={handleRegenerate}
               className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700
-                         text-gray-500 dark:text-gray-400 hover:border-indigo-400 hover:text-indigo-600
-                         dark:hover:text-indigo-400 transition-colors flex items-center gap-1.5"
+                         text-gray-500 dark:text-gray-400 hover:border-brand-400 hover:text-brand-600
+                         dark:hover:text-brand-400 transition-colors flex items-center gap-1.5"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -419,7 +420,7 @@ export default function PreviewDataModal({ getHtml, getCss, meta, onClose }) {
                             focus:outline-none transition-colors
                             ${parseError
                               ? 'border-l-2 border-red-400'
-                              : 'border-l-2 border-transparent focus:border-indigo-400'
+                              : 'border-l-2 border-transparent focus:border-brand-400'
                             }`}
                 value={jsonText}
                 onChange={e => handleJsonChange(e.target.value)}
@@ -443,8 +444,9 @@ export default function PreviewDataModal({ getHtml, getCss, meta, onClose }) {
                   {parseError}
                 </p>
               ) : (
-                <p className="text-[11px] text-gray-400">
-                  ✓ Valid JSON · {detectedVars.length} variables
+                <p className="text-[11px] text-gray-400 inline-flex items-center gap-1.5">
+                  <IconCheck className="w-3.5 h-3.5" />
+                  Valid JSON · {detectedVars.length} variables
                 </p>
               )}
             </div>
@@ -474,7 +476,7 @@ export default function PreviewDataModal({ getHtml, getCss, meta, onClose }) {
                       }}
                       className={`text-[10px] font-mono px-2 py-0.5 rounded-full border transition-all
                         ${activeField === key
-                          ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
+                          ? 'border-brand-400 bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300'
                           : isArray
                           ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400'
                           : isBool
@@ -508,7 +510,7 @@ export default function PreviewDataModal({ getHtml, getCss, meta, onClose }) {
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
                               transition-colors ${
                     previewTab === tab.key
-                      ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
+                      ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300'
                       : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                   }`}
                 >

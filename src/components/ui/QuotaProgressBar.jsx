@@ -17,7 +17,7 @@ export default function QuotaProgressBar({ label, current, limit, unit = '' }) {
     : 'bg-emerald-500'
 
   const textColor = unlimited
-    ? 'text-gray-400'
+    ? 'text-ink-4'
     : pct >= 90 ? 'text-red-600 dark:text-red-400 font-semibold'
     : pct >= 75 ? 'text-amber-600 dark:text-amber-400'
     : 'text-gray-600 dark:text-gray-300'
@@ -25,15 +25,15 @@ export default function QuotaProgressBar({ label, current, limit, unit = '' }) {
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between text-xs">
-        <span className="text-gray-500 dark:text-gray-400 font-medium">{label}</span>
+        <span className="text-ink-3 dark:text-gray-400 font-medium">{label}</span>
         <span className={textColor}>
           {unlimited
-            ? <span className="text-gray-400 dark:text-gray-500">Unlimited</span>
-            : <>{current.toLocaleString()}{unit} / {limit.toLocaleString()}{unit} <span className="text-gray-400">({pct}%)</span></>
+            ? <span className="text-ink-4 dark:text-gray-500">Unlimited</span>
+            : <>{current.toLocaleString()}{unit} / {limit.toLocaleString()}{unit} <span className="text-ink-4">({pct}%)</span></>
           }
         </span>
       </div>
-      <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+      <div className="h-1.5 w-full bg-ink-8 dark:bg-gray-700 rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-500 ${barColor}`}
           style={{ width: unlimited ? '100%' : `${pct}%`, opacity: unlimited ? 0.3 : 1 }}

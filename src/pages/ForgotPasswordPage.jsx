@@ -23,12 +23,12 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-violet-950 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-brand-900 to-accent-700 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl"
-            style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>
+            style={{ background: 'linear-gradient(135deg,#2F5BF0,#6D52E8)' }}>
             <svg className="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
@@ -37,7 +37,7 @@ export default function ForgotPasswordPage() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8">
+        <div className="card dark:bg-gray-800 p-8">
           {sent ? (
             <div className="text-center py-4">
               <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
@@ -91,7 +91,7 @@ export default function ForgotPasswordPage() {
 
               <p className="mt-6 text-center text-sm text-gray-400">
                 Remember it?{' '}
-                <Link to="/login" className="text-indigo-500 hover:text-indigo-600 font-semibold">
+                <Link to="/login" className="text-brand hover:text-brand-hover font-semibold">
                   Sign in
                 </Link>
               </p>
