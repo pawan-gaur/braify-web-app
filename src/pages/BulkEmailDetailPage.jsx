@@ -41,13 +41,13 @@ const ATT_LABELS = {
 }
 
 const AUDIT_ICONS = {
-  JOB_CREATED:          { path: 'M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z',                                         color: 'text-purple-500' },
+  JOB_CREATED:          { path: 'M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z',                                         color: 'text-accent-500' },
   PROCESSING_STARTED:   { path: 'M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z M21 12a9 9 0 11-18 0 9 9 0 0118 0z', color: 'text-blue-500'   },
   JOB_COMPLETED:        { path: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',                                                        color: 'text-green-500'  },
   JOB_PARTIAL:          { path: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z', color: 'text-orange-500' },
   JOB_FAILED:           { path: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z',                                color: 'text-red-500'    },
   JOB_CANCELLED:        { path: 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636',        color: 'text-gray-400'   },
-  RESEND_CREATED:       { path: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15', color: 'text-indigo-500' },
+  RESEND_CREATED:       { path: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15', color: 'text-brand-500' },
 }
 
 const POLL_MS = 3000
@@ -55,7 +55,7 @@ const RECIP_PAGE_SIZE = 100   // recipients rendered per page (jobs can have tho
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function Spinner() {
-  return <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin" />
+  return <div className="w-8 h-8 border-4 border-accent-500 border-t-transparent rounded-full animate-spin" />
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────
@@ -299,8 +299,7 @@ export default function BulkEmailDetailPage() {
               )}
               <button
                 onClick={() => navigate('/bulk-email/send')}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white hover:opacity-90 transition-all"
-                style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)' }}
+                className="btn btn-accent btn-sm"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/>
@@ -338,7 +337,7 @@ export default function BulkEmailDetailPage() {
             onClick={() => setTab(t.key)}
             className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors -mb-px
               ${tab === t.key
-                ? 'border-purple-600 text-purple-700 dark:text-purple-400'
+                ? 'border-accent-600 text-accent-700 dark:text-accent-400'
                 : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
           >
             {t.label}

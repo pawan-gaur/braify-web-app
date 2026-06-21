@@ -5,6 +5,7 @@ import { getEmailTemplate, createEmailTemplate, updateEmailTemplate, sendEmailTe
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
+import { IconArrowLeft } from '../components/ui/icons'
 
 export default function EmailBuilderPage() {
   const { id }       = useParams()
@@ -99,8 +100,9 @@ export default function EmailBuilderPage() {
           </svg>
           {fatalError}
         </div>
-        <button className="btn btn-secondary mt-3" onClick={() => navigate('/email-templates')}>
-          ← Back to Email Templates
+        <button className="btn btn-secondary mt-3 inline-flex items-center gap-1.5" onClick={() => navigate('/email-templates')}>
+          <IconArrowLeft />
+          Back to Email Templates
         </button>
       </div>
     )

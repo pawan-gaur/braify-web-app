@@ -69,7 +69,7 @@ export default function Breadcrumbs({ items = [], dark = false }) {
                   className={`text-xs font-medium leading-none transition-colors duration-150 no-underline ${
                     dark
                       ? 'text-sidebar-muted hover:text-white'
-                      : 'text-gray-400 hover:text-primary dark:text-gray-500 dark:hover:text-indigo-400'
+                      : 'text-gray-400 hover:text-brand dark:text-gray-500 dark:hover:text-brand-400'
                   }`}
                 >
                   {item.label}

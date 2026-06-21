@@ -15,8 +15,8 @@ export function BraiLogo({ size = 28 }) {
             stroke="white" strokeWidth="1.6" strokeLinecap="round" />
       <defs>
         <linearGradient id="brai-pub" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#6366f1" />
-          <stop offset="1" stopColor="#8b5cf6" />
+          <stop stopColor="#2F5BF0" />
+          <stop offset="1" stopColor="#6D52E8" />
         </linearGradient>
       </defs>
     </svg>
@@ -78,17 +78,17 @@ function NavDropdown({ item, open, onFeatureClick }) {
               onClick={() => l.slug && onFeatureClick(l.slug)}
               className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors group flex items-start gap-3">
               {l.icon && (
-                <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-indigo-100 transition-colors">
-                  <svg className="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-7 h-7 rounded-lg bg-brand-50 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-brand-100 transition-colors">
+                  <svg className="w-3.5 h-3.5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={l.icon}/>
                   </svg>
                 </div>
               )}
               <div className="flex-1">
                 <div className="flex items-center gap-1.5">
-                  <p className="text-sm font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">{l.label}</p>
+                  <p className="text-sm font-semibold text-gray-900 group-hover:text-brand-600 transition-colors">{l.label}</p>
                   {l.slug && (
-                    <svg className="w-3 h-3 text-gray-300 group-hover:text-indigo-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-3 h-3 text-gray-300 group-hover:text-brand-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
                     </svg>
                   )}
@@ -227,11 +227,11 @@ export default function PublicNavbar({ onPricingClick, activeFeature }) {
           ))}
           {/* Mobile feature links (shown when Features is tapped) */}
           {openMenu === 'Features' && (
-            <div className="pl-4 space-y-1 border-l-2 border-indigo-100 ml-3">
+            <div className="pl-4 space-y-1 border-l-2 border-brand-100 ml-3">
               {DROPDOWNS.Features.links.map(l => (
                 <button key={l.label}
                   onClick={() => { setMobileOpen(false); setOpenMenu(null); navigate(`/features/${l.slug}`) }}
-                  className="w-full text-left px-3 py-2 rounded-lg text-sm text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+                  className="w-full text-left px-3 py-2 rounded-lg text-sm text-gray-600 hover:text-brand-600 hover:bg-brand-50 transition-colors">
                   {l.label}
                 </button>
               ))}

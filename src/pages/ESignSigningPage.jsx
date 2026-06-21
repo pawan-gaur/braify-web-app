@@ -17,9 +17,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { esignOpenDocument, esignSignField, esignSubmitDocument, esignUploadAttachment } from '../services/api'
+import { IconCheck } from '../components/ui/icons'
 
 const FIELD_COLORS = {
-  SIGNATURE: { border: '#7c3aed', bg: 'rgba(124,58,237,0.12)' },
+  SIGNATURE: { border: '#6D52E8', bg: 'rgba(109,82,232,0.12)' },
   INITIALS:  { border: '#2563eb', bg: 'rgba(37,99,235,0.12)'  },
   DATE:      { border: '#059669', bg: 'rgba(5,150,105,0.12)'  },
   TEXT:      { border: '#d97706', bg: 'rgba(217,119,6,0.12)'  },
@@ -307,8 +308,8 @@ export default function ESignSigningPage() {
             <label
               className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl p-6 cursor-pointer transition-colors
                           ${dragOver
-                            ? 'border-purple-400 bg-purple-50'
-                            : 'border-gray-200 bg-gray-50 hover:border-purple-300 hover:bg-purple-50/50'}`}
+                            ? 'border-accent-400 bg-accent-50'
+                            : 'border-gray-200 bg-gray-50 hover:border-accent-300 hover:bg-accent-50/50'}`}
               onDragOver={e  => { e.preventDefault(); setDragOver(true) }}
               onDragLeave={() => setDragOver(false)}
               onDrop={e      => { e.preventDefault(); setDragOver(false); handleAttachFiles(e.dataTransfer.files) }}
@@ -319,7 +320,7 @@ export default function ESignSigningPage() {
               </svg>
               <p className="text-sm text-gray-500">
                 Drag &amp; drop files here, or{' '}
-                <span className="text-purple-600 font-semibold">browse</span>
+                <span className="text-accent font-semibold">browse</span>
               </p>
               <p className="text-xs text-gray-400">
                 {doc?.allowedClientUploadFileTypes?.length > 0
@@ -342,8 +343,8 @@ export default function ESignSigningPage() {
 
           {/* Uploading indicator */}
           {uploading && (
-            <div className="mt-3 flex items-center gap-2 text-xs text-purple-600">
-              <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin shrink-0"/>
+            <div className="mt-3 flex items-center gap-2 text-xs text-accent">
+              <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin shrink-0"/>
               Uploading…
             </div>
           )}
@@ -367,7 +368,7 @@ export default function ESignSigningPage() {
                     <p className="text-sm font-medium text-gray-800 truncate">{a.fileName}</p>
                     <p className="text-xs text-gray-400">{formatBytes(a.fileSize)}</p>
                   </div>
-                  <span className="text-green-500 text-base shrink-0">✓</span>
+                  <span className="text-green-500 shrink-0"><IconCheck className="w-4 h-4" /></span>
                 </li>
               ))}
             </ul>
@@ -397,7 +398,7 @@ export default function ESignSigningPage() {
                          justify-between sticky top-0 z-40 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)' }}>
+            style={{ background: 'linear-gradient(135deg,#6D52E8,#5a3fd6)' }}>
             <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
@@ -424,7 +425,7 @@ export default function ESignSigningPage() {
 
       {/* Progress bar */}
       <div className="h-1 bg-gray-200">
-        <div className="h-1 bg-purple-600 transition-all duration-500"
+        <div className="h-1 bg-accent transition-all duration-500"
           style={{ width: fields.length ? `${(signedCount / fields.length) * 100}%` : '0%' }}/>
       </div>
 
@@ -495,7 +496,7 @@ export default function ESignSigningPage() {
                             style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 2 }}
                           />
                         ) : (
-                          <span style={{ fontSize: 11, color: '#16a34a', fontWeight: 700 }}>✓ Signed</span>
+                          <span style={{ fontSize: 11, color: '#16a34a', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}><IconCheck className="w-3 h-3" /> Signed</span>
                         )
                       ) : (
                         <span style={{
@@ -534,13 +535,13 @@ export default function ESignSigningPage() {
                               border transition-colors
                               ${f.signed
                                 ? 'border-green-200 bg-green-50 text-green-700'
-                                : 'border-gray-200 hover:border-purple-300 bg-white text-gray-700 hover:bg-purple-50'}`}
+                                : 'border-gray-200 hover:border-accent-300 bg-white text-gray-700 hover:bg-accent-50'}`}
                 >
                   <span className="w-2.5 h-2.5 rounded-sm shrink-0"
                     style={{ background: f.signed ? '#16a34a' : colors.border }}/>
                   <span className="flex-1 truncate text-xs font-medium">{f.label}</span>
                   {f.required && !f.signed && <span className="text-red-400 text-xs font-bold shrink-0">*</span>}
-                  {f.signed           && <span className="text-green-500 text-xs shrink-0">✓</span>}
+                  {f.signed           && <span className="text-green-500 shrink-0"><IconCheck className="w-3.5 h-3.5" /></span>}
                 </button>
               )
             })}
@@ -548,7 +549,7 @@ export default function ESignSigningPage() {
 
           {fields.length > 0 && allRequiredSigned && (
             <div className="mt-4 pt-4 border-t border-gray-100">
-              <p className="text-xs text-green-600 font-semibold text-center">All fields signed ✓</p>
+              <p className="text-xs text-green-600 font-semibold text-center inline-flex items-center justify-center gap-1 w-full">All fields signed <IconCheck className="w-3.5 h-3.5" /></p>
             </div>
           )}
         </div>
@@ -567,7 +568,7 @@ export default function ESignSigningPage() {
             {/* Header */}
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-bold text-gray-900">
-                Sign: <span className="text-purple-700">{activeField.label}</span>
+                Sign: <span className="text-accent-700">{activeField.label}</span>
               </h2>
               <button
                 onClick={() => setActiveField(null)}
@@ -589,8 +590,8 @@ export default function ESignSigningPage() {
                       onClick={() => { setModalTab(t); clearCanvas(); setTypedText('') }}
                       className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-colors
                                   ${modalTab === t
-                                    ? 'bg-purple-600 text-white border-purple-600'
-                                    : 'bg-white text-gray-600 border-gray-200 hover:border-purple-300'}`}
+                                    ? 'bg-accent text-white border-accent'
+                                    : 'bg-white text-gray-600 border-gray-200 hover:border-accent-300'}`}
                     >
                       {t === 'DRAW' ? (
                         <span className="flex items-center justify-center gap-1.5">
@@ -641,7 +642,7 @@ export default function ESignSigningPage() {
                       </button>
                     )}
                     {modalTab === 'UPLOAD' && (
-                      <label className="mt-3 flex items-center gap-2 cursor-pointer text-sm text-purple-600 hover:text-purple-700">
+                      <label className="mt-3 flex items-center gap-2 cursor-pointer text-sm text-accent hover:text-accent-700">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                             d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
@@ -663,7 +664,7 @@ export default function ESignSigningPage() {
                       onChange={e => setTypedText(e.target.value)}
                       autoFocus
                       className="w-full px-4 py-3 rounded-xl border-2 border-gray-200
-                                 focus:border-purple-500 outline-none text-2xl text-gray-800"
+                                 focus:border-accent outline-none text-2xl text-gray-800"
                       style={{ fontFamily: 'cursive' }}
                     />
                     <p className="text-xs text-gray-400 mt-2">This typed text will be used as your signature</p>
@@ -684,7 +685,7 @@ export default function ESignSigningPage() {
                   autoFocus
                   onChange={e => setTypedText(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl border-2 border-gray-200
-                             focus:border-purple-500 outline-none text-lg"
+                             focus:border-accent outline-none text-lg"
                 />
               </div>
             )}
@@ -703,7 +704,7 @@ export default function ESignSigningPage() {
                 disabled={saving}
                 className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold
                            disabled:opacity-60 transition-all hover:opacity-90"
-                style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)' }}
+                style={{ background: 'linear-gradient(135deg,#6D52E8,#5a3fd6)' }}
               >
                 {saving ? 'Saving…' : 'Apply Signature'}
               </button>
@@ -725,7 +726,7 @@ function Center({ children }) {
 }
 
 function Spinner() {
-  return <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"/>
+  return <div className="w-10 h-10 border-4 border-accent border-t-transparent rounded-full animate-spin"/>
 }
 
 function formatBytes(bytes) {

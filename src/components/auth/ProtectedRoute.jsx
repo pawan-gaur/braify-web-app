@@ -19,8 +19,8 @@ export default function ProtectedRoute({ children, requiredRole }) {
     return (
       <div className="min-h-screen flex items-center justify-center
                       bg-surface dark:bg-gray-900">
-        <div className="flex flex-col items-center gap-4 text-gray-400">
-          <svg className="animate-spin h-8 w-8 text-primary" viewBox="0 0 24 24" fill="none">
+        <div className="flex flex-col items-center gap-4 text-ink-4">
+          <svg className="animate-spin h-8 w-8 text-brand" viewBox="0 0 24 24" fill="none">
             <circle className="opacity-25" cx="12" cy="12" r="10"
               stroke="currentColor" strokeWidth="4"/>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
@@ -49,8 +49,8 @@ export default function ProtectedRoute({ children, requiredRole }) {
                    a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
             </svg>
           </div>
-          <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-1">Access Denied</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <h2 className="text-lg font-bold text-ink dark:text-gray-100 mb-1">Access Denied</h2>
+          <p className="text-sm text-ink-3 dark:text-gray-400">
             You don't have permission to view this page.
           </p>
         </div>

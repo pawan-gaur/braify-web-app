@@ -75,14 +75,14 @@ const API_GROUPS = [
 
 const COLOR_MAP = {
   indigo: {
-    active:   'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300',
-    inactive: 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 text-gray-600 dark:text-gray-400',
-    dot:      'bg-indigo-500',
+    active:   'border-brand-500 bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-300',
+    inactive: 'border-ink-7 dark:border-gray-700 hover:border-brand-300 text-ink-2 dark:text-gray-400',
+    dot:      'bg-brand-500',
   },
   violet: {
-    active:   'border-violet-500 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300',
-    inactive: 'border-gray-200 dark:border-gray-700 hover:border-violet-300 text-gray-600 dark:text-gray-400',
-    dot:      'bg-violet-500',
+    active:   'border-accent-500 bg-accent-50 dark:bg-accent-900/20 text-accent-700 dark:text-accent-300',
+    inactive: 'border-ink-7 dark:border-gray-700 hover:border-accent-300 text-ink-2 dark:text-gray-400',
+    dot:      'bg-accent-500',
   },
   blue: {
     active:   'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300',
@@ -128,8 +128,8 @@ const SWAGGER_OVERRIDES = `
   }
 
   /* GET */
-  .swagger-ui .opblock.opblock-get { border-color: #6366f1 !important; background: #eef2ff !important; }
-  .swagger-ui .opblock.opblock-get .opblock-summary-method { background: #6366f1 !important; }
+  .swagger-ui .opblock.opblock-get { border-color: #2F5BF0 !important; background: #eef2ff !important; }
+  .swagger-ui .opblock.opblock-get .opblock-summary-method { background: #2F5BF0 !important; }
 
   /* POST */
   .swagger-ui .opblock.opblock-post { border-color: #10b981 !important; background: #ecfdf5 !important; }
@@ -144,7 +144,7 @@ const SWAGGER_OVERRIDES = `
   .swagger-ui .opblock.opblock-delete .opblock-summary-method { background: #ef4444 !important; }
 
   /* Execute button */
-  .swagger-ui .btn.execute { background: #6366f1 !important; border-color: #4f46e5 !important; border-radius: 0.5rem !important; }
+  .swagger-ui .btn.execute { background: #2F5BF0 !important; border-color: #2347C8 !important; border-radius: 0.5rem !important; }
 
   /* Input fields */
   .swagger-ui input[type=text], .swagger-ui textarea {
@@ -207,8 +207,8 @@ export default function ApiDocsPage() {
       {/* ── Header ── */}
       <div className="flex items-start justify-between mt-4 mb-6 gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">API Documentation</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-ink dark:text-white">API Documentation</h1>
+          <p className="text-sm text-ink-3 mt-1">
             Live reference generated from the running backend. Updates automatically when controllers change.
           </p>
         </div>
@@ -236,9 +236,9 @@ export default function ApiDocsPage() {
           <button
             onClick={handleRefresh}
             title="Refresh spec from backend"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600
-                       text-xs font-semibold text-gray-600 dark:text-gray-300
-                       hover:border-indigo-400 hover:text-indigo-600 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-ink-7 dark:border-gray-600
+                       text-xs font-semibold text-ink-2 dark:text-gray-300
+                       hover:border-brand-400 hover:text-brand-600 transition-colors"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -303,14 +303,14 @@ export default function ApiDocsPage() {
           <style>{SWAGGER_OVERRIDES}</style>
 
           {/* Info banner */}
-          <div className="flex items-center gap-3 px-5 py-3 bg-indigo-50 dark:bg-indigo-900/20 border-b border-indigo-100 dark:border-indigo-800">
-            <svg className="w-4 h-4 text-indigo-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="flex items-center gap-3 px-5 py-3 bg-brand-50 dark:bg-brand-900/20 border-b border-brand-100 dark:border-brand-800">
+            <svg className="w-4 h-4 text-brand-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
-            <p className="text-xs text-indigo-700 dark:text-indigo-300">
+            <p className="text-xs text-brand-700 dark:text-brand-300">
               Click <strong>Authorize</strong> and paste your JWT token to test endpoints directly from this page.
-              Get your token from <code className="bg-indigo-100 dark:bg-indigo-800 px-1 rounded">POST /api/auth/login</code>.
+              Get your token from <code className="bg-brand-100 dark:bg-brand-800 px-1 rounded">POST /api/auth/login</code>.
             </p>
           </div>
 

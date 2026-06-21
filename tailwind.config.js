@@ -6,10 +6,11 @@ export default {
     extend: {
       fontFamily: {
         sans: [
+          '"Inter Tight Variable"',
+          '"Inter Tight"',
           '-apple-system',
           'BlinkMacSystemFont',
           '"SF Pro Display"',
-          '"SF Pro Text"',
           'Inter',
           'system-ui',
           'sans-serif',
@@ -58,6 +59,29 @@ export default {
         warning: '#FF9500',
         info:    '#5AC8FA',
 
+        /* ── REVAMP: violet accent (pairs with brand blue in gradients) ──── */
+        accent: {
+          DEFAULT: '#6D52E8',
+          50:  '#F3F0FE',
+          100: '#E9E3FC',
+          200: '#C4B6FB',
+          300: '#A78BFA',
+          400: '#8B6DF7',
+          500: '#6D52E8',
+          600: '#5B3FD6',
+          700: '#4A30B8',
+          800: '#382593',
+          900: '#251968',
+        },
+
+        /* ── REVAMP: soft pastel surface tints for bento cards ──────────── */
+        wash: {
+          violet: '#F3F0FF',
+          blue:   '#EAF1FE',
+          peach:  '#FFF4EE',
+          mint:   '#EAF8F2',
+        },
+
         /* ── BACKWARD COMPAT (keep existing pages working) ──────────────── */
         primary: {
           DEFAULT: '#0066FF',   // remap to brand
@@ -90,6 +114,19 @@ export default {
         'gradient-brand-hover':  'linear-gradient(135deg, #0052CC 0%, #0066FF 100%)',
         'gradient-glass':        'linear-gradient(180deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.4) 100%)',
 
+        /* ── REVAMP: blue→violet accent + pastel cloud page wash ────────── */
+        'gradient-accent':       'linear-gradient(150deg, #2F5BF0 0%, #6D52E8 100%)',
+        'gradient-accent-soft':  'linear-gradient(150deg, #4F7BF7 0%, #8B6DF7 100%)',
+        'app-wash':
+          'radial-gradient(900px 520px at 8% -5%, rgba(190,170,250,.45), transparent 60%), \
+           radial-gradient(900px 540px at 96% 0%, rgba(150,185,255,.45), transparent 60%), \
+           radial-gradient(820px 620px at 50% 112%, rgba(255,205,190,.32), transparent 60%), \
+           linear-gradient(180deg, #F4F1FC 0%, #EBF2FE 45%, #FBF8F5 100%)',
+        'app-wash-dark':
+          'radial-gradient(900px 520px at 8% -5%, rgba(90,70,160,.34), transparent 60%), \
+           radial-gradient(900px 540px at 96% 0%, rgba(40,70,150,.34), transparent 60%), \
+           linear-gradient(180deg, #0d0d18 0%, #11132a 60%, #0d0d18 100%)',
+
         /* Backward-compat aliases */
         'gradient-primary':         'linear-gradient(135deg, #0066FF 0%, #338BFF 100%)',
         'gradient-primary-hover':   'linear-gradient(135deg, #0052CC 0%, #0066FF 100%)',
@@ -101,6 +138,7 @@ export default {
         chip: '8px',
         input: '12px',
         card: '16px',
+        bento: '24px',
         hero: '24px',
       },
 
@@ -111,6 +149,11 @@ export default {
         floatHover:  '0 12px 32px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.05)',
         modal:       '0 24px 64px rgba(0,0,0,0.12), 0 6px 16px rgba(0,0,0,0.06)',
         ring:        '0 0 0 4px rgba(0,102,255,0.15)',
+
+        /* ── REVAMP: airy bento elevation + colored accent glow ─────────── */
+        bento:       '0 12px 36px rgba(40,40,90,.08), 0 2px 8px rgba(40,40,90,.04)',
+        lift:        '0 28px 70px rgba(40,40,90,.16), 0 8px 20px rgba(40,40,90,.08)',
+        accentGlow:  '0 16px 40px rgba(80,80,220,.32)',
 
         /* Backward-compat aliases */
         card:          '0 1px 2px rgba(0,0,0,0.04), 0 1px 1px rgba(0,0,0,0.02)',

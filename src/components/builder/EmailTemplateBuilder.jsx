@@ -583,7 +583,7 @@ ${html}
               key={p}
               onClick={() => insertVariable(p)}
               title={`Click to insert {{${p}}} at cursor`}
-              className="ph-chip font-mono hover:bg-purple-200 dark:hover:bg-purple-800/40 transition-colors"
+              className="ph-chip font-mono hover:bg-accent-200 dark:hover:bg-accent-700/40 transition-colors"
             >{`{{${p}}}`}</button>
           ))}
         </div>
@@ -802,7 +802,7 @@ function VariablesPanel({ placeholders, customVar, setCustomVar, insertVariable,
           `<td style="padding:8px 10px;font-size:13px;color:#374151;border-bottom:1px solid #f3f4f6;">{{this.${f}}}</td>`
         ).join('\n          ')
       : `<td style="padding:8px 12px;font-size:13px;color:#374151;">{{this.name}}</td>
-          <td style="padding:8px 12px;font-size:13px;color:#6366f1;text-align:right;">{{this.value}}</td>`
+          <td style="padding:8px 12px;font-size:13px;color:#2F5BF0;text-align:right;">{{this.value}}</td>`
     return `<!-- {{#each ${collection || 'items'}}} -->
 <table width="100%" cellpadding="0" cellspacing="0" border="0">
   <tr>
@@ -927,7 +927,7 @@ function VariablesPanel({ placeholders, customVar, setCustomVar, insertVariable,
               label="If / Else"
               desc="Different content for true & false"
               icon="M3 12h18M3 6h7m7 0h4M3 18h4m10 0h7"
-              color="indigo"
+              color="brand"
               onClick={() => insertBlock(buildIfElseBlock(condVar))}
             />
             <SnippetInsertBtn
@@ -1117,7 +1117,7 @@ function VariablesPanel({ placeholders, customVar, setCustomVar, insertVariable,
 
           {/* Text helpers */}
           <div className="bg-sidebar-hover rounded-lg p-2.5 space-y-2 border border-sidebar-border">
-            <p className="text-[9px] font-bold text-violet-400 uppercase tracking-wider flex items-center gap-1">
+            <p className="text-[9px] font-bold text-accent-400 uppercase tracking-wider flex items-center gap-1">
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M4 6h16M4 12h10M4 18h7"/>
@@ -1147,20 +1147,20 @@ function VariablesPanel({ placeholders, customVar, setCustomVar, insertVariable,
             <div className="grid grid-cols-3 gap-1">
               <button
                 onClick={() => insertAtCursor(`{{truncate ${textField || 'text'} ${truncateLen || 100}}}`)}
-                className="py-1.5 text-[10px] bg-violet-600/70 text-white rounded-lg
-                           hover:bg-violet-600 transition-colors font-medium"
+                className="py-1.5 text-[10px] bg-accent-600/70 text-white rounded-lg
+                           hover:bg-accent-600 transition-colors font-medium"
                 title={`{{truncate ${textField} ${truncateLen}}}`}
               >Truncate</button>
               <button
                 onClick={() => insertAtCursor(`{{uppercase ${textField || 'text'}}}`)}
-                className="py-1.5 text-[10px] bg-violet-600/70 text-white rounded-lg
-                           hover:bg-violet-600 transition-colors font-medium"
+                className="py-1.5 text-[10px] bg-accent-600/70 text-white rounded-lg
+                           hover:bg-accent-600 transition-colors font-medium"
                 title={`{{uppercase ${textField}}}`}
               >UPPER</button>
               <button
                 onClick={() => insertAtCursor(`{{lowercase ${textField || 'text'}}}`)}
-                className="py-1.5 text-[10px] bg-violet-600/70 text-white rounded-lg
-                           hover:bg-violet-600 transition-colors font-medium"
+                className="py-1.5 text-[10px] bg-accent-600/70 text-white rounded-lg
+                           hover:bg-accent-600 transition-colors font-medium"
                 title={`{{lowercase ${textField}}}`}
               >lower</button>
             </div>
@@ -1170,7 +1170,7 @@ function VariablesPanel({ placeholders, customVar, setCustomVar, insertVariable,
                 `{{uppercase ${textField || 'text'}}}`,
                 `{{lowercase ${textField || 'text'}}}`,
               ].map(s => (
-                <p key={s} className="text-[10px] font-mono text-violet-400 break-all">{s}</p>
+                <p key={s} className="text-[10px] font-mono text-accent-400 break-all">{s}</p>
               ))}
             </div>
           </div>
@@ -1190,7 +1190,7 @@ function VarButton({ name, onInsert, detected }) {
       className={`w-full text-left px-2.5 py-1.5 rounded-lg text-[11px] font-mono transition-all group
         flex items-center justify-between gap-1
         ${detected
-          ? 'bg-purple-900/30 border border-purple-700/40 text-purple-300 hover:bg-purple-900/50 hover:border-purple-500'
+          ? 'bg-accent-700/30 border border-accent-700/40 text-accent-300 hover:bg-accent-700/50 hover:border-accent-500'
           : 'bg-sidebar-hover border border-sidebar-border text-sidebar-muted hover:border-primary hover:text-white'
         }`}
     >
@@ -1206,11 +1206,11 @@ function VarButton({ name, onInsert, detected }) {
 /* ── SnippetInsertBtn ─────────────────────────────────────────────────────── */
 const SNIPPET_COLORS = {
   blue:    'border-blue-700/50 bg-blue-900/20 text-blue-300 hover:border-blue-500 hover:bg-blue-900/40',
-  indigo:  'border-indigo-700/50 bg-indigo-900/20 text-indigo-300 hover:border-indigo-500 hover:bg-indigo-900/40',
+  brand:   'border-brand-700/50 bg-brand-900/20 text-brand-300 hover:border-brand-500 hover:bg-brand-900/40',
   amber:   'border-amber-700/50 bg-amber-900/20 text-amber-300 hover:border-amber-500 hover:bg-amber-900/40',
   emerald: 'border-emerald-700/50 bg-emerald-900/20 text-emerald-300 hover:border-emerald-500 hover:bg-emerald-900/40',
 }
-function SnippetInsertBtn({ label, desc, icon, color = 'indigo', onClick }) {
+function SnippetInsertBtn({ label, desc, icon, color = 'brand', onClick }) {
   return (
     <button
       onClick={onClick}
@@ -1241,8 +1241,8 @@ function TestSendModal({ meta, testTo, setTestTo, testSending, onSend, onClose, 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
-              <svg className="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-8 h-8 rounded-lg bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center">
+              <svg className="w-4 h-4 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
               </svg>
             </div>
@@ -1269,7 +1269,7 @@ function TestSendModal({ meta, testTo, setTestTo, testSending, onSend, onClose, 
               autoFocus
               className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700
                          rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-white
-                         focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                         focus:outline-none focus:ring-2 focus:ring-brand-500"
               placeholder="test@example.com"
               value={testTo}
               onChange={e => setTestTo(e.target.value)}
@@ -1302,9 +1302,7 @@ function TestSendModal({ meta, testTo, setTestTo, testSending, onSend, onClose, 
             onClick={onClose}
           >Cancel</button>
           <button
-            className="px-4 py-2 text-sm font-semibold rounded-xl text-white transition-all
-                       disabled:opacity-50 flex items-center gap-2"
-            style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}
+            className="btn btn-accent"
             onClick={onSend}
             disabled={!testTo.trim() || testSending}
           >

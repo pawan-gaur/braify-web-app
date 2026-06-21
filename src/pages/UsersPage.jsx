@@ -19,8 +19,8 @@ const ROLE_OPTIONS = [
 ]
 
 const ROLE_BADGE = {
-  PLATFORM_ADMIN: 'bg-violet-100 text-violet-700',
-  ORG_ADMIN:      'bg-indigo-100 text-indigo-700',
+  PLATFORM_ADMIN: 'bg-accent-100 text-accent-700',
+  ORG_ADMIN:      'bg-brand-100 text-brand-700',
   ADMIN:          'bg-blue-100   text-blue-700',
   USER:           'bg-gray-100   text-gray-600',
 }
@@ -33,7 +33,7 @@ function Avatar({ user, size = 'sm' }) {
     return <img src={user.profilePicture} alt="" className={`${s} rounded-full object-cover shrink-0`} />
   }
   const initials = `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase()
-  const colors = ['bg-indigo-500','bg-violet-500','bg-pink-500','bg-emerald-500','bg-amber-500']
+  const colors = ['bg-brand-500','bg-accent-500','bg-pink-500','bg-emerald-500','bg-amber-500']
   const bg = colors[(user.email?.charCodeAt(0) ?? 0) % colors.length]
   return (
     <div className={`${s} ${bg} rounded-full flex items-center justify-center text-white font-bold shrink-0`}>
@@ -170,8 +170,8 @@ export default function UsersPage() {
       {/* Header */}
       <div className="flex items-center justify-between mt-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Users</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage platform users and their roles.</p>
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-ink dark:text-white">Users</h1>
+          <p className="text-sm text-ink-3 mt-1">Manage platform users and their roles.</p>
         </div>
         <div className="flex items-center gap-3">
           <ViewToggle view={view} onChange={setView} />
@@ -187,7 +187,7 @@ export default function UsersPage() {
       {/* Filters */}
       <div className="flex gap-3 mb-6 flex-wrap">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
           </svg>
           <input type="text" className="form-input pl-9" placeholder="Search by name or email…"
@@ -209,7 +209,7 @@ export default function UsersPage() {
 
       {/* User list */}
       {loading ? (
-        <div className="card flex items-center justify-center py-20 text-gray-400 gap-3">
+        <div className="card flex items-center justify-center py-20 text-ink-4 gap-3">
           <svg className="animate-spin h-5 w-5 text-primary" viewBox="0 0 24 24" fill="none">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
@@ -217,8 +217,8 @@ export default function UsersPage() {
           Loading…
         </div>
       ) : filteredUsers.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center py-20 text-gray-400">
-          <svg className="w-10 h-10 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="card flex flex-col items-center justify-center py-20 text-ink-4">
+          <svg className="w-10 h-10 mb-3 text-ink-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
               d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
           </svg>
@@ -232,7 +232,7 @@ export default function UsersPage() {
               <div className="flex items-start gap-3">
                 <Avatar user={u} size="sm" />
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-800 dark:text-gray-200 truncate">
+                  <p className="font-semibold text-ink dark:text-gray-200 truncate">
                     {u.firstName} {u.lastName}
                     {u.mustChangePassword && (
                       <span className="ml-2 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-bold">
@@ -240,7 +240,7 @@ export default function UsersPage() {
                       </span>
                     )}
                   </p>
-                  <p className="text-xs text-gray-400 truncate">{u.email}</p>
+                  <p className="text-xs text-ink-4 truncate">{u.email}</p>
                 </div>
                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold shrink-0
                   ${u.active ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
@@ -254,15 +254,15 @@ export default function UsersPage() {
                   {u.role.replace('_', ' ')}
                 </span>
                 {isPlatformAdmin && (u.organizationName || orgName(u.organizationId)) && (
-                  <span className="text-xs text-gray-400">{u.organizationName || orgName(u.organizationId)}</span>
+                  <span className="text-xs text-ink-4">{u.organizationName || orgName(u.organizationId)}</span>
                 )}
               </div>
 
-              <p className="text-[11px] text-gray-400 mt-auto">Joined {fmtDate(u.createdAt)}</p>
+              <p className="text-[11px] text-ink-4 mt-auto">Joined {fmtDate(u.createdAt)}</p>
 
-              <div className="flex items-center gap-1 pt-1 border-t border-gray-100 dark:border-gray-700">
+              <div className="flex items-center gap-1 pt-1 border-t border-ink-7 dark:border-gray-700">
                 <button onClick={() => openEdit(u)}
-                  className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 hover:border-primary hover:text-primary transition-colors">
+                  className="text-xs px-2.5 py-1 rounded-lg border border-ink-7 dark:border-gray-600 text-ink-3 hover:border-primary hover:text-primary transition-colors">
                   Edit
                 </button>
                 {u.active ? (
@@ -285,23 +285,23 @@ export default function UsersPage() {
         <div className="card p-0 overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">User</th>
-                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Role</th>
-                {isPlatformAdmin && <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Organization</th>}
-                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Status</th>
-                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Joined</th>
+              <tr className="border-b border-ink-7 dark:border-gray-700 bg-ink-8 dark:bg-gray-900/50">
+                <th className="text-left px-5 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">User</th>
+                <th className="text-left px-5 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">Role</th>
+                {isPlatformAdmin && <th className="text-left px-5 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">Organization</th>}
+                <th className="text-left px-5 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">Status</th>
+                <th className="text-left px-5 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">Joined</th>
                 <th className="px-5 py-3"/>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
               {filteredUsers.map(u => (
-                <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group">
+                <tr key={u.id} className="hover:bg-ink-8 dark:hover:bg-gray-700/30 transition-colors group">
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
                       <Avatar user={u} />
                       <div>
-                        <p className="font-medium text-gray-800 dark:text-gray-200">
+                        <p className="font-medium text-ink dark:text-gray-200">
                           {u.firstName} {u.lastName}
                           {u.mustChangePassword && (
                             <span className="ml-2 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-bold">
@@ -309,7 +309,7 @@ export default function UsersPage() {
                             </span>
                           )}
                         </p>
-                        <p className="text-xs text-gray-400">{u.email}</p>
+                        <p className="text-xs text-ink-4">{u.email}</p>
                       </div>
                     </div>
                   </td>
@@ -319,7 +319,7 @@ export default function UsersPage() {
                     </span>
                   </td>
                   {isPlatformAdmin && (
-                    <td className="px-5 py-3.5 text-xs text-gray-500">
+                    <td className="px-5 py-3.5 text-xs text-ink-3">
                       {u.organizationName || orgName(u.organizationId)}
                     </td>
                   )}
@@ -330,12 +330,12 @@ export default function UsersPage() {
                       {u.active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td className="px-5 py-3.5 text-xs text-gray-400">{fmtDate(u.createdAt)}</td>
+                  <td className="px-5 py-3.5 text-xs text-ink-4">{fmtDate(u.createdAt)}</td>
                   <td className="px-4 py-3.5">
                     <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                       <button onClick={() => openEdit(u)}
-                        className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600
-                                   text-gray-500 hover:border-primary hover:text-primary transition-colors">
+                        className="text-xs px-2.5 py-1 rounded-lg border border-ink-7 dark:border-gray-600
+                                   text-ink-3 hover:border-primary hover:text-primary transition-colors">
                         Edit
                       </button>
                       {u.active ? (
@@ -370,7 +370,7 @@ export default function UsersPage() {
                 {editUser ? 'Edit User' : 'Invite New User'}
               </h2>
               <button onClick={closeForm}
-                className="w-8 h-8 flex items-center justify-center rounded-xl text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                className="w-8 h-8 flex items-center justify-center rounded-xl text-ink-4 hover:bg-ink-8 dark:hover:bg-gray-700">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
                 </svg>
@@ -415,12 +415,12 @@ export default function UsersPage() {
                 </div>
               )}
               {!editUser && (
-                <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-700 cursor-pointer">
+                <label className="flex items-center gap-3 p-3 rounded-xl border border-ink-7 dark:border-gray-700 cursor-pointer">
                   <input type="checkbox" className="rounded" checked={form.sendInvite}
                     onChange={e => setForm(f => ({ ...f, sendInvite: e.target.checked }))} />
                   <div>
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Send email invitation</p>
-                    <p className="text-xs text-gray-400">User receives a link valid for 7 days to set their password.</p>
+                    <p className="text-sm font-medium text-ink-2 dark:text-gray-300">Send email invitation</p>
+                    <p className="text-xs text-ink-4">User receives a link valid for 7 days to set their password.</p>
                   </div>
                 </label>
               )}

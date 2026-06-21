@@ -6,6 +6,7 @@ import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { esignBulkCreate, getTemplates, generatePdfAsBase64, getEmailTemplates } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
+import { IconCheck, IconX, IconChevronRight } from '../components/ui/icons'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl
 
@@ -187,15 +188,15 @@ function JsonTree({ data, path = '', selectedPath, onSelect, depth = 0 }) {
         <button type="button"
           onClick={() => setOpen(o => !o)}
           className="flex items-center gap-1 text-xs font-mono text-left w-full hover:bg-gray-100 dark:hover:bg-gray-800 rounded px-1">
-          <span className="text-gray-400 w-3">{open ? '▾' : '▸'}</span>
-          <span className="text-violet-600 dark:text-violet-400 font-semibold">[Array · {data.length}]</span>
+          <IconChevronRight className={`w-3 h-3 text-gray-400 shrink-0 transition-transform ${open ? 'rotate-90' : ''}`} />
+          <span className="text-accent-600 dark:text-accent-400 font-semibold">[Array · {data.length}]</span>
           <button type="button"
             onClick={e => { e.stopPropagation(); onSelect(path) }}
             className={`ml-2 text-[10px] px-1.5 py-0.5 rounded font-semibold border transition-colors
               ${isSelected
                 ? 'bg-blue-600 text-white border-blue-600'
                 : 'bg-white dark:bg-gray-900 text-blue-600 border-blue-300 hover:bg-blue-50'}`}>
-            {isSelected ? '✓ Selected' : 'Use this'}
+            {isSelected ? <span className="inline-flex items-center gap-1"><IconCheck className="w-3.5 h-3.5" />Selected</span> : 'Use this'}
           </button>
         </button>
         {open && data.slice(0, 2).map((item, i) => (
@@ -218,7 +219,7 @@ function JsonTree({ data, path = '', selectedPath, onSelect, depth = 0 }) {
           <button type="button"
             onClick={() => setOpen(o => !o)}
             className="flex items-center gap-1 text-xs font-mono text-left w-full hover:bg-gray-100 dark:hover:bg-gray-800 rounded px-1">
-            <span className="text-gray-400 w-3">{open ? '▾' : '▸'}</span>
+            <IconChevronRight className={`w-3 h-3 text-gray-400 shrink-0 transition-transform ${open ? 'rotate-90' : ''}`} />
             <span className="text-amber-600 dark:text-amber-400">{'{ }'}</span>
             <button type="button"
               onClick={e => { e.stopPropagation(); onSelect(path) }}
@@ -226,7 +227,7 @@ function JsonTree({ data, path = '', selectedPath, onSelect, depth = 0 }) {
                 ${isSelected
                   ? 'bg-blue-600 text-white border-blue-600'
                   : 'bg-white dark:bg-gray-900 text-blue-600 border-blue-300 hover:bg-blue-50'}`}>
-              {isSelected ? '✓ Selected' : 'Use this'}
+              {isSelected ? <span className="inline-flex items-center gap-1"><IconCheck className="w-3.5 h-3.5" />Selected</span> : 'Use this'}
             </button>
           </button>
         )}
@@ -264,9 +265,9 @@ function StepIndicator({ current }) {
           <div className="flex flex-col items-center shrink-0">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors
               ${i < current
-                ? 'bg-purple-600 text-white'
+                ? 'bg-accent text-white'
                 : i === current
-                  ? 'bg-purple-600 text-white ring-4 ring-purple-200 dark:ring-purple-900/40'
+                  ? 'bg-accent text-white ring-4 ring-accent-200 dark:ring-accent-900/40'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-400'}`}>
               {i < current
                 ? <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -275,12 +276,12 @@ function StepIndicator({ current }) {
                 : i + 1}
             </div>
             <span className={`text-xs mt-1 whitespace-nowrap
-              ${i === current ? 'text-purple-600 dark:text-purple-400 font-medium' : 'text-gray-400'}`}>
+              ${i === current ? 'text-accent-600 dark:text-accent-400 font-medium' : 'text-gray-400'}`}>
               {label}
             </span>
           </div>
           {i < STEPS.length - 1 && (
-            <div className={`h-px flex-1 mx-3 mb-4 ${i < current ? 'bg-purple-400' : 'bg-gray-200 dark:bg-gray-700'}`} />
+            <div className={`h-px flex-1 mx-3 mb-4 ${i < current ? 'bg-accent-400' : 'bg-gray-200 dark:bg-gray-700'}`} />
           )}
         </div>
       ))}
@@ -308,7 +309,7 @@ const STATUS_LABEL = {
   creating:     'Creating…',
   created:      'Created',
   sending:      'Sending…',
-  sent:         'Sent ✓',
+  sent:         'Sent',
   failed:       'Failed',
   skipped:      'Skipped',
 }
@@ -367,7 +368,7 @@ function PdfPageCanvas({ base64DataUrl, pageNumber, onPageCountChange }) {
 /* Shared Tailwind snippets                                              */
 /* ─────────────────────────────────────────────────────────────────── */
 
-const INPUT = 'w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900 dark:text-white'
+const INPUT = 'w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-accent text-gray-900 dark:text-white'
 const LABEL = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'
 
 /* ═══════════════════════════════════════════════════════════════════ */
@@ -930,7 +931,7 @@ export default function ESignBulkPage() {
                 if (!next) setAllowedFileTypes([])
               }}
               className={`w-11 h-6 rounded-full shrink-0 relative transition-colors
-                          ${allowClientUpload ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-600'}`}
+                          ${allowClientUpload ? 'bg-accent' : 'bg-gray-200 dark:bg-gray-600'}`}
               aria-pressed={allowClientUpload}
               title={allowClientUpload ? 'Disable client upload' : 'Enable client upload'}
             >
@@ -960,8 +961,8 @@ export default function ESignBulkPage() {
                       )}
                       className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors
                         ${selected
-                          ? 'bg-purple-600 text-white border-purple-600'
-                          : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-purple-400'}`}
+                          ? 'bg-accent text-white border-accent'
+                          : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-accent-400'}`}
                     >
                       .{typeLabel}
                     </button>
@@ -969,7 +970,7 @@ export default function ESignBulkPage() {
                 })}
               </div>
               {allowedFileTypes.length > 0 && (
-                <p className="text-xs text-purple-600 dark:text-purple-400 mt-2">
+                <p className="text-xs text-accent-600 dark:text-accent-400 mt-2">
                   Clients may only upload: {allowedFileTypes.map(t => '.' + t.toUpperCase()).join(', ')}
                 </p>
               )}
@@ -983,22 +984,22 @@ export default function ESignBulkPage() {
         {/* ── File upload ── */}
         <button type="button" onClick={() => excelRef.current?.click()}
           className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-10
-                     text-center hover:border-purple-400 dark:hover:border-purple-500 transition-colors group">
-          <svg className="w-10 h-10 mx-auto mb-3 text-gray-300 group-hover:text-purple-400 transition-colors"
+                     text-center hover:border-accent-400 dark:hover:border-accent transition-colors group">
+          <svg className="w-10 h-10 mx-auto mb-3 text-gray-300 group-hover:text-accent-400 transition-colors"
                fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
               d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414
                  5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
           </svg>
           {excelFileName
-            ? <p className="text-sm font-medium text-purple-600 dark:text-purple-400">{excelFileName} — click to replace</p>
+            ? <p className="text-sm font-medium text-accent-600 dark:text-accent-400">{excelFileName} — click to replace</p>
             : <><p className="text-sm font-medium text-gray-600 dark:text-gray-400">Click to upload Excel or CSV</p>
                 <p className="text-xs text-gray-400 mt-1">.xlsx · .xls · .csv</p></>
           }
         </button>
         <input ref={excelRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={onExcelFile} />
 
-        {excelLoading && <p className="text-sm text-purple-600 text-center animate-pulse">Parsing file…</p>}
+        {excelLoading && <p className="text-sm text-accent-600 text-center animate-pulse">Parsing file…</p>}
         {excelError   && <p className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg px-4 py-2">{excelError}</p>}
 
         {excelRows.length > 0 && (
@@ -1068,7 +1069,7 @@ export default function ESignBulkPage() {
             <div key={src}
                  className={`rounded-xl border-2 transition-colors
                    ${enabled
-                     ? 'border-purple-500 bg-purple-50/30 dark:bg-purple-900/10'
+                     ? 'border-accent bg-accent-50/30 dark:bg-accent-900/10'
                      : 'border-gray-200 dark:border-gray-700'}`}>
 
               {/* Card header — clicking toggles the source */}
@@ -1085,7 +1086,7 @@ export default function ESignBulkPage() {
                 </div>
                 {/* Toggle pill */}
                 <div className={`w-11 h-6 rounded-full shrink-0 relative transition-colors
-                                 ${enabled ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-600'}`}>
+                                 ${enabled ? 'bg-accent' : 'bg-gray-200 dark:bg-gray-600'}`}>
                   <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform
                                    ${enabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
                 </div>
@@ -1100,15 +1101,15 @@ export default function ESignBulkPage() {
                     <>
                       <button type="button" onClick={() => pdfRef.current?.click()}
                         className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600
-                                   rounded-xl p-8 text-center hover:border-purple-400 transition-colors group">
-                        <svg className="w-8 h-8 mx-auto mb-2 text-gray-300 group-hover:text-purple-400 transition-colors"
+                                   rounded-xl p-8 text-center hover:border-accent-400 transition-colors group">
+                        <svg className="w-8 h-8 mx-auto mb-2 text-gray-300 group-hover:text-accent-400 transition-colors"
                              fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                             d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414
                                5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                         </svg>
                         {singlePdfFileName
-                          ? <p className="text-sm font-medium text-purple-600 dark:text-purple-400">{singlePdfFileName} — click to replace</p>
+                          ? <p className="text-sm font-medium text-accent-600 dark:text-accent-400">{singlePdfFileName} — click to replace</p>
                           : <><p className="text-sm font-medium text-gray-600 dark:text-gray-400">Click to upload PDF</p>
                               <p className="text-xs text-gray-400 mt-1">.pdf only</p></>
                         }
@@ -1123,13 +1124,13 @@ export default function ESignBulkPage() {
                     <div className="space-y-4">
                       {templatesLoading ? (
                         <div className="flex items-center justify-center py-10">
-                          <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mr-2"/>
+                          <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin mr-2"/>
                           <span className="text-sm text-gray-500">Loading templates…</span>
                         </div>
                       ) : templates.length === 0 ? (
                         <div className="text-center py-8 text-gray-500">
                           <p className="text-sm">No PDF templates found.</p>
-                          <a href="/templates" className="text-xs text-purple-600 hover:underline mt-1 inline-block">
+                          <a href="/templates" className="text-xs text-accent-600 hover:underline mt-1 inline-block">
                             Create a template first →
                           </a>
                         </div>
@@ -1154,7 +1155,7 @@ export default function ESignBulkPage() {
                                 <button key={tpl.id} type="button" onClick={() => onTemplateSelect(tpl)}
                                   className={`p-3 rounded-lg border-2 text-left transition-colors
                                     ${selectedTemplateId === tpl.id
-                                      ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
+                                      ? 'border-accent bg-accent-50 dark:bg-accent-900/20'
                                       : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}`}>
                                   <div className="flex items-start justify-between gap-2">
                                     <div className="min-w-0">
@@ -1167,7 +1168,7 @@ export default function ESignBulkPage() {
                                       </p>
                                     </div>
                                     {selectedTemplateId === tpl.id && (
-                                      <svg className="w-4 h-4 text-purple-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <svg className="w-4 h-4 text-accent shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/>
                                       </svg>
                                     )}
@@ -1193,8 +1194,8 @@ export default function ESignBulkPage() {
                                   <div className="space-y-2">
                                     {selectedTemplate.placeholders.map(p => (
                                       <div key={p} className="flex items-center gap-3 p-2.5 bg-gray-50 dark:bg-gray-800/60 rounded-lg">
-                                        <code className="text-xs font-mono text-purple-700 dark:text-purple-400
-                                                         bg-purple-50 dark:bg-purple-900/30 px-2 py-0.5 rounded whitespace-nowrap shrink-0">
+                                        <code className="text-xs font-mono text-accent-700 dark:text-accent-400
+                                                         bg-accent-50 dark:bg-accent-900/30 px-2 py-0.5 rounded whitespace-nowrap shrink-0">
                                           {`{{${p}}}`}
                                         </code>
                                         <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1204,13 +1205,13 @@ export default function ESignBulkPage() {
                                           onChange={e => setPlaceholderMapping(m => ({ ...m, [p]: e.target.value }))}
                                           className="flex-1 px-2 py-1.5 border border-gray-200 dark:border-gray-600 rounded-lg
                                                      bg-white dark:bg-gray-700 text-sm focus:outline-none focus:ring-2
-                                                     focus:ring-purple-500 text-gray-900 dark:text-white">
+                                                     focus:ring-accent text-gray-900 dark:text-white">
                                           <option value="">— Not mapped (blank) —</option>
                                           {excelHeaders.map(h => <option key={h} value={h}>{h}</option>)}
                                         </select>
                                         {placeholderMapping[p] && excelRows[0] && (
-                                          <span className="text-xs bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700
-                                                           dark:text-indigo-300 px-2 py-0.5 rounded-full shrink-0 max-w-[100px] truncate"
+                                          <span className="text-xs bg-brand-50 dark:bg-brand-900/30 text-brand-700
+                                                           dark:text-brand-300 px-2 py-0.5 rounded-full shrink-0 max-w-[100px] truncate"
                                                 title={excelRows[0][placeholderMapping[p]] || '(empty)'}>
                                             {excelRows[0][placeholderMapping[p]] || '(empty)'}
                                           </span>
@@ -1218,9 +1219,9 @@ export default function ESignBulkPage() {
                                       </div>
                                     ))}
                                   </div>
-                                  <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border
-                                                  border-purple-200 dark:border-purple-800 text-xs">
-                                    <p className="font-medium text-purple-700 dark:text-purple-400 mb-2">
+                                  <div className="p-3 bg-accent-50 dark:bg-accent-900/20 rounded-lg border
+                                                  border-accent-200 dark:border-accent-700 text-xs">
+                                    <p className="font-medium text-accent-700 dark:text-accent-400 mb-2">
                                       First row preview
                                     </p>
                                     <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
@@ -1333,8 +1334,8 @@ export default function ESignBulkPage() {
                       <div className="flex items-center gap-3">
                         <button type="button" onClick={onTestApi}
                           disabled={!fileApi.url || !excelRows.length || fileApiLoading}
-                          className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg
-                                     hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed
+                          className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg
+                                     hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed
                                      text-sm font-medium transition-colors">
                           {fileApiLoading
                             ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/>
@@ -1577,11 +1578,11 @@ export default function ESignBulkPage() {
 
         {/* ── Fallback priority order (shown when 2+ sources enabled) ── */}
         {activeSources.length > 1 && (
-          <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-200 dark:border-indigo-800">
-            <p className="text-sm font-semibold text-indigo-800 dark:text-indigo-300 mb-1">
+          <div className="p-4 bg-brand-50 dark:bg-brand-900/20 rounded-xl border border-brand-200 dark:border-brand-800">
+            <p className="text-sm font-semibold text-brand-800 dark:text-brand-300 mb-1">
               Fallback Priority Order
             </p>
-            <p className="text-xs text-indigo-600 dark:text-indigo-400 mb-3">
+            <p className="text-xs text-brand-600 dark:text-brand-400 mb-3">
               For each row, source #1 is tried first. If it fails, source #2 is tried, and so on.
               Use the arrows to reorder.
             </p>
@@ -1589,8 +1590,8 @@ export default function ESignBulkPage() {
               {activeSources.map((src, idx) => (
                 <div key={src}
                      className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg px-3 py-2.5
-                                border border-indigo-100 dark:border-indigo-800/40">
-                  <span className="w-6 h-6 bg-indigo-600 text-white rounded-full text-xs font-bold
+                                border border-brand-100 dark:border-brand-800/40">
+                  <span className="w-6 h-6 bg-brand-600 text-white rounded-full text-xs font-bold
                                    flex items-center justify-center shrink-0">
                     {idx + 1}
                   </span>
@@ -1604,18 +1605,18 @@ export default function ESignBulkPage() {
                     <button type="button"
                       onClick={() => movePriorityInActive(src, -1)}
                       disabled={idx === 0}
-                      className="p-1 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/40
+                      className="p-1 rounded hover:bg-brand-100 dark:hover:bg-brand-900/40
                                  disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-                      <svg className="w-3 h-3 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-3 h-3 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7"/>
                       </svg>
                     </button>
                     <button type="button"
                       onClick={() => movePriorityInActive(src, 1)}
                       disabled={idx === activeSources.length - 1}
-                      className="p-1 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/40
+                      className="p-1 rounded hover:bg-brand-100 dark:hover:bg-brand-900/40
                                  disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-                      <svg className="w-3 h-3 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-3 h-3 text-brand-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7"/>
                       </svg>
                     </button>
@@ -1629,7 +1630,7 @@ export default function ESignBulkPage() {
         {/* ── Email Template (optional) ────────────────────────────── */}
         <div className={`rounded-xl border-2 transition-colors
           ${emailPickerOpen
-            ? 'border-purple-500 bg-purple-50/40 dark:bg-purple-900/10'
+            ? 'border-accent bg-accent-50/40 dark:bg-accent-900/10'
             : 'border-gray-200 dark:border-gray-700'}`}>
 
           {/* Toggle header */}
@@ -1652,7 +1653,7 @@ export default function ESignBulkPage() {
               </p>
             </div>
             <div className={`w-11 h-6 rounded-full shrink-0 relative transition-colors
-                             ${emailPickerOpen ? 'bg-purple-600' : 'bg-gray-200 dark:bg-gray-600'}`}>
+                             ${emailPickerOpen ? 'bg-accent' : 'bg-gray-200 dark:bg-gray-600'}`}>
               <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform
                                ${emailPickerOpen ? 'translate-x-5' : 'translate-x-0.5'}`} />
             </div>
@@ -1663,13 +1664,13 @@ export default function ESignBulkPage() {
             <div className="px-4 pb-5 border-t border-gray-200/70 dark:border-gray-700/60 pt-4 space-y-4">
               {emailTemplatesLoading ? (
                 <div className="flex items-center justify-center py-10">
-                  <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mr-2"/>
+                  <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin mr-2"/>
                   <span className="text-sm text-gray-500">Loading email templates…</span>
                 </div>
               ) : emailTemplates.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <p className="text-sm">No email templates found.</p>
-                  <a href="/email-templates" className="text-xs text-purple-600 hover:underline mt-1 inline-block">
+                  <a href="/email-templates" className="text-xs text-accent-600 hover:underline mt-1 inline-block">
                     Create an email template first →
                   </a>
                 </div>
@@ -1680,7 +1681,7 @@ export default function ESignBulkPage() {
                     onClick={() => { setSelectedEmailTemplateId(''); setSelectedEmailTemplate(null) }}
                     className={`w-full p-3 rounded-lg border-2 text-left transition-colors
                       ${!selectedEmailTemplateId
-                        ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
+                        ? 'border-accent bg-accent-50 dark:bg-accent-900/20'
                         : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}`}>
                     <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Default invitation email</p>
                     <p className="text-xs text-gray-400 mt-0.5">Use the built-in invitation template for all rows</p>
@@ -1706,7 +1707,7 @@ export default function ESignBulkPage() {
                           onClick={() => { setSelectedEmailTemplateId(tpl.id); setSelectedEmailTemplate(tpl) }}
                           className={`p-3 rounded-lg border-2 text-left transition-colors
                             ${selectedEmailTemplateId === tpl.id
-                              ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
+                              ? 'border-accent bg-accent-50 dark:bg-accent-900/20'
                               : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}`}>
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
@@ -1716,7 +1717,7 @@ export default function ESignBulkPage() {
                               </p>
                             </div>
                             {selectedEmailTemplateId === tpl.id && (
-                              <svg className="w-4 h-4 text-purple-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-4 h-4 text-accent shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/>
                               </svg>
                             )}
@@ -1735,7 +1736,7 @@ export default function ESignBulkPage() {
                     </p>
                   )}
 
-                  <p className="text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20
+                  <p className="text-xs text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/20
                                 px-3 py-2 rounded-lg">
                     Tip: Use <code className="font-mono">{'{{clientName}}'}</code>,{' '}
                     <code className="font-mono">{'{{documentTitle}}'}</code>,{' '}
@@ -1750,8 +1751,8 @@ export default function ESignBulkPage() {
 
         {/* ── Signature Field Placement ────────────────────────────── */}
         {(enabledSources.single || enabledSources.template) && (
-          <div className="rounded-xl border-2 border-dashed border-purple-200 dark:border-purple-800
-                          bg-purple-50/30 dark:bg-purple-900/10 p-4 space-y-4">
+          <div className="rounded-xl border-2 border-dashed border-accent-200 dark:border-accent-700
+                          bg-accent-50/30 dark:bg-accent-900/10 p-4 space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -1762,8 +1763,8 @@ export default function ESignBulkPage() {
                 </p>
               </div>
               {bulkFields.length > 0 && (
-                <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700
-                                 dark:text-purple-300 px-2 py-0.5 rounded-full font-medium">
+                <span className="text-xs bg-accent-100 dark:bg-accent-900/30 text-accent-700
+                                 dark:text-accent-300 px-2 py-0.5 rounded-full font-medium">
                   {bulkFields.length} field{bulkFields.length !== 1 ? 's' : ''}
                 </span>
               )}
@@ -1815,7 +1816,7 @@ export default function ESignBulkPage() {
                     /* Loading spinner while template PDF is being generated */
                     <div className="w-full flex flex-col items-center justify-center gap-3 bg-gray-50 dark:bg-gray-800/40"
                          style={{ aspectRatio: '210 / 297' }}>
-                      <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                      <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
                       <p className="text-xs text-gray-400 dark:text-gray-500">Generating template preview…</p>
                     </div>
                   ) : templatePdfError && enabledSources.template ? (
@@ -1866,7 +1867,7 @@ export default function ESignBulkPage() {
                               style={{ color: typeDef?.color }}
                               className="text-xs font-bold ml-0.5 hover:opacity-60 shrink-0 leading-none"
                               onClick={e => { e.stopPropagation(); removeBulkField(f.id) }}>
-                              ✕
+                              <IconX className="w-3 h-3" />
                             </button>
                           </div>
                         )
@@ -1926,7 +1927,7 @@ export default function ESignBulkPage() {
                           prev.map(x => x.id === f.id ? { ...x, label: e.target.value } : x))}
                         placeholder="Label"
                         className="flex-1 bg-transparent border-b border-gray-200 dark:border-gray-600
-                                   focus:outline-none focus:border-purple-400 text-gray-700
+                                   focus:outline-none focus:border-accent-400 text-gray-700
                                    dark:text-gray-300 py-0.5" />
                       <span className="text-gray-400 shrink-0">Pg {f.page}</span>
                       <label className="flex items-center gap-1 text-gray-500 dark:text-gray-400 shrink-0 cursor-pointer">
@@ -1990,13 +1991,13 @@ export default function ESignBulkPage() {
                 onChange={e => setMapping(m => ({ ...m, [field.key]: e.target.value }))}
                 className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg
                            bg-white dark:bg-gray-700 text-sm focus:outline-none focus:ring-2
-                           focus:ring-purple-500 text-gray-900 dark:text-white">
+                           focus:ring-accent text-gray-900 dark:text-white">
                 <option value="">— {field.required ? 'Select column' : 'Not mapped'} —</option>
                 {excelHeaders.map(h => <option key={h} value={h}>{h}</option>)}
               </select>
               {mapping[field.key] && (
-                <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700
-                                 dark:text-purple-300 px-2 py-0.5 rounded-full whitespace-nowrap">
+                <span className="text-xs bg-accent-100 dark:bg-accent-900/30 text-accent-700
+                                 dark:text-accent-300 px-2 py-0.5 rounded-full whitespace-nowrap">
                   {excelRows[0]?.[mapping[field.key]] || '(empty)'}
                 </span>
               )}
@@ -2028,9 +2029,9 @@ export default function ESignBulkPage() {
 
         {/* First-row preview */}
         {mapping.clientEmail && mapping.clientName && mapping.title && (
-          <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl
-                          border border-purple-200 dark:border-purple-800">
-            <p className="text-xs font-semibold text-purple-700 dark:text-purple-400 mb-3 uppercase tracking-wider">
+          <div className="p-4 bg-accent-50 dark:bg-accent-900/20 rounded-xl
+                          border border-accent-200 dark:border-accent-700">
+            <p className="text-xs font-semibold text-accent-700 dark:text-accent-400 mb-3 uppercase tracking-wider">
               First Row Preview
             </p>
             <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
@@ -2171,14 +2172,14 @@ export default function ESignBulkPage() {
       return (
         <div className="space-y-6 py-6">
           <div className="flex items-center gap-3">
-            <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin shrink-0"/>
+            <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin shrink-0"/>
             <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
               Processing… {current} / {total}
             </p>
           </div>
           <div className="space-y-1">
             <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-              <div className="h-2.5 bg-purple-500 rounded-full transition-all duration-200"
+              <div className="h-2.5 bg-accent rounded-full transition-all duration-200"
                    style={{ width: `${pct}%` }}/>
             </div>
             <p className="text-xs text-gray-400 text-right">{pct}%</p>
@@ -2233,8 +2234,8 @@ export default function ESignBulkPage() {
           type="button"
           onClick={startProcessing}
           disabled={validCount === 0}
-          className="w-full py-3 bg-purple-600 text-white rounded-xl font-semibold
-                     hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed
+          className="w-full py-3 bg-accent text-white rounded-xl font-semibold
+                     hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed
                      transition-colors text-sm flex items-center justify-center gap-2"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2317,8 +2318,8 @@ export default function ESignBulkPage() {
                 Back
               </button>
               <button type="button" onClick={goNext} disabled={!canGoNext()}
-                className="flex items-center gap-2 px-5 py-2 text-sm font-medium bg-purple-600 text-white
-                           rounded-lg hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed
+                className="flex items-center gap-2 px-5 py-2 text-sm font-medium bg-accent text-white
+                           rounded-lg hover:bg-accent-600 disabled:opacity-40 disabled:cursor-not-allowed
                            transition-colors">
                 {step === 3 ? 'Proceed to Processing' : 'Next'}
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

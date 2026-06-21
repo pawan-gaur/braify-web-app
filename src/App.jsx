@@ -51,12 +51,15 @@ const OrgDetailPage          = lazy(() => import('./pages/OrgDetailPage'))
 const ApiKeysPage            = lazy(() => import('./pages/ApiKeysPage'))
 const FilesPage              = lazy(() => import('./pages/FilesPage'))
 const FeatureDetailPage      = lazy(() => import('./pages/FeatureDetailPage'))
+const PlatformSettingsPage         = lazy(() => import('./pages/PlatformSettingsPage'))
+const PlatformSecurityPoliciesPage = lazy(() => import('./pages/PlatformSecurityPoliciesPage'))
+const PlatformUserAccessPage       = lazy(() => import('./pages/PlatformUserAccessPage'))
 
 /* Centered spinner shown while a lazy route chunk loads. */
 function RouteFallback() {
   return (
     <div className="flex justify-center items-center min-h-[60vh]">
-      <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"/>
+      <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin"/>
     </div>
   )
 }
@@ -80,7 +83,7 @@ function ESignDocumentRouter() {
 
   if (status === null) return (
     <div className="flex justify-center items-center min-h-[60vh]">
-      <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"/>
+      <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin"/>
     </div>
   )
 
@@ -112,7 +115,7 @@ function Shell() {
     <div className="flex min-h-screen bg-surface dark:bg-gray-900 transition-colors duration-300">
       <Sidebar />
       <Navbar  />
-      <main className={`flex-1 ${sideW} pt-14 transition-[margin-left] duration-300 ease-spring min-w-0`}>
+      <main className={`flex-1 ${sideW} pt-14 app-wash transition-[margin-left] duration-300 ease-spring min-w-0`}>
         <PageTransition>
         <Suspense fallback={<RouteFallback />}>
         <Routes>
@@ -157,6 +160,9 @@ function Shell() {
           <Route path="/profile" element={<ProfilePage />} />
 
           {/* ── Settings ── */}
+          <Route path="/settings/platform"          element={<PlatformSettingsPage />} />
+          <Route path="/settings/platform/security" element={<PlatformSecurityPoliciesPage />} />
+          <Route path="/settings/platform/access"   element={<PlatformUserAccessPage />} />
           <Route path="/settings/org-settings" element={<OrgSettingsPage />} />
           <Route path="/settings/api-keys"   element={<ApiKeysPage />} />
           <Route path="/usage"              element={<UsagePage />} />

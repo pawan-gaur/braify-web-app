@@ -11,6 +11,7 @@ import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import ViewToggle, { useView } from '../components/ui/ViewToggle'
 import { fmtDateTimeGB as fmtDate } from '../utils/date'
+import { IconChevronsLeft, IconChevronsRight, IconChevronLeft, IconChevronRight } from '../components/ui/icons'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -53,7 +54,7 @@ function CopyIdButton({ id }) {
     <button
       onClick={handleCopy}
       title={copied ? 'Copied!' : 'Copy full ID'}
-      className="p-0.5 rounded text-gray-300 hover:text-purple-500 dark:hover:text-purple-400 transition-colors shrink-0"
+      className="p-0.5 rounded text-gray-300 hover:text-accent dark:hover:text-accent-400 transition-colors shrink-0"
     >
       {copied ? (
         <svg className="w-3 h-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -72,7 +73,7 @@ function CopyIdButton({ id }) {
 function Spinner() {
   return (
     <div className="flex justify-center py-20">
-      <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"/>
+      <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin"/>
     </div>
   )
 }
@@ -95,7 +96,7 @@ function PaginationBar({ page, totalPages, totalElements, size, onPage, onSize, 
             onChange={e => onSize(Number(e.target.value))}
             className="px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-600
                        bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300
-                       focus:outline-none focus:ring-2 focus:ring-purple-400"
+                       focus:outline-none focus:ring-2 focus:ring-accent-400"
           >
             {PAGE_SIZE_OPTIONS.map(n => (
               <option key={n} value={n}>{n}</option>
@@ -113,14 +114,14 @@ function PaginationBar({ page, totalPages, totalElements, size, onPage, onSize, 
           className="px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-600
                      disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           title="First page"
-        >«</button>
+        ><IconChevronsLeft className="w-4 h-4" /></button>
         <button
           disabled={page === 0}
           onClick={() => onPage(page - 1)}
           className="px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-600
                      disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           title="Previous page"
-        >‹</button>
+        ><IconChevronLeft className="w-4 h-4" /></button>
 
         {/* page number pills */}
         {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
@@ -142,7 +143,7 @@ function PaginationBar({ page, totalPages, totalElements, size, onPage, onSize, 
               onClick={() => onPage(p)}
               className={`px-3 py-1 rounded-lg border text-xs font-semibold transition-colors
                 ${page === p
-                  ? 'bg-purple-600 border-purple-600 text-white'
+                  ? 'bg-accent border-accent text-white'
                   : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
             >
               {p + 1}
@@ -156,14 +157,14 @@ function PaginationBar({ page, totalPages, totalElements, size, onPage, onSize, 
           className="px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-600
                      disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           title="Next page"
-        >›</button>
+        ><IconChevronRight className="w-4 h-4" /></button>
         <button
           disabled={page >= totalPages - 1}
           onClick={() => onPage(totalPages - 1)}
           className="px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-600
                      disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           title="Last page"
-        >»</button>
+        ><IconChevronsRight className="w-4 h-4" /></button>
       </div>
     </div>
   )
@@ -251,7 +252,7 @@ function DocumentsTab() {
             onChange={e => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700
                        bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm
-                       focus:outline-none focus:ring-2 focus:ring-purple-500"
+                       focus:outline-none focus:ring-2 focus:ring-accent"
           />
         </div>
         <select
@@ -259,7 +260,7 @@ function DocumentsTab() {
           onChange={e => applyStatusFilter(e.target.value)}
           className="px-3 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-700
                      bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300
-                     focus:outline-none focus:ring-2 focus:ring-purple-500"
+                     focus:outline-none focus:ring-2 focus:ring-accent"
         >
           <option value="">All Statuses</option>
           <option value="DRAFT">Draft</option>
@@ -299,7 +300,7 @@ function DocumentsTab() {
           <button
             onClick={() => navigate('/esign/new')}
             className="mt-4 px-5 py-2.5 rounded-xl text-white text-sm font-semibold transition-all hover:opacity-90"
-            style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)' }}
+            style={{ background: 'linear-gradient(135deg,#2F5BF0,#6D52E8)' }}
           >
             Create Document
           </button>
@@ -340,8 +341,8 @@ function DocumentsTab() {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center shrink-0">
-                        <span className="text-xs font-bold text-purple-600 dark:text-purple-400">
+                      <div className="w-7 h-7 rounded-full bg-accent-100 dark:bg-accent-900/30 flex items-center justify-center shrink-0">
+                        <span className="text-xs font-bold text-accent-600 dark:text-accent-400">
                           {doc.clientName?.charAt(0)?.toUpperCase() || '?'}
                         </span>
                       </div>
@@ -459,7 +460,7 @@ function DocumentsTab() {
                     <td className="px-4 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
                         <button onClick={() => navigate(href)}
-                          className="p-1.5 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/30 text-gray-400 hover:text-purple-600 transition-colors"
+                          className="p-1.5 rounded-lg hover:bg-accent-50 dark:hover:bg-accent-900/30 text-gray-400 hover:text-accent-600 transition-colors"
                           title={isTerminal ? 'View' : 'Edit'}>
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -573,7 +574,7 @@ function BatchDocumentsView({ batch, onBack }) {
       <div className="flex items-center gap-3 mb-5">
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-accent-600 dark:hover:text-accent-400 transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/>
@@ -604,7 +605,7 @@ function BatchDocumentsView({ batch, onBack }) {
             onChange={e => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700
                        bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm
-                       focus:outline-none focus:ring-2 focus:ring-purple-500"/>
+                       focus:outline-none focus:ring-2 focus:ring-accent"/>
         </div>
       </div>
 
@@ -659,7 +660,7 @@ function BatchDocumentsView({ batch, onBack }) {
                         <div className="flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
                           {/* View / Edit */}
                           <button onClick={() => navigate(href)}
-                            className="p-1.5 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/30 text-gray-400 hover:text-purple-600 transition-colors"
+                            className="p-1.5 rounded-lg hover:bg-accent-50 dark:hover:bg-accent-900/30 text-gray-400 hover:text-accent-600 transition-colors"
                             title={isTerminal ? 'View' : 'Edit'}>
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -756,7 +757,7 @@ function BulkBatchesTab() {
             onChange={e => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700
                        bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm
-                       focus:outline-none focus:ring-2 focus:ring-purple-500"/>
+                       focus:outline-none focus:ring-2 focus:ring-accent"/>
         </div>
       </div>
 
@@ -792,8 +793,8 @@ function BulkBatchesTab() {
                   className="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors">
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center shrink-0">
-                        <svg className="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="w-8 h-8 rounded-lg bg-accent-100 dark:bg-accent-900/30 flex items-center justify-center shrink-0">
+                        <svg className="w-4 h-4 text-accent-600 dark:text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                             d="M9 17v-2m3 2v-4m3 4v-6M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"/>
                         </svg>
@@ -818,8 +819,8 @@ function BulkBatchesTab() {
                   <td className="px-4 py-4 text-right">
                     <button
                       onClick={e => { e.stopPropagation(); setSelectedBatch(batch) }}
-                      className="flex items-center gap-1 text-xs font-semibold text-purple-600 dark:text-purple-400
-                                 hover:text-purple-800 dark:hover:text-purple-300 transition-colors"
+                      className="flex items-center gap-1 text-xs font-semibold text-accent-600 dark:text-accent-400
+                                 hover:text-accent-700 dark:hover:text-accent-300 transition-colors"
                     >
                       View docs
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -868,8 +869,8 @@ export default function ESignDocumentsPage() {
           <button
             onClick={() => navigate('/esign/bulk')}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold
-                       border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300
-                       bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/40
+                       border border-accent-200 dark:border-accent-700 text-accent-700 dark:text-accent-300
+                       bg-accent-50 dark:bg-accent-900/20 hover:bg-accent-100 dark:hover:bg-accent-900/40
                        transition-colors active:scale-95"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -882,7 +883,7 @@ export default function ESignDocumentsPage() {
             onClick={() => navigate('/esign/new')}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold
                        shadow-sm hover:shadow-md transition-all active:scale-95"
-            style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)' }}
+            style={{ background: 'linear-gradient(135deg,#2F5BF0,#6D52E8)' }}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4"/>
@@ -900,7 +901,7 @@ export default function ESignDocumentsPage() {
             onClick={() => setActiveTab(tab.key)}
             className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all
               ${activeTab === tab.key
-                ? 'bg-white dark:bg-gray-700 text-purple-700 dark:text-purple-300 shadow-sm'
+                ? 'bg-white dark:bg-gray-700 text-accent-700 dark:text-accent-300 shadow-sm'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
           >
             {tab.label}

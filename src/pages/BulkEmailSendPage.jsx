@@ -60,7 +60,7 @@ const ATT_OPTIONS = [
 ]
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-const INPUT = 'w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-400'
+const INPUT = 'w-full px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent-400'
 
 /**
  * Convert a raw SheetJS cell value to a clean string.
@@ -90,9 +90,9 @@ function StepIndicator({ current }) {
           <div className="flex flex-col items-center shrink-0">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors
               ${i < current
-                ? 'bg-purple-600 text-white'
+                ? 'bg-accent-600 text-white'
                 : i === current
-                  ? 'bg-purple-600 text-white ring-4 ring-purple-200 dark:ring-purple-900/40'
+                  ? 'bg-accent-600 text-white ring-4 ring-accent-200 dark:ring-accent-900/40'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-400'}`}>
               {i < current
                 ? <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -102,13 +102,13 @@ function StepIndicator({ current }) {
             </div>
             <span className={`text-xs mt-1 whitespace-nowrap
               ${i === current
-                ? 'text-purple-600 dark:text-purple-400 font-medium'
+                ? 'text-accent-600 dark:text-accent-400 font-medium'
                 : 'text-gray-400'}`}>
               {label}
             </span>
           </div>
           {i < STEPS.length - 1 && (
-            <div className={`h-px flex-1 mx-3 mb-4 ${i < current ? 'bg-purple-400' : 'bg-gray-200 dark:bg-gray-700'}`} />
+            <div className={`h-px flex-1 mx-3 mb-4 ${i < current ? 'bg-accent-400' : 'bg-gray-200 dark:bg-gray-700'}`} />
           )}
         </div>
       ))}
@@ -389,9 +389,9 @@ export default function BulkEmailSendPage() {
           type="button"
           onClick={() => xlsxRef.current?.click()}
           className={`w-full border-2 border-dashed rounded-xl p-10 text-center transition-colors group
-            ${xlsxDragOver   ? 'border-purple-400 bg-purple-50 dark:bg-purple-900/10'
+            ${xlsxDragOver   ? 'border-accent-400 bg-accent-50 dark:bg-accent-900/10'
               : xlsxRows.length ? 'border-green-400 bg-green-50 dark:bg-green-900/10'
-              : 'border-gray-300 dark:border-gray-600 hover:border-purple-400 dark:hover:border-purple-500'}`}
+              : 'border-gray-300 dark:border-gray-600 hover:border-accent-400 dark:hover:border-accent-500'}`}
           onDragOver={e  => { e.preventDefault(); setXlsxDragOver(true) }}
           onDragLeave={() => setXlsxDragOver(false)}
           onDrop={e      => { e.preventDefault(); setXlsxDragOver(false); handleXlsxFile(e.dataTransfer.files[0]) }}
@@ -406,7 +406,7 @@ export default function BulkEmailSendPage() {
             </>
           ) : (
             <>
-              <svg className="w-10 h-10 mx-auto mb-3 text-gray-300 group-hover:text-purple-400 transition-colors"
+              <svg className="w-10 h-10 mx-auto mb-3 text-gray-300 group-hover:text-accent-400 transition-colors"
                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                   d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -522,7 +522,7 @@ export default function BulkEmailSendPage() {
                         {xlsxColumns.map(c => (
                           <th key={c} className="px-3 py-2 text-left text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">
                             {c}
-                            {c === emailColumn      && <span className="ml-1 text-purple-500">(to)</span>}
+                            {c === emailColumn      && <span className="ml-1 text-accent-500">(to)</span>}
                             {c === nameColumn       && <span className="ml-1 text-blue-500">(name)</span>}
                             {ccColumns.includes(c)  && <span className="ml-1 text-sky-500">(cc)</span>}
                           </th>
@@ -568,12 +568,12 @@ export default function BulkEmailSendPage() {
 
         {templatesLoading ? (
           <div className="flex items-center justify-center py-10">
-            <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"/>
+            <div className="w-6 h-6 border-2 border-accent-500 border-t-transparent rounded-full animate-spin"/>
           </div>
         ) : emailTemplates.length === 0 ? (
           <div className="text-center py-10 text-sm text-gray-500 dark:text-gray-400">
             No email templates found.{' '}
-            <a href="/email-templates" className="text-purple-600 underline">Create one first.</a>
+            <a href="/email-templates" className="text-accent-600 underline">Create one first.</a>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -581,11 +581,11 @@ export default function BulkEmailSendPage() {
               <button key={t.id} type="button" onClick={() => setSelectedTemplateId(t.id)}
                 className={`text-left p-4 rounded-xl border-2 transition-all
                   ${selectedTemplateId === t.id
-                    ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
-                    : 'border-gray-200 dark:border-gray-600 hover:border-purple-300 bg-white dark:bg-gray-700/40'}`}>
+                    ? 'border-accent-500 bg-accent-50 dark:bg-accent-900/20'
+                    : 'border-gray-200 dark:border-gray-600 hover:border-accent-300 bg-white dark:bg-gray-700/40'}`}>
                 <div className="flex items-start gap-2">
                   {selectedTemplateId === t.id && (
-                    <svg className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-4 h-4 text-accent-600 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
                     </svg>
                   )}
@@ -593,7 +593,7 @@ export default function BulkEmailSendPage() {
                     <p className="font-semibold text-sm text-gray-800 dark:text-gray-100 truncate">{t.name}</p>
                     {t.subject && <p className="text-xs text-gray-500 mt-0.5 truncate">Subject: {t.subject}</p>}
                     {t.placeholders?.length > 0 && (
-                      <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                      <p className="text-xs text-accent-600 dark:text-accent-400 mt-1">
                         {t.placeholders.length} variable{t.placeholders.length > 1 ? 's' : ''}
                       </p>
                     )}
@@ -615,7 +615,7 @@ export default function BulkEmailSendPage() {
             <div className="p-4 space-y-3">
               {selectedTemplate.placeholders.map(ph => (
                 <div key={ph} className="flex items-center gap-3">
-                  <span className="text-xs font-mono bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-1 rounded w-36 shrink-0 truncate">
+                  <span className="text-xs font-mono bg-accent-100 dark:bg-accent-900/30 text-accent-700 dark:text-accent-300 px-2 py-1 rounded w-36 shrink-0 truncate">
                     {'{{'}{ph}{'}}'}
                   </span>
                   <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -693,7 +693,7 @@ export default function BulkEmailSendPage() {
                   const idVal      = xlsxRows[0][mainIdColumn] || ''
                   const matchCount = sheet2Rows.filter(r => String(r[sheet2IdColumn]).toLowerCase() === idVal.toLowerCase()).length
                   return (
-                    <div className="mx-4 mb-4 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
+                    <div className="mx-4 mb-4 p-3 bg-accent-50 dark:bg-accent-900/20 rounded-xl border border-accent-200 dark:border-accent-800">
                       <p className="text-xs text-gray-700 dark:text-gray-300">
                         {mainIdColumn} = <code className="font-mono bg-white dark:bg-gray-700 px-1 rounded">{idVal || '—'}</code>{' '}→{' '}
                         <strong className={matchCount === 0 ? 'text-amber-600' : 'text-green-700 dark:text-green-400'}>{matchCount} matching row{matchCount !== 1 ? 's' : ''}</strong>
@@ -709,7 +709,7 @@ export default function BulkEmailSendPage() {
                 <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700/60 border-b border-gray-200 dark:border-gray-600 flex items-center justify-between">
                   <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Columns to include</p>
                   <div className="flex gap-2">
-                    <button type="button" onClick={() => setSheet2SelectedColumns([...sheet2Columns])} className="text-xs text-purple-600 dark:text-purple-400 hover:underline font-medium">All</button>
+                    <button type="button" onClick={() => setSheet2SelectedColumns([...sheet2Columns])} className="text-xs text-accent-600 dark:text-accent-400 hover:underline font-medium">All</button>
                     <span className="text-gray-300 dark:text-gray-600">|</span>
                     <button type="button" onClick={() => setSheet2SelectedColumns([])} className="text-xs text-gray-500 hover:underline font-medium">None</button>
                   </div>
@@ -722,7 +722,7 @@ export default function BulkEmailSendPage() {
                         <button key={col} type="button"
                           onClick={() => setSheet2SelectedColumns(prev => prev.includes(col) ? prev.filter(c => c !== col) : [...prev, col])}
                           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all
-                            ${selected ? 'bg-purple-600 text-white border-purple-600' : 'bg-white dark:bg-gray-800 text-gray-500 border-gray-300 dark:border-gray-600 hover:border-purple-400'}`}>
+                            ${selected ? 'bg-accent-600 text-white border-accent-600' : 'bg-white dark:bg-gray-800 text-gray-500 border-gray-300 dark:border-gray-600 hover:border-accent-400'}`}>
                           {selected && <svg className="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>}
                           {col}
                         </button>
@@ -743,7 +743,7 @@ export default function BulkEmailSendPage() {
                 <input type="text" placeholder="e.g. Claims_{{Provider Name}}_April2026.xlsx"
                   value={detailFileName} onChange={e => setDetailFileName(e.target.value)} className={INPUT}/>
                 <p className="text-xs text-gray-400 mt-1.5">
-                  Use <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded font-mono text-purple-600 dark:text-purple-400">{'{{column}}'}</code> with any Sheet 1 column to personalise per recipient.
+                  Use <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded font-mono text-accent-600 dark:text-accent-400">{'{{column}}'}</code> with any Sheet 1 column to personalise per recipient.
                 </p>
               </div>
             </>
@@ -770,7 +770,7 @@ export default function BulkEmailSendPage() {
 
         {/* ── Primary attachment label ── */}
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-purple-600 text-white text-[10px] font-bold">1</span>
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-accent-600 text-white text-[10px] font-bold">1</span>
           <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Primary attachment</p>
         </div>
 
@@ -781,9 +781,9 @@ export default function BulkEmailSendPage() {
               onClick={() => { setAttachmentType(opt.value); if (opt.value === 'EXCEL_SHEET') setIncludeExcelSheet(false) }}
               className={`p-4 rounded-xl border-2 text-left transition-all
                 ${attachmentType === opt.value
-                  ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
-                  : 'border-gray-200 dark:border-gray-600 hover:border-purple-300 bg-white dark:bg-gray-700/40'}`}>
-              <svg className={`w-5 h-5 mb-2.5 ${attachmentType === opt.value ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400'}`}
+                  ? 'border-accent-500 bg-accent-50 dark:bg-accent-900/20'
+                  : 'border-gray-200 dark:border-gray-600 hover:border-accent-300 bg-white dark:bg-gray-700/40'}`}>
+              <svg className={`w-5 h-5 mb-2.5 ${attachmentType === opt.value ? 'text-accent-600 dark:text-accent-400' : 'text-gray-400'}`}
                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d={opt.iconPath}/>
               </svg>
@@ -804,7 +804,7 @@ export default function BulkEmailSendPage() {
                 className={`w-full flex items-center gap-4 border-2 border-dashed rounded-xl p-4 transition-colors text-left
                   ${uploadedPdfFile
                     ? 'border-green-400 bg-green-50 dark:bg-green-900/10'
-                    : 'border-gray-300 dark:border-gray-600 hover:border-purple-400'}`}>
+                    : 'border-gray-300 dark:border-gray-600 hover:border-accent-400'}`}>
                 <svg className="w-8 h-8 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -832,7 +832,7 @@ export default function BulkEmailSendPage() {
             <div className="p-4 space-y-4">
               {pdfTemplatesLoading ? (
                 <div className="flex items-center justify-center py-4">
-                  <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"/>
+                  <div className="w-5 h-5 border-2 border-accent-500 border-t-transparent rounded-full animate-spin"/>
                 </div>
               ) : pdfTemplates.length === 0 ? (
                 <p className="text-sm text-gray-500">No PDF templates found. Create one in PDF Templates.</p>
@@ -880,7 +880,7 @@ export default function BulkEmailSendPage() {
             <div className="p-4 space-y-4">
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Use{' '}
-                <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded font-mono text-purple-600 dark:text-purple-400">
+                <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded font-mono text-accent-600 dark:text-accent-400">
                   {'{{column}}'}
                 </code>{' '}
                 in URL or body to inject row values. The endpoint must return PDF bytes.
@@ -888,7 +888,7 @@ export default function BulkEmailSendPage() {
 
               <div className="flex gap-2">
                 <select value={extApiMethod} onChange={e => setExtApiMethod(e.target.value)}
-                  className="w-24 shrink-0 px-2 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-400">
+                  className="w-24 shrink-0 px-2 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent-400">
                   <option>GET</option>
                   <option>POST</option>
                 </select>
@@ -903,7 +903,7 @@ export default function BulkEmailSendPage() {
                 </label>
                 <textarea rows={2} placeholder={'{"Authorization": "Bearer token123"}'}
                   value={extApiHeaders} onChange={e => setExtApiHeaders(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs font-mono text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"/>
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs font-mono text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent-400 resize-none"/>
               </div>
 
               {extApiMethod === 'POST' && (
@@ -913,7 +913,7 @@ export default function BulkEmailSendPage() {
                   </label>
                   <textarea rows={3} placeholder={'{"customerId": "{{id}}", "name": "{{name}}"}'}
                     value={extApiBody} onChange={e => setExtApiBody(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs font-mono text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"/>
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs font-mono text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent-400 resize-none"/>
                 </div>
               )}
             </div>
@@ -980,11 +980,11 @@ export default function BulkEmailSendPage() {
 
         {/* Summary badge when both are active */}
         {attachmentType !== 'NONE' && attachmentType !== 'EXCEL_SHEET' && includeExcelSheet && sheet2Rows.length > 0 && (
-          <div className="flex items-center gap-2 p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800">
-            <svg className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-accent-50 dark:bg-accent-900/20 border border-accent-200 dark:border-accent-800">
+            <svg className="w-4 h-4 text-accent-600 dark:text-accent-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
-            <p className="text-xs text-purple-700 dark:text-purple-300">
+            <p className="text-xs text-accent-700 dark:text-accent-300">
               Each email will have <strong>2 attachments</strong>: a{' '}
               <strong>{ATT_OPTIONS.find(o => o.value === attachmentType)?.label}</strong> and an Excel file from Sheet 2.
             </p>
@@ -1039,8 +1039,8 @@ export default function BulkEmailSendPage() {
 
         {/* First row preview */}
         {xlsxRows.length > 0 && (
-          <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
-            <p className="text-xs font-semibold text-purple-700 dark:text-purple-400 mb-3 uppercase tracking-wider">
+          <div className="p-4 bg-accent-50 dark:bg-accent-900/20 rounded-xl border border-accent-200 dark:border-accent-800">
+            <p className="text-xs font-semibold text-accent-700 dark:text-accent-400 mb-3 uppercase tracking-wider">
               First Recipient Preview
             </p>
             <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
@@ -1155,8 +1155,8 @@ export default function BulkEmailSendPage() {
               Back
             </button>
             <button type="button" onClick={goNext} disabled={!canGoNext()}
-              className="flex items-center gap-2 px-5 py-2 text-sm font-medium bg-purple-600 text-white
-                         rounded-lg hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed
+              className="flex items-center gap-2 px-5 py-2 text-sm font-medium bg-accent-600 text-white
+                         rounded-lg hover:bg-accent-700 disabled:opacity-40 disabled:cursor-not-allowed
                          transition-colors">
               {step === 2 ? 'Review & Send' : 'Next'}
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

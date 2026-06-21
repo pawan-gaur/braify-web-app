@@ -24,7 +24,7 @@ const PERMISSIONS = [
     value: 'EDIT',
     label: 'Edit (fork)',
     desc: 'A copy is created in the target org. They can modify it independently.',
-    color: 'text-violet-600 bg-violet-50 border-violet-200 dark:bg-violet-900/30 dark:border-violet-700 dark:text-violet-300',
+    color: 'text-accent-600 bg-accent-50 border-accent-200 dark:bg-accent-900/30 dark:border-accent-700 dark:text-accent-300',
   },
 ]
 
@@ -148,14 +148,14 @@ export default function ShareTemplateModal({ templateId, templateType, templateN
             <label className="form-label">Target Organisation</label>
             {selectedOrg ? (
               <div className="flex items-center justify-between mt-1 px-3 py-2.5 rounded-xl
-                              border-2 border-indigo-300 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20">
+                              border-2 border-brand-300 dark:border-brand-600 bg-brand-50 dark:bg-brand-900/20">
                 <div>
-                  <p className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">{selectedOrg.name}</p>
-                  <p className="text-xs text-indigo-400">{selectedOrg.code}</p>
+                  <p className="text-sm font-semibold text-brand-700 dark:text-brand-300">{selectedOrg.name}</p>
+                  <p className="text-xs text-brand-400">{selectedOrg.code}</p>
                 </div>
                 <button
                   onClick={() => setSelectedOrg(null)}
-                  className="text-xs text-indigo-500 hover:text-indigo-700 dark:hover:text-indigo-200"
+                  className="text-xs text-brand-500 hover:text-brand-700 dark:hover:text-brand-200"
                 >
                   Change
                 </button>
@@ -221,7 +221,7 @@ export default function ShareTemplateModal({ templateId, templateType, templateN
                     value={p.value}
                     checked={permission === p.value}
                     onChange={() => setPermission(p.value)}
-                    className="mt-0.5 accent-indigo-600"
+                    className="mt-0.5 accent-brand-600"
                   />
                   <div>
                     <p className="text-sm font-semibold">{p.label}</p>

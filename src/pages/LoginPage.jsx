@@ -58,8 +58,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-violet-50
-                    dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950
+    <div className="min-h-screen bg-gradient-to-br from-brand-50 via-white to-accent-50
+                    dark:from-gray-950 dark:via-gray-900 dark:to-brand-900
                     flex items-center justify-center px-4">
 
       <div className="w-full max-w-md">
@@ -67,7 +67,7 @@ export default function LoginPage() {
         {/* Logo / brand */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4
-                          bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/30">
+                          bg-gradient-accent shadow-lg shadow-brand/30">
             <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293
@@ -79,8 +79,7 @@ export default function LoginPage() {
         </div>
 
         {/* Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl
-                        border border-gray-100 dark:border-gray-700 p-8">
+        <div className="card dark:bg-gray-800 dark:border-gray-700 p-8">
 
           {error && (
             <div className="flex items-start gap-2.5 bg-red-50 dark:bg-red-900/20 border border-red-200
@@ -122,7 +121,7 @@ export default function LoginPage() {
                   Password
                 </label>
                 <Link to="/forgot-password"
-                  className="text-xs text-indigo-500 hover:text-indigo-600 font-medium">
+                  className="text-xs text-brand hover:text-brand-hover font-medium">
                   Forgot password?
                 </Link>
               </div>
@@ -171,12 +170,8 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 px-4 rounded-xl text-sm font-semibold text-white
-                         bg-gradient-to-r from-indigo-500 to-violet-600
-                         hover:from-indigo-600 hover:to-violet-700
-                         disabled:opacity-60 disabled:cursor-not-allowed
-                         shadow-md shadow-indigo-500/20 hover:shadow-indigo-500/30
-                         transition-all duration-150 flex items-center justify-center gap-2"
+              className="btn btn-accent w-full gap-2
+                         disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
@@ -214,11 +209,8 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 px-4 rounded-xl text-sm font-semibold text-white
-                         bg-gradient-to-r from-indigo-500 to-violet-600
-                         hover:from-indigo-600 hover:to-violet-700
-                         disabled:opacity-60 disabled:cursor-not-allowed
-                         shadow-md shadow-indigo-500/20 transition-all flex items-center justify-center gap-2"
+              className="btn btn-accent w-full gap-2
+                         disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>

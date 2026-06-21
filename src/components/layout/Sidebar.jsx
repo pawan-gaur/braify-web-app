@@ -94,6 +94,11 @@ const NAV_SECTIONS = [
     section: 'Settings',
     links: [
       {
+        to: '/settings/platform', label: 'Platform Settings',
+        minRole: ROLES.PLATFORM_ADMIN,
+        icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z',
+      },
+      {
         to: '/settings/org-settings', label: 'Organization',
         minRole: ROLES.ADMIN,
         icon: 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01',
@@ -182,7 +187,8 @@ export default function Sidebar() {
     <>
       <aside
         className={`fixed left-0 top-0 h-screen ${w}
-                    bg-white dark:bg-sidebar
+                    bg-gradient-to-b from-[#F4F1FC] via-white to-[#EDF2FE]
+                    dark:from-sidebar dark:via-sidebar dark:to-sidebar
                     border-r border-ink-7 dark:border-sidebar-border
                     flex flex-col z-50
                     transition-[width] duration-300 ease-spring overflow-hidden`}
@@ -313,7 +319,7 @@ export default function Sidebar() {
                         hover:bg-ink-9 dark:hover:bg-sidebar-hover transition-colors
                         ${collapsed ? 'justify-center' : ''}`}
           >
-            <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center shrink-0
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center shrink-0
                             text-white text-xs font-bold shadow-soft">
               {(user?.firstName?.[0] ?? '') + (user?.lastName?.[0] ?? '')}
             </div>
@@ -347,16 +353,16 @@ export default function Sidebar() {
 function RealItem({ link, collapsed, badge = 0 }) {
   const { to, end, label, icon } = link
   const inner = ({ isActive }) => (
-    <span className={`flex items-center gap-3 px-2.5 py-2 rounded-input text-[13px] font-medium
+    <span className={`group flex items-center gap-3 px-2.5 py-2 rounded-input text-[13px] font-medium
                       transition-all duration-200 ease-spring w-full
                       ${isActive
-                        ? 'bg-brand text-white shadow-soft'
-                        : 'text-ink-2 hover:text-ink hover:bg-ink-9 dark:text-sidebar-muted dark:hover:text-white dark:hover:bg-sidebar-hover'
+                        ? 'bg-gradient-accent text-white shadow-[0_4px_14px_rgba(79,91,240,0.35)]'
+                        : 'text-ink-2 hover:text-brand hover:bg-brand-50/70 dark:text-sidebar-muted dark:hover:text-white dark:hover:bg-sidebar-hover'
                       }
                       ${collapsed ? 'justify-center' : ''}`}
     >
-      <span className={`shrink-0 w-[18px] h-[18px] relative
-        ${isActive ? 'text-white' : 'text-ink-4 dark:text-sidebar-label'}`}>
+      <span className={`shrink-0 w-[18px] h-[18px] relative transition-colors
+        ${isActive ? 'text-white' : 'text-ink-4 group-hover:text-brand dark:text-sidebar-label'}`}>
         <Icon d={icon} />
         {collapsed && badge > 0 && (
           <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] px-0.5 rounded-full

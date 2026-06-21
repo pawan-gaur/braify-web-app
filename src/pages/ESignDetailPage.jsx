@@ -10,6 +10,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { esignGetDocument, esignGetAudit, esignDownloadSigned, esignListAttachments, esignDownloadAttachment } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
+import { IconCheck } from '../components/ui/icons'
 
 const STATUS_COLORS = {
   DRAFT:     'bg-gray-100 text-gray-600',
@@ -106,7 +107,7 @@ export default function ESignDetailPage() {
 
   if (loading) return (
     <div className="flex justify-center items-center min-h-[60vh]">
-      <div className="w-10 h-10 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"/>
+      <div className="w-10 h-10 border-4 border-accent border-t-transparent rounded-full animate-spin"/>
     </div>
   )
 
@@ -258,9 +259,9 @@ export default function ESignDetailPage() {
                       <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{f.label || f.fieldType}</p>
                       <p className="text-xs text-gray-400">Page {f.page} · {f.fieldType}</p>
                     </div>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold inline-flex items-center gap-1
                       ${f.signed ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-600'}`}>
-                      {f.signed ? '✓ Signed' : 'Pending'}
+                      {f.signed ? <><IconCheck className="w-3 h-3" /> Signed</> : 'Pending'}
                     </span>
                   </div>
                 ))}
@@ -386,7 +387,7 @@ export default function ESignDetailPage() {
                           {ev.event?.replace(/_/g, ' ')}
                         </span>
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase
-                          ${ev.actorType === 'CREATOR' ? 'bg-purple-100 text-purple-700'
+                          ${ev.actorType === 'CREATOR' ? 'bg-accent-100 text-accent-700'
                             : ev.actorType === 'CLIENT' ? 'bg-blue-100 text-blue-700'
                             : 'bg-gray-100 text-gray-500'}`}>
                           {ev.actorType}

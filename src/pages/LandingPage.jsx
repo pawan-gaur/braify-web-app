@@ -9,9 +9,9 @@ function CardPDF() {
       <p className="font-bold text-gray-800 mb-1">PDF Template Gallery</p>
       <div className="flex items-center justify-between mb-3">
         <span className="text-gray-400 text-[10px]">7 starter categories</span>
-        <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-[9px] font-bold">New</span>
+        <span className="bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full text-[9px] font-bold">New</span>
       </div>
-      {[['Invoice', '#6366f1', 92], ['Certificate', '#b45309', 68], ['Legal Contract', '#1e40af', 55]].map(([label, color, pct]) => (
+      {[['Invoice', '#2F5BF0', 92], ['Certificate', '#b45309', 68], ['Legal Contract', '#1e40af', 55]].map(([label, color, pct]) => (
         <div key={label} className="mb-2">
           <div className="flex justify-between text-[10px] text-gray-400 mb-0.5">
             <span>{label}</span><span>{pct}%</span>
@@ -75,7 +75,7 @@ function CardAnalytics() {
   return (
     <div className="bg-white rounded-2xl shadow-xl p-4 w-52 text-xs select-none">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-5 h-5 rounded bg-indigo-500 flex items-center justify-center shrink-0">
+        <div className="w-5 h-5 rounded bg-brand flex items-center justify-center shrink-0">
           <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
@@ -84,7 +84,7 @@ function CardAnalytics() {
         <span className="font-bold text-gray-800">E-Sign Funnel</span>
         <span className="ml-auto w-2 h-2 rounded-full bg-emerald-400 animate-pulse"/>
       </div>
-      {[['Sent', '#6366f1', 100], ['Viewed', '#0ea5e9', 82], ['Signed', '#10b981', 64]].map(([label, color, w]) => (
+      {[['Sent', '#2F5BF0', 100], ['Viewed', '#0ea5e9', 82], ['Signed', '#10b981', 64]].map(([label, color, w]) => (
         <div key={label} className="mb-2">
           <div className="flex justify-between text-[10px] text-gray-400 mb-0.5">
             <span>{label}</span><span>{w}%</span>
@@ -112,7 +112,7 @@ const TABS = [
       'Zoom controls, export HTML, live preview',
       'Reusable Handlebars-style placeholder variables',
     ],
-    color: '#6366f1',
+    color: '#2F5BF0',
   },
   {
     label: 'Email Templates',
@@ -124,7 +124,7 @@ const TABS = [
       'Automatic version history — restore any snapshot',
       'Full SENT audit trail per template',
     ],
-    color: '#8b5cf6',
+    color: '#6D52E8',
   },
   {
     label: 'E-Sign',
@@ -199,7 +199,7 @@ const TABS = [
       'PLATFORM_ADMIN org filter · resource type filter',
       'ADMIN sees ADMIN+USER · USER sees own actions only',
     ],
-    color: '#6366f1',
+    color: '#2F5BF0',
   },
   {
     label: 'Version History',
@@ -217,18 +217,18 @@ const TABS = [
 
 /* ─── Features grid ──────────────────────────────────────────────────────── */
 const FEATURE_GRID = [
-  { icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9v11a2 2 0 01-2 2z', title: 'PDF Templates',        desc: 'Drag-and-drop builder, 7 starter categories, live preview and Handlebars placeholders.', color: '#6366f1' },
-  { icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', title: 'Email Templates',      desc: 'Rich HTML editor, Resend integration, placeholder fill and automatic version snapshots.', color: '#8b5cf6' },
+  { icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9v11a2 2 0 01-2 2z', title: 'PDF Templates',        desc: 'Drag-and-drop builder, 7 starter categories, live preview and Handlebars placeholders.', color: '#2F5BF0' },
+  { icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', title: 'Email Templates',      desc: 'Rich HTML editor, Resend integration, placeholder fill and automatic version snapshots.', color: '#6D52E8' },
   { icon: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z', title: 'E-Sign',                desc: 'Upload or generate PDFs, place signature fields, send a secure link and track completion.', color: '#0d9488' },
   { icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', title: 'Analytics & Reporting', desc: 'Custom date range, E-Sign funnel, template usage rankings, scheduled email reports and chart exports.', color: '#f59e0b' },
   { icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z', title: 'File Storage',          desc: 'Org-scoped cloud file management. Upload, organise and link files to templates and documents.', color: '#0891b2' },
   { icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z', title: 'Feature Access Control', desc: 'Assign PDF, Email, E-Sign and File Storage per org. Sidebar and routes auto-gate to licensed modules.', color: '#f43f5e' },
-  { icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z', title: 'Multi-Org & Roles',      desc: 'Isolated workspaces per organisation. Four-tier hierarchy: Platform Admin › Org Admin › Admin › User.', color: '#7c3aed' },
+  { icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z', title: 'Multi-Org & Roles',      desc: 'Isolated workspaces per organisation. Four-tier hierarchy: Platform Admin › Org Admin › Admin › User.', color: '#6D52E8' },
   { icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', title: 'Audit Log',            desc: 'Role-scoped trail covering PDF, Email, E-Sign, Files, Users & Org features — expandable before/after diffs.', color: '#ef4444' },
   { icon: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15', title: 'Version History',       desc: 'Every save snapshots the template. Restore any version in one click for both PDF and email templates.', color: '#10b981' },
   { icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4', title: 'REST API',              desc: 'JWT-secured endpoints for generating PDFs and sending emails programmatically from any system.', color: '#06b6d4' },
   { icon: 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z', title: 'API Keys',              desc: 'Generate and manage org-scoped API keys with usage logs, key prefix display and one-click revoke.', color: '#f97316' },
-  { icon: 'M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z', title: 'Template Sharing',     desc: 'Share templates across organisations for collaboration. Controlled visibility with org-level permissions.', color: '#6366f1' },
+  { icon: 'M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z', title: 'Template Sharing',     desc: 'Share templates across organisations for collaboration. Controlled visibility with org-level permissions.', color: '#2F5BF0' },
 ]
 
 /* ─── Pricing plans ─────────────────────────────────────────────────────── */
@@ -262,13 +262,13 @@ const PLANS = [
   {
     name: 'Pro',
     badge: 'Free during beta',
-    badgeColor: 'bg-indigo-100 text-indigo-700',
+    badgeColor: 'bg-brand-100 text-brand-700',
     price: '$29',
     period: '/month',
     highlight: true,
     desc: 'Full analytics, unlimited E-Sign and advanced reporting for growing teams.',
     cta: 'Start for free',
-    ctaStyle: 'bg-indigo-600 text-white hover:bg-indigo-700',
+    ctaStyle: 'bg-brand text-white hover:bg-brand-hover',
     features: [
       { text: 'Everything in Starter', included: true },
       { text: 'Unlimited E-Sign documents', included: true },
@@ -287,7 +287,7 @@ const PLANS = [
   {
     name: 'Enterprise',
     badge: 'Custom',
-    badgeColor: 'bg-violet-100 text-violet-700',
+    badgeColor: 'bg-accent-100 text-accent-700',
     price: 'Custom',
     period: 'pricing',
     highlight: false,
@@ -349,7 +349,7 @@ export default function LandingPage() {
             Create, send &amp; sign —
             <br />
             <span className="text-transparent bg-clip-text"
-              style={{ backgroundImage: 'linear-gradient(135deg,#6366f1,#0d9488)' }}>
+              style={{ backgroundImage: 'linear-gradient(135deg,#2F5BF0,#0d9488)' }}>
               document automation
             </span>
             {' '}done right
@@ -402,7 +402,7 @@ export default function LandingPage() {
               Trusted by teams who need
               <br />documents done fast
             </p>
-            <a href="#" className="mt-3 text-sm text-gray-500 hover:text-indigo-600 transition-colors flex items-center gap-1">
+            <a href="#" className="mt-3 text-sm text-gray-500 hover:text-brand transition-colors flex items-center gap-1">
               See how customers use Braify
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
@@ -424,7 +424,7 @@ export default function LandingPage() {
       {/* ══ FEATURE TABS ═══════════════════════════════════════════════════ */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6">
-          <p className="text-center text-xs font-bold uppercase tracking-widest text-indigo-500 mb-3">
+          <p className="text-center text-xs font-bold uppercase tracking-widest text-brand mb-3">
             EVERYTHING YOUR TEAM NEEDS
           </p>
           <h2 className="text-3xl font-extrabold text-gray-900 text-center mb-10">
@@ -541,7 +541,7 @@ export default function LandingPage() {
       {/* ══ FEATURES GRID ════════════════════════════════════════════════════ */}
       <section className="py-20 bg-[#f5f4f0]">
         <div className="max-w-7xl mx-auto px-6">
-          <p className="text-center text-xs font-bold uppercase tracking-widest text-indigo-500 mb-3">
+          <p className="text-center text-xs font-bold uppercase tracking-widest text-brand mb-3">
             ACROSS EVERY TEAM AND WORKFLOW
           </p>
           <h2 className="text-3xl font-extrabold text-gray-900 text-center mb-3">
@@ -581,7 +581,7 @@ export default function LandingPage() {
       {/* ══ ROLE HIERARCHY ══════════════════════════════════════════════════ */}
       <section className="py-20 bg-white">
         <div className="max-w-5xl mx-auto px-6">
-          <p className="text-center text-xs font-bold uppercase tracking-widest text-indigo-500 mb-3">
+          <p className="text-center text-xs font-bold uppercase tracking-widest text-brand mb-3">
             ROLE-BASED ACCESS CONTROL
           </p>
           <h2 className="text-3xl font-extrabold text-gray-900 text-center mb-3">
@@ -592,7 +592,7 @@ export default function LandingPage() {
           </p>
           <div className="grid md:grid-cols-3 gap-4">
             {[
-              { role: 'Org Admin', badge: 'bg-violet-100 text-violet-700', ring: 'border-violet-200',
+              { role: 'Org Admin', badge: 'bg-accent-100 text-accent-700', ring: 'border-accent-200',
                 path: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
                 perms: ['Manage users in their org', 'Access all org templates', 'View full org audit log', 'All licensed feature access'] },
               { role: 'Admin', badge: 'bg-sky-100 text-sky-700', ring: 'border-sky-200',
@@ -630,7 +630,7 @@ export default function LandingPage() {
       {/* ══ PRICING ═══════════════════════════════════════════════════════════ */}
       <section ref={pricingRef} className="py-24 bg-[#f5f4f0]">
         <div className="max-w-7xl mx-auto px-6">
-          <p className="text-center text-xs font-bold uppercase tracking-widest text-indigo-500 mb-3">
+          <p className="text-center text-xs font-bold uppercase tracking-widest text-brand mb-3">
             SIMPLE, TRANSPARENT PRICING
           </p>
           <h2 className="text-3xl font-extrabold text-gray-900 text-center mb-3">
@@ -645,7 +645,7 @@ export default function LandingPage() {
             <span className={`text-sm font-semibold ${!annual ? 'text-gray-900' : 'text-gray-400'}`}>Monthly</span>
             <button onClick={() => setAnnual(a => !a)}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                ${annual ? 'bg-indigo-600' : 'bg-gray-200'}`}>
+                ${annual ? 'bg-brand' : 'bg-gray-200'}`}>
               <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform
                 ${annual ? 'translate-x-6' : 'translate-x-1'}`}/>
             </button>
@@ -662,12 +662,12 @@ export default function LandingPage() {
               <div key={plan.name}
                 className={`relative rounded-2xl p-8 flex flex-col border-2 transition-all
                   ${plan.highlight
-                    ? 'border-indigo-500 bg-white shadow-2xl shadow-indigo-500/10'
+                    ? 'border-brand bg-white shadow-2xl shadow-brand/10'
                     : 'border-gray-200 bg-white shadow-sm hover:shadow-md'}`}>
 
                 {plan.highlight && (
                   <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                    <span className="bg-indigo-600 text-white text-[11px] font-bold px-3 py-1 rounded-full whitespace-nowrap">
+                    <span className="bg-brand text-white text-[11px] font-bold px-3 py-1 rounded-full whitespace-nowrap">
                       Most Popular
                     </span>
                   </div>
@@ -711,7 +711,7 @@ export default function LandingPage() {
                     <li key={f.text} className="flex items-start gap-2.5">
                       <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 mt-0.5
                         ${f.included
-                          ? plan.highlight ? 'bg-indigo-600' : 'bg-gray-900'
+                          ? plan.highlight ? 'bg-brand' : 'bg-gray-900'
                           : 'bg-gray-100'}`}>
                         {f.included ? (
                           <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -741,7 +741,7 @@ export default function LandingPage() {
               { icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z', text: 'Secure billing via Stripe' },
             ].map(item => (
               <div key={item.text} className="flex items-center gap-1.5">
-                <svg className="w-4 h-4 text-indigo-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-brand shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon}/>
                 </svg>
                 {item.text}
@@ -779,8 +779,8 @@ export default function LandingPage() {
           </p>
           <div className="flex items-center justify-center gap-3 flex-wrap">
             <button onClick={() => navigate('/get-started')}
-              className="px-7 py-3 bg-indigo-600 text-white font-semibold rounded-xl
-                         hover:bg-indigo-700 transition-all shadow-lg active:scale-95">
+              className="px-7 py-3 bg-brand text-white font-semibold rounded-xl
+                         hover:bg-brand-hover transition-all shadow-lg active:scale-95">
               Get started free
             </button>
             <button onClick={() => scrollTo(pricingRef)}

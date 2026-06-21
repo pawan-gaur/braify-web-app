@@ -6,6 +6,7 @@ import useDocumentTitle from '../hooks/useDocumentTitle'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import LogoUpload from '../components/ui/LogoUpload'
 import ColorPicker from '../components/ui/ColorPicker'
+import { IconCheck, IconX, IconArrowRight } from '../components/ui/icons'
 
 const CRUMBS = [
   { label: 'Dashboard', to: '/' },
@@ -173,8 +174,8 @@ export default function OrgSettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh] gap-3 text-gray-400">
-        <svg className="animate-spin h-5 w-5 text-indigo-500" viewBox="0 0 24 24" fill="none">
+      <div className="flex items-center justify-center min-h-[60vh] gap-3 text-ink-4">
+        <svg className="animate-spin h-5 w-5 text-brand-500" viewBox="0 0 24 24" fill="none">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
         </svg>
@@ -196,23 +197,23 @@ export default function OrgSettingsPage() {
 
       <div className="flex items-center justify-between mt-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Organization Settings</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-ink dark:text-white">Organization Settings</h1>
+          <p className="text-sm text-ink-3 mt-1">
             Customise your logo, theme, cloud storage, and control who can access each feature.
           </p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl mb-8 w-fit">
+      <div className="flex gap-1 p-1 bg-ink-8 dark:bg-gray-800 rounded-xl mb-8 w-fit">
         {TABS.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all
               ${activeTab === tab.id
-                ? 'bg-white dark:bg-gray-700 text-purple-700 dark:text-purple-300 shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                ? 'bg-gradient-accent text-white shadow-soft'
+                : 'text-ink-3 hover:text-ink dark:text-gray-400 dark:hover:text-gray-200'
               }`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -363,8 +364,8 @@ function ThemeTab({ form, set, saving, onSave }) {
                 onClick={() => { set('primaryColor', preset.primary); set('accentColor', preset.accent) }}
                 className={`flex flex-col items-center gap-1.5 p-2 rounded-xl border-2 transition-all
                   ${isActive(preset)
-                    ? 'border-indigo-400 dark:border-indigo-500 shadow-md'
-                    : 'border-gray-100 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500'
+                    ? 'border-brand-400 dark:border-brand-500 shadow-md'
+                    : 'border-ink-7 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500'
                   }`}
                 title={preset.name}
               >
@@ -481,8 +482,8 @@ function AccessControlTab({ form, set, saving, onSave, orgFeatures }) {
                   <th key={role.key} className="px-4 py-4 text-center">
                     <div className="flex flex-col items-center gap-1">
                       <span className={`text-xs font-bold px-2.5 py-1 rounded-full
-                        ${role.key === 'ORG_ADMIN' ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300'
-                          : role.key === 'ADMIN'   ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
+                        ${role.key === 'ORG_ADMIN' ? 'bg-accent-100 text-accent-700 dark:bg-accent-900/40 dark:text-accent-300'
+                          : role.key === 'ADMIN'   ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300'
                           : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
                         }`}
                       >
@@ -523,7 +524,7 @@ function AccessControlTab({ form, set, saving, onSave, orgFeatures }) {
                       {role.locked ? (
                         /* ORG_ADMIN always allowed — locked checkbox */
                         <div className="flex justify-center">
-                          <div className="w-5 h-5 rounded bg-violet-500 flex items-center justify-center cursor-not-allowed opacity-80">
+                          <div className="w-5 h-5 rounded bg-accent-500 flex items-center justify-center cursor-not-allowed opacity-80">
                             <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/>
                             </svg>
@@ -537,8 +538,8 @@ function AccessControlTab({ form, set, saving, onSave, orgFeatures }) {
                             onClick={() => toggle(feature.key, role.key)}
                             className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all
                               ${isAllowed(feature.key, role.key)
-                                ? 'bg-indigo-600 border-indigo-600 hover:bg-indigo-700'
-                                : 'border-gray-300 dark:border-gray-600 hover:border-indigo-400'
+                                ? 'bg-brand-600 border-brand-600 hover:bg-brand-700'
+                                : 'border-gray-300 dark:border-gray-600 hover:border-brand-400'
                               }`}
                           >
                             {isAllowed(feature.key, role.key) && (
@@ -576,7 +577,7 @@ function AccessControlTab({ form, set, saving, onSave, orgFeatures }) {
                     </svg>
                   </div>
                   <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{feature.label}</span>
-                  <span className="text-xs text-gray-400">→</span>
+                  <IconArrowRight className="w-3.5 h-3.5 text-gray-400" />
                   <span className={`text-xs font-semibold px-2 py-0.5 rounded-full
                     ${allOthers
                       ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
@@ -881,8 +882,8 @@ function CloudStorageTab({ form, set, saving, onSave }) {
                   }}
                   className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all
                     ${form.cloud === provider.key
-                      ? 'border-indigo-400 dark:border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 shadow-md'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                      ? 'border-brand-400 dark:border-brand-500 bg-brand-50 dark:bg-brand-900/20 shadow-md'
+                      : 'border-ink-7 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                     }`}
                 >
                   <div
@@ -895,7 +896,7 @@ function CloudStorageTab({ form, set, saving, onSave }) {
                     {provider.label}
                   </span>
                   {form.cloud === provider.key && (
-                    <div className="w-4 h-4 rounded-full bg-indigo-500 flex items-center justify-center">
+                    <div className="w-4 h-4 rounded-full bg-brand-500 flex items-center justify-center">
                       <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/>
                       </svg>
@@ -1027,11 +1028,16 @@ function CloudStorageTab({ form, set, saving, onSave }) {
                     disabled={form.allowedFileTypes.includes(type)}
                     className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold transition-all
                       ${form.allowedFileTypes.includes(type)
-                        ? 'bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-700 cursor-default'
-                        : 'border-gray-200 text-gray-500 hover:border-indigo-300 hover:text-indigo-600 dark:border-gray-700 dark:text-gray-400'
+                        ? 'bg-brand-100 text-brand-700 border-brand-300 dark:bg-brand-900/40 dark:text-brand-300 dark:border-brand-700 cursor-default'
+                        : 'border-ink-7 text-ink-3 hover:border-brand-300 hover:text-brand-600 dark:border-gray-700 dark:text-gray-400'
                       }`}
                   >
-                    {form.allowedFileTypes.includes(type) ? `✓ ${type}` : `+ ${type}`}
+                    <span className="inline-flex items-center gap-1">
+                      {form.allowedFileTypes.includes(type)
+                        ? <IconCheck className="w-3 h-3" />
+                        : '+'}
+                      {type}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -1065,7 +1071,7 @@ function CloudStorageTab({ form, set, saving, onSave }) {
                         onClick={() => removeFileType(type)}
                         className="text-gray-400 hover:text-red-500 transition-colors ml-0.5"
                       >
-                        ×
+                        <IconX className="w-3 h-3" />
                       </button>
                     </span>
                   ))}

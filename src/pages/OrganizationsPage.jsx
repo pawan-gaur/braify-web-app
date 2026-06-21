@@ -15,6 +15,7 @@ import ViewToggle, { useView } from '../components/ui/ViewToggle'
 import { ALL_FEATURES, FEATURE_META } from '../config/features'
 import PlanBadge from '../components/ui/PlanBadge'
 import QuotaProgressBar from '../components/ui/QuotaProgressBar'
+import { IconCheck, IconX } from '../components/ui/icons'
 
 const CRUMBS = [
   { label: 'Dashboard', to: '/' },
@@ -159,8 +160,8 @@ export default function OrganizationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mt-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Organizations</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage all tenant organizations and their feature access.</p>
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-ink dark:text-white">Organizations</h1>
+          <p className="text-sm text-ink-3 mt-1">Manage all tenant organizations and their feature access.</p>
         </div>
         <div className="flex items-center gap-3">
           <ViewToggle view={view} onChange={setView} />
@@ -175,7 +176,7 @@ export default function OrganizationsPage() {
 
       {/* Search */}
       <div className="relative mb-6 max-w-sm">
-        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
         </svg>
         <input
@@ -189,7 +190,7 @@ export default function OrganizationsPage() {
 
       {/* List */}
       {loading ? (
-        <div className="card flex items-center justify-center py-20 text-gray-400 gap-3">
+        <div className="card flex items-center justify-center py-20 text-ink-4 gap-3">
           <svg className="animate-spin h-5 w-5 text-primary" viewBox="0 0 24 24" fill="none">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
@@ -197,8 +198,8 @@ export default function OrganizationsPage() {
           Loading…
         </div>
       ) : orgs.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center py-20 text-gray-400">
-          <svg className="w-10 h-10 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="card flex flex-col items-center justify-center py-20 text-ink-4">
+          <svg className="w-10 h-10 mb-3 text-ink-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
               d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
           </svg>
@@ -213,11 +214,11 @@ export default function OrganizationsPage() {
                 <div className="flex-1 min-w-0">
                   <button
                     onClick={() => navigate(`/admin/organizations/${org.id}`)}
-                    className="font-bold text-indigo-600 hover:text-indigo-800 hover:underline text-left truncate block"
+                    className="font-bold text-brand-600 hover:text-brand-800 hover:underline text-left truncate block"
                   >
                     {org.name}
                   </button>
-                  <code className="text-[11px] bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-gray-500 dark:text-gray-400 mt-1 inline-block">
+                  <code className="text-[11px] bg-ink-8 dark:bg-gray-700 px-2 py-0.5 rounded text-ink-3 dark:text-gray-400 mt-1 inline-block">
                     {org.code}
                   </code>
                 </div>
@@ -229,7 +230,7 @@ export default function OrganizationsPage() {
               </div>
 
               {org.description && (
-                <p className="text-xs text-gray-400 line-clamp-2">{org.description}</p>
+                <p className="text-xs text-ink-4 line-clamp-2">{org.description}</p>
               )}
 
               <div className="flex items-center gap-2 flex-wrap">
@@ -237,27 +238,27 @@ export default function OrganizationsPage() {
                 {org.features?.length > 0 && org.features.map(f => <FeaturePill key={f} featureKey={f} />)}
               </div>
 
-              <p className="text-[11px] text-gray-400 mt-auto">Created {fmtDate(org.createdAt)}</p>
+              <p className="text-[11px] text-ink-4 mt-auto">Created {fmtDate(org.createdAt)}</p>
 
-              <div className="flex items-center gap-1 flex-wrap pt-1 border-t border-gray-100 dark:border-gray-700">
+              <div className="flex items-center gap-1 flex-wrap pt-1 border-t border-ink-7 dark:border-gray-700">
                 <button onClick={() => navigate(`/users?orgId=${org.id}`)}
-                  className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
+                  className="text-xs px-2.5 py-1 rounded-lg border border-ink-7 dark:border-gray-600 text-ink-3 hover:border-brand-400 hover:text-brand-600 transition-colors">
                   Users
                 </button>
                 <button onClick={() => setFeatOrg(org)}
-                  className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 hover:border-violet-400 hover:text-violet-600 transition-colors">
+                  className="text-xs px-2.5 py-1 rounded-lg border border-ink-7 dark:border-gray-600 text-ink-3 hover:border-accent-400 hover:text-accent-600 transition-colors">
                   Features
                 </button>
                 <button onClick={() => setPlanOrg(org)}
-                  className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 hover:border-amber-400 hover:text-amber-600 transition-colors">
+                  className="text-xs px-2.5 py-1 rounded-lg border border-ink-7 dark:border-gray-600 text-ink-3 hover:border-amber-400 hover:text-amber-600 transition-colors">
                   Plan
                 </button>
                 <button onClick={() => setQuotaOrg(org)}
-                  className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 hover:border-emerald-400 hover:text-emerald-600 transition-colors">
+                  className="text-xs px-2.5 py-1 rounded-lg border border-ink-7 dark:border-gray-600 text-ink-3 hover:border-emerald-400 hover:text-emerald-600 transition-colors">
                   Quotas
                 </button>
                 <button onClick={() => openEdit(org)}
-                  className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 hover:border-primary hover:text-primary transition-colors">
+                  className="text-xs px-2.5 py-1 rounded-lg border border-ink-7 dark:border-gray-600 text-ink-3 hover:border-primary hover:text-primary transition-colors">
                   Edit
                 </button>
                 <button onClick={() => handleDelete(org)}
@@ -273,32 +274,32 @@ export default function OrganizationsPage() {
         <div className="card p-0 overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Name</th>
-                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Code</th>
-                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Plan</th>
-                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Features</th>
-                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Status</th>
-                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Created</th>
+              <tr className="border-b border-ink-7 dark:border-gray-700 bg-ink-8 dark:bg-gray-900/50">
+                <th className="text-left px-5 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">Name</th>
+                <th className="text-left px-5 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">Code</th>
+                <th className="text-left px-5 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">Plan</th>
+                <th className="text-left px-5 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">Features</th>
+                <th className="text-left px-5 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">Status</th>
+                <th className="text-left px-5 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">Created</th>
                 <th className="px-5 py-3"/>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
               {orgs.map(org => (
-                <tr key={org.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group">
+                <tr key={org.id} className="hover:bg-ink-8 dark:hover:bg-gray-700/30 transition-colors group">
                   <td className="px-5 py-3.5">
                     <button
                       onClick={() => navigate(`/admin/organizations/${org.id}`)}
-                      className="font-semibold text-indigo-600 hover:text-indigo-800 hover:underline text-left"
+                      className="font-semibold text-brand-600 hover:text-brand-800 hover:underline text-left"
                     >
                       {org.name}
                     </button>
                     {org.description && (
-                      <p className="text-xs text-gray-400 mt-0.5 truncate max-w-[200px]">{org.description}</p>
+                      <p className="text-xs text-ink-4 mt-0.5 truncate max-w-[200px]">{org.description}</p>
                     )}
                   </td>
                   <td className="px-5 py-3.5">
-                    <code className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-gray-600 dark:text-gray-300">
+                    <code className="text-xs bg-ink-8 dark:bg-gray-700 px-2 py-0.5 rounded text-ink-2 dark:text-gray-300">
                       {org.code}
                     </code>
                   </td>
@@ -313,7 +314,7 @@ export default function OrganizationsPage() {
                         {org.features.map(f => <FeaturePill key={f} featureKey={f} />)}
                       </div>
                     ) : (
-                      <span className="text-xs text-gray-300 dark:text-gray-600 italic">No features</span>
+                      <span className="text-xs text-ink-4 dark:text-gray-600 italic">No features</span>
                     )}
                   </td>
                   <td className="px-5 py-3.5">
@@ -323,53 +324,53 @@ export default function OrganizationsPage() {
                       {org.active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td className="px-5 py-3.5 text-xs text-gray-400">{fmtDate(org.createdAt)}</td>
+                  <td className="px-5 py-3.5 text-xs text-ink-4">{fmtDate(org.createdAt)}</td>
                   <td className="px-4 py-3.5">
                     <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity flex-wrap">
                       <button
                         onClick={() => navigate(`/users?orgId=${org.id}`)}
-                        className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600
-                                   text-gray-500 hover:border-indigo-400 hover:text-indigo-600 transition-colors"
+                        className="text-xs px-2.5 py-1 rounded-lg border border-ink-7 dark:border-gray-600
+                                   text-ink-3 hover:border-brand-400 hover:text-brand-600 transition-colors"
                         title="View users"
                       >
                         Users
                       </button>
                       <button
                         onClick={() => setFeatOrg(org)}
-                        className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600
-                                   text-gray-500 hover:border-violet-400 hover:text-violet-600 transition-colors"
+                        className="text-xs px-2.5 py-1 rounded-lg border border-ink-7 dark:border-gray-600
+                                   text-ink-3 hover:border-accent-400 hover:text-accent-600 transition-colors"
                         title="Manage features"
                       >
                         Features
                       </button>
                       <button
                         onClick={() => setPlanOrg(org)}
-                        className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600
-                                   text-gray-500 hover:border-amber-400 hover:text-amber-600 transition-colors"
+                        className="text-xs px-2.5 py-1 rounded-lg border border-ink-7 dark:border-gray-600
+                                   text-ink-3 hover:border-amber-400 hover:text-amber-600 transition-colors"
                         title="Manage subscription plan"
                       >
                         Plan
                       </button>
                       <button
                         onClick={() => setQuotaOrg(org)}
-                        className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600
-                                   text-gray-500 hover:border-emerald-400 hover:text-emerald-600 transition-colors"
+                        className="text-xs px-2.5 py-1 rounded-lg border border-ink-7 dark:border-gray-600
+                                   text-ink-3 hover:border-emerald-400 hover:text-emerald-600 transition-colors"
                         title="Manage quotas"
                       >
                         Quotas
                       </button>
                       <button
                         onClick={() => setBrandingOrg(org)}
-                        className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600
-                                   text-gray-500 hover:border-pink-400 hover:text-pink-600 transition-colors"
+                        className="text-xs px-2.5 py-1 rounded-lg border border-ink-7 dark:border-gray-600
+                                   text-ink-3 hover:border-pink-400 hover:text-pink-600 transition-colors"
                         title="View organization settings"
                       >
                         Settings
                       </button>
                       <button
                         onClick={() => openEdit(org)}
-                        className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600
-                                   text-gray-500 hover:border-primary hover:text-primary transition-colors"
+                        className="text-xs px-2.5 py-1 rounded-lg border border-ink-7 dark:border-gray-600
+                                   text-ink-3 hover:border-primary hover:text-primary transition-colors"
                       >
                         Edit
                       </button>
@@ -530,7 +531,7 @@ function OrgFormModal({ editOrg, form, saving, onClose, onSubmit, onNameChange, 
                   >
                     <input
                       type="checkbox"
-                      className="mt-0.5 rounded accent-indigo-600"
+                      className="mt-0.5 rounded accent-brand"
                       checked={active}
                       onChange={() => onToggleFeature(feat.key)}
                     />
@@ -570,7 +571,7 @@ function OrgFormModal({ editOrg, form, saving, onClose, onSubmit, onNameChange, 
 /* ── Plan Assignment modal ───────────────────────────────────────────────── */
 const PLANS = [
   { value: 'FREE',         label: 'Free',         desc: '3 users · 50 docs/mo · 512 MB · 1,000 API calls', cls: 'border-gray-200 dark:border-gray-600' },
-  { value: 'PROFESSIONAL', label: 'Professional', desc: '25 users · 500 docs/mo · 5 GB · 10,000 API calls', cls: 'border-indigo-300 dark:border-indigo-600' },
+  { value: 'PROFESSIONAL', label: 'Professional', desc: '25 users · 500 docs/mo · 5 GB · 10,000 API calls', cls: 'border-brand-300 dark:border-brand-600' },
   { value: 'ENTERPRISE',   label: 'Enterprise',   desc: 'Unlimited users, docs, storage, and API calls',    cls: 'border-amber-300 dark:border-amber-600'  },
 ]
 
@@ -654,7 +655,7 @@ function PlanModal({ org, onClose, onUpdated }) {
                       value={p.value}
                       checked={plan === p.value}
                       onChange={() => setPlan(p.value)}
-                      className="mt-0.5 accent-indigo-600"
+                      className="mt-0.5 accent-brand"
                     />
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
@@ -821,7 +822,7 @@ function BrandingPreviewModal({ org, onClose }) {
       .finally(() => setLoading(false))
   }, [org.id])
 
-  const color = branding?.primaryColor || '#6366f1'
+  const color = branding?.primaryColor || '#2F5BF0'
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -1023,7 +1024,10 @@ function ManageFeaturesModal({ org, onClose, onUpdated }) {
                             : { background: '#f3f4f6', color: '#9ca3af' }
                           }
                         >
-                          {active ? '✓ Enabled' : '✗ Disabled'}
+                          <span className="inline-flex items-center gap-1">
+                            {active ? <IconCheck className="w-3 h-3" /> : <IconX className="w-3 h-3" />}
+                            {active ? 'Enabled' : 'Disabled'}
+                          </span>
                         </span>
                       </div>
                     </div>

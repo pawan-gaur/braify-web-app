@@ -5,13 +5,13 @@ import PublicNavbar, { BraiLogo } from '../components/layout/PublicNavbar'
 const FEATURES = {
   'pdf-builder': {
     label: 'PDF Builder',
-    color: '#6366f1',
-    gradient: 'linear-gradient(135deg,#6366f1,#4f46e5)',
+    color: '#2F5BF0',
+    gradient: 'linear-gradient(135deg,#2F5BF0,#6D52E8)',
     icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9v11a2 2 0 01-2 2z',
     tagline: 'Design stunning PDFs without writing a single line of code',
     desc: 'Our visual drag-and-drop PDF template editor gives any team the power to build professional documents — from invoices and legal contracts to certificates and sales proposals. Choose from our starter gallery or design from scratch.',
     badge: 'PDF Templates',
-    badgeColor: 'bg-indigo-100 text-indigo-700',
+    badgeColor: 'bg-brand-100 text-brand-700',
     steps: [
       { step: '01', title: 'Create or pick a template', body: 'Browse the 7-category starter gallery (Invoice, Receipt, Legal, Certificate, Business Letter, Quotation, Report) or start from a blank canvas.' },
       { step: '02', title: 'Design with drag-and-drop', body: 'Add text blocks, images, tables, dividers and signature areas. Use Handlebars-style placeholders ({{customer_name}}, {{invoice_total}}) for dynamic data.' },
@@ -52,13 +52,13 @@ Content-Type: application/json
 
   'email-templates': {
     label: 'Email Templates',
-    color: '#8b5cf6',
-    gradient: 'linear-gradient(135deg,#8b5cf6,#6d28d9)',
+    color: '#6D52E8',
+    gradient: 'linear-gradient(135deg,#6D52E8,#6d28d9)',
     icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
     tagline: 'Build, brand and send emails — all from one visual editor',
     desc: 'Design rich HTML email templates with GrapesJS, fill in placeholder data, and send instantly via the Resend integration. Every delivery is logged in the audit trail. Version history means you never lose a working design.',
     badge: 'Email Templates',
-    badgeColor: 'bg-purple-100 text-purple-700',
+    badgeColor: 'bg-accent-100 text-accent-700',
     steps: [
       { step: '01', title: 'Build your template', body: 'Open the GrapesJS visual email editor. Add columns, text, images, buttons and dividers. Use {{placeholder}} syntax for dynamic fields like recipient name or custom values.' },
       { step: '02', title: 'Fill & preview', body: 'Before sending, open the Preview Data modal to substitute placeholder values with real data and see exactly how the email will look.' },
@@ -470,7 +470,7 @@ export default function FeatureDetailPage() {
             </div>
             <p className="text-center mt-6 text-sm text-gray-500">
               Full Swagger documentation available at{' '}
-              <span className="text-indigo-400 font-mono">/api-docs</span>
+              <span className="text-brand-400 font-mono">/api-docs</span>
               {' '}after sign-in.
             </p>
           </div>
@@ -493,7 +493,7 @@ export default function FeatureDetailPage() {
                       style={{ background: feat.color + '20' }}>
                       <Icon d={feat.icon} className="w-4 h-4" style={{ color: feat.color }} />
                     </div>
-                    <p className="font-bold text-gray-900 text-sm group-hover:text-indigo-600 transition-colors">
+                    <p className="font-bold text-gray-900 text-sm group-hover:text-brand-600 transition-colors">
                       {n.label}
                     </p>
                   </button>

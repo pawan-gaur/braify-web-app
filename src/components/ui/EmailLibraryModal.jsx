@@ -2,9 +2,9 @@ import { useState, useMemo } from 'react'
 import { EMAIL_LIBRARY, LIBRARY_CATEGORIES } from '../../data/emailLibraryTemplates'
 
 const ACCENT_COLORS = {
-  transactional: { bg: 'bg-indigo-50 dark:bg-indigo-900/20', text: 'text-indigo-600 dark:text-indigo-400', border: 'border-indigo-200 dark:border-indigo-800' },
+  transactional: { bg: 'bg-brand-50 dark:bg-brand-900/20', text: 'text-brand-600 dark:text-brand-400', border: 'border-brand-200 dark:border-brand-800' },
   marketing:     { bg: 'bg-orange-50 dark:bg-orange-900/20', text: 'text-orange-600 dark:text-orange-400', border: 'border-orange-200 dark:border-orange-800' },
-  onboarding:    { bg: 'bg-violet-50 dark:bg-violet-900/20', text: 'text-violet-600 dark:text-violet-400', border: 'border-violet-200 dark:border-violet-800' },
+  onboarding:    { bg: 'bg-accent-50 dark:bg-accent-900/20', text: 'text-accent-600 dark:text-accent-400', border: 'border-accent-200 dark:border-accent-800' },
   notification:  { bg: 'bg-amber-50 dark:bg-amber-900/20',  text: 'text-amber-600 dark:text-amber-400',  border: 'border-amber-200 dark:border-amber-800'  },
   operational:   { bg: 'bg-sky-50 dark:bg-sky-900/20',      text: 'text-sky-700 dark:text-sky-400',      border: 'border-sky-200 dark:border-sky-800'      },
 }
@@ -68,14 +68,14 @@ export default function EmailLibraryModal({ onClose, onSelect }) {
                 className={`w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium
                             transition-colors text-left ${
                   activeCategory === cat.key
-                    ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                    ? 'bg-white dark:bg-gray-700 text-brand-600 dark:text-brand-400 shadow-sm'
                     : 'text-gray-600 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-gray-700/50'
                 }`}
               >
                 <span>{cat.label}</span>
                 <span className={`text-xs px-1.5 py-0.5 rounded-full ${
                   activeCategory === cat.key
-                    ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400'
+                    ? 'bg-brand-100 dark:bg-brand-900/40 text-brand-600 dark:text-brand-400'
                     : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
                 }`}>{cat.count}</span>
               </button>
@@ -88,7 +88,7 @@ export default function EmailLibraryModal({ onClose, onSelect }) {
               onClick={() => handleUse(null)}
               className="w-full py-2 text-sm font-medium rounded-xl border border-dashed
                          border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400
-                         hover:border-indigo-400 hover:text-indigo-600 transition-colors"
+                         hover:border-brand-400 hover:text-brand-600 transition-colors"
             >
               + Start blank
             </button>
@@ -112,7 +112,7 @@ export default function EmailLibraryModal({ onClose, onSelect }) {
                 onChange={e => setSearch(e.target.value)}
                 className="w-full pl-9 pr-4 py-2 text-sm rounded-xl border border-gray-200 dark:border-gray-700
                            bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-                           focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                           focus:outline-none focus:ring-2 focus:ring-brand-500"
                 autoFocus
               />
             </div>
@@ -138,7 +138,7 @@ export default function EmailLibraryModal({ onClose, onSelect }) {
                   </svg>
                   <p className="text-sm font-medium">No templates match your search</p>
                   <button onClick={() => { setSearch(''); setActiveCategory('all') }}
-                    className="mt-2 text-sm text-indigo-500 hover:underline">Clear filters</button>
+                    className="mt-2 text-sm text-brand-500 hover:underline">Clear filters</button>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
@@ -181,8 +181,8 @@ function LibraryCard({ template, isSelected, onClick, onUse }) {
       onClick={onClick}
       className={`group cursor-pointer rounded-xl border-2 overflow-hidden transition-all ${
         isSelected
-          ? 'border-indigo-500 ring-2 ring-indigo-200 dark:ring-indigo-900'
-          : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700'
+          ? 'border-brand-500 ring-2 ring-brand-200 dark:ring-brand-900'
+          : 'border-gray-200 dark:border-gray-700 hover:border-brand-300 dark:hover:border-brand-700'
       }`}
     >
       {/* Mini HTML preview */}
@@ -191,13 +191,13 @@ function LibraryCard({ template, isSelected, onClick, onUse }) {
           <div dangerouslySetInnerHTML={{ __html: template.htmlContent }} />
         </div>
         {/* Hover overlay */}
-        <div className="absolute inset-0 bg-indigo-600/0 group-hover:bg-indigo-600/5 transition-colors
+        <div className="absolute inset-0 bg-brand-600/0 group-hover:bg-brand-600/5 transition-colors
                         flex items-center justify-center">
           <button
             onClick={e => { e.stopPropagation(); onUse() }}
             className="opacity-0 group-hover:opacity-100 transition-opacity
-                       px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl shadow-lg
-                       hover:bg-indigo-700"
+                       px-4 py-2 bg-brand-600 text-white text-xs font-bold rounded-xl shadow-lg
+                       hover:bg-brand-700"
           >
             Use this template
           </button>
@@ -275,7 +275,7 @@ function PreviewPanel({ template, onClose, onUse }) {
         <button
           onClick={onUse}
           className="w-full py-2.5 text-sm font-bold rounded-xl text-white transition-all hover:opacity-90"
-          style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}
+          style={{ background: 'linear-gradient(135deg,#2F5BF0,#6D52E8)' }}
         >
           Use this template →
         </button>

@@ -51,8 +51,8 @@ export default function LogoUpload({ currentLogo, onLogoChange, label = 'Organis
         className={`relative flex flex-col items-center justify-center gap-3 w-full rounded-2xl border-2 border-dashed
           cursor-pointer transition-all select-none
           ${dragging
-            ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20'
-            : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 hover:border-indigo-300 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10'
+            ? 'border-brand-400 bg-brand-50 dark:bg-brand-900/20'
+            : 'border-ink-7 dark:border-gray-700 bg-ink-8 dark:bg-gray-800/50 hover:border-brand-300 hover:bg-brand-50/50 dark:hover:bg-brand-900/10'
           }
           ${currentLogo ? 'py-4' : 'py-10'}`}
       >
@@ -65,14 +65,14 @@ export default function LogoUpload({ currentLogo, onLogoChange, label = 'Organis
               className="max-h-20 max-w-[240px] object-contain rounded-lg"
               onClick={e => e.stopPropagation()}
             />
-            <p className="text-xs text-gray-400">Click anywhere to replace</p>
+            <p className="text-xs text-ink-4">Click anywhere to replace</p>
           </div>
         ) : (
           /* Upload prompt */
           <div className="flex flex-col items-center gap-2 text-center pointer-events-none">
             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors
-              ${dragging ? 'bg-indigo-100 dark:bg-indigo-900/40' : 'bg-gray-100 dark:bg-gray-700'}`}>
-              <svg className={`w-6 h-6 transition-colors ${dragging ? 'text-indigo-500' : 'text-gray-400'}`}
+              ${dragging ? 'bg-brand-100 dark:bg-brand-900/40' : 'bg-ink-8 dark:bg-gray-700'}`}>
+              <svg className={`w-6 h-6 transition-colors ${dragging ? 'text-brand-500' : 'text-ink-4'}`}
                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                   d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
@@ -82,7 +82,7 @@ export default function LogoUpload({ currentLogo, onLogoChange, label = 'Organis
               <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
                 {dragging ? 'Drop to upload' : 'Drag & drop your logo here'}
               </p>
-              <p className="text-xs text-gray-400 mt-0.5">or click to browse — PNG, JPG, SVG · max 2 MB</p>
+              <p className="text-xs text-ink-4 mt-0.5">or click to browse — PNG, JPG, SVG · max 2 MB</p>
             </div>
           </div>
         )}

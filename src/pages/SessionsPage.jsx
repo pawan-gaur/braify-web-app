@@ -12,8 +12,8 @@ const CRUMBS = [
 ]
 
 const ROLE_BADGE = {
-  PLATFORM_ADMIN: 'bg-violet-100 text-violet-700',
-  ORG_ADMIN:      'bg-indigo-100 text-indigo-700',
+  PLATFORM_ADMIN: 'bg-accent-100 text-accent-700',
+  ORG_ADMIN:      'bg-brand-100 text-brand-700',
   ADMIN:          'bg-blue-100   text-blue-700',
   USER:           'bg-gray-100   text-gray-600',
 }
@@ -59,7 +59,7 @@ function Avatar({ name, email, size = 'sm' }) {
   const initials = name
     ? name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
     : '?'
-  const colors = ['bg-indigo-500', 'bg-violet-500', 'bg-pink-500', 'bg-emerald-500', 'bg-amber-500']
+  const colors = ['bg-brand-500', 'bg-accent-500', 'bg-pink-500', 'bg-emerald-500', 'bg-amber-500']
   const bg = colors[(email?.charCodeAt(0) ?? 0) % colors.length]
   return (
     <div className={`${s} ${bg} rounded-full flex items-center justify-center text-white font-bold shrink-0`}>
@@ -137,8 +137,8 @@ export default function SessionsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mt-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Active Sessions</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-ink dark:text-white">Active Sessions</h1>
+          <p className="text-sm text-ink-3 mt-1">
             {isUser
               ? 'Manage your active login sessions.'
               : 'Monitor and manage active login sessions based on your role.'}
@@ -170,8 +170,8 @@ export default function SessionsPage() {
 
       {/* Stats bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        <StatCard label="Total Active" value={sessions.length} color="indigo" />
-        <StatCard label="My Sessions"  value={mySessions.length} color="violet" />
+        <StatCard label="Total Active" value={sessions.length} color="brand" />
+        <StatCard label="My Sessions"  value={mySessions.length} color="accent" />
         {!isUser && <StatCard label="Others' Sessions" value={otherSessions.length} color="sky" />}
         <StatCard label="Current"      value={sessions.filter(s => s.current).length} color="emerald" />
       </div>
@@ -203,13 +203,13 @@ export default function SessionsPage() {
 
       {/* Session list */}
       {loading ? (
-        <div className="card flex items-center justify-center py-20 text-gray-400 gap-3">
+        <div className="card flex items-center justify-center py-20 text-ink-4 gap-3">
           <Spinner className="h-5 w-5 text-primary" />
           Loading sessions…
         </div>
       ) : displayed.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center py-20 text-gray-400">
-          <svg className="w-10 h-10 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="card flex flex-col items-center justify-center py-20 text-ink-4">
+          <svg className="w-10 h-10 mb-3 text-ink-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
               d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
@@ -221,16 +221,16 @@ export default function SessionsPage() {
           {displayed.map(s => (
             <div key={s.id}
               className={`card p-5 flex flex-col gap-3
-                ${s.current ? 'ring-2 ring-indigo-400 dark:ring-indigo-600' : ''}`}>
+                ${s.current ? 'ring-2 ring-brand-400 dark:ring-brand-600' : ''}`}>
               <div className="flex items-start gap-3">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0
                   ${s.current
-                    ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600'
+                    ? 'bg-brand-100 dark:bg-brand-900/40 text-brand-600'
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-500'}`}>
                   <DeviceIcon ua={s.deviceInfo} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-800 dark:text-gray-200 text-sm truncate">
+                  <p className="font-semibold text-ink dark:text-gray-200 text-sm truncate">
                     {parseDevice(s.deviceInfo)}
                   </p>
                   {s.current && (
@@ -246,7 +246,7 @@ export default function SessionsPage() {
                 <div className="flex items-center gap-2">
                   <Avatar name={s.userName} email={s.userEmail} size="sm" />
                   <div className="min-w-0">
-                    <p className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{s.userName}</p>
+                    <p className="text-xs font-medium text-ink-2 dark:text-gray-300 truncate">{s.userName}</p>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${ROLE_BADGE[s.userRole] || 'bg-gray-100 text-gray-600'}`}>
                       {s.userRole?.replace('_', ' ')}
                     </span>
@@ -254,19 +254,19 @@ export default function SessionsPage() {
                 </div>
               )}
 
-              <div className="space-y-1 text-xs text-gray-500">
+              <div className="space-y-1 text-xs text-ink-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-gray-400 w-20 shrink-0">IP</span>
-                  <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-gray-600 dark:text-gray-300">
+                  <span className="text-ink-4 w-20 shrink-0">IP</span>
+                  <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-ink-2 dark:text-gray-300">
                     {s.ipAddress || '—'}
                   </code>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-gray-400 w-20 shrink-0">Last active</span>
+                  <span className="text-ink-4 w-20 shrink-0">Last active</span>
                   <span title={fmtDateTime(s.lastUsedAt)}>{timeSince(s.lastUsedAt)}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-gray-400 w-20 shrink-0">Signed in</span>
+                  <span className="text-ink-4 w-20 shrink-0">Signed in</span>
                   <span>{fmtDateTime(s.createdAt)}</span>
                 </div>
               </div>
@@ -288,14 +288,14 @@ export default function SessionsPage() {
         <div className="card p-0 overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Device</th>
-                {!isUser && <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">User</th>}
-                {isPlatformAdmin && <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Organization</th>}
-                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">IP Address</th>
-                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Last Active</th>
-                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Signed In</th>
-                <th className="text-left px-5 py-3 text-xs font-bold text-gray-500 uppercase tracking-wide">Expires</th>
+              <tr className="border-b border-ink-7 dark:border-gray-700 bg-ink-8 dark:bg-gray-900/50">
+                <th className="text-left px-5 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">Device</th>
+                {!isUser && <th className="text-left px-5 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">User</th>}
+                {isPlatformAdmin && <th className="text-left px-5 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">Organization</th>}
+                <th className="text-left px-5 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">IP Address</th>
+                <th className="text-left px-5 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">Last Active</th>
+                <th className="text-left px-5 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">Signed In</th>
+                <th className="text-left px-5 py-3 text-xs font-bold text-ink-3 uppercase tracking-wide">Expires</th>
                 <th className="px-5 py-3"/>
               </tr>
             </thead>
@@ -304,20 +304,20 @@ export default function SessionsPage() {
                 <tr key={s.id}
                   className={`transition-colors group
                     ${s.current
-                      ? 'bg-indigo-50/40 dark:bg-indigo-900/10'
-                      : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'}`}>
+                      ? 'bg-brand-50/40 dark:bg-brand-900/10'
+                      : 'hover:bg-ink-8 dark:hover:bg-gray-700/30'}`}>
 
                   {/* Device */}
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
                       <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0
                         ${s.current
-                          ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600'
+                          ? 'bg-brand-100 dark:bg-brand-900/40 text-brand-600'
                           : 'bg-gray-100 dark:bg-gray-700 text-gray-500'}`}>
                         <DeviceIcon ua={s.deviceInfo} />
                       </div>
                       <div>
-                        <p className="font-medium text-gray-800 dark:text-gray-200 text-xs">
+                        <p className="font-medium text-ink dark:text-gray-200 text-xs">
                           {parseDevice(s.deviceInfo)}
                           {s.current && (
                             <span className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">
@@ -326,7 +326,7 @@ export default function SessionsPage() {
                             </span>
                           )}
                         </p>
-                        <p className="text-[11px] text-gray-400 truncate max-w-[180px] mt-0.5" title={s.deviceInfo}>
+                        <p className="text-[11px] text-ink-4 truncate max-w-[180px] mt-0.5" title={s.deviceInfo}>
                           {s.deviceInfo || 'Unknown agent'}
                         </p>
                       </div>
@@ -339,7 +339,7 @@ export default function SessionsPage() {
                       <div className="flex items-center gap-2.5">
                         <Avatar name={s.userName} email={s.userEmail} />
                         <div>
-                          <p className="font-medium text-gray-800 dark:text-gray-200 text-xs">{s.userName}</p>
+                          <p className="font-medium text-ink dark:text-gray-200 text-xs">{s.userName}</p>
                           <div className="flex items-center gap-1.5 mt-0.5">
                             <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${ROLE_BADGE[s.userRole] || 'bg-gray-100 text-gray-600'}`}>
                               {s.userRole?.replace('_', ' ')}
@@ -352,30 +352,30 @@ export default function SessionsPage() {
 
                   {/* Organization */}
                   {isPlatformAdmin && (
-                    <td className="px-5 py-3.5 text-xs text-gray-500">
-                      {s.organizationName || s.organizationId || <span className="text-gray-300">—</span>}
+                    <td className="px-5 py-3.5 text-xs text-ink-3">
+                      {s.organizationName || s.organizationId || <span className="text-ink-4">—</span>}
                     </td>
                   )}
 
                   {/* IP */}
                   <td className="px-5 py-3.5">
-                    <code className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-gray-600 dark:text-gray-300">
+                    <code className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-ink-2 dark:text-gray-300">
                       {s.ipAddress || '—'}
                     </code>
                   </td>
 
                   {/* Last active */}
-                  <td className="px-5 py-3.5 text-xs text-gray-500">
+                  <td className="px-5 py-3.5 text-xs text-ink-3">
                     <span title={fmtDateTime(s.lastUsedAt)}>{timeSince(s.lastUsedAt)}</span>
                   </td>
 
                   {/* Signed in */}
-                  <td className="px-5 py-3.5 text-xs text-gray-400">
+                  <td className="px-5 py-3.5 text-xs text-ink-4">
                     {fmtDateTime(s.createdAt)}
                   </td>
 
                   {/* Expires */}
-                  <td className="px-5 py-3.5 text-xs text-gray-400">
+                  <td className="px-5 py-3.5 text-xs text-ink-4">
                     {fmtDateTime(s.expiresAt)}
                   </td>
 
@@ -402,7 +402,7 @@ export default function SessionsPage() {
       )}
 
       {/* Legend */}
-      <p className="text-xs text-gray-400 mt-4 text-center">
+      <p className="text-xs text-ink-4 mt-4 text-center">
         Sessions automatically expire after 24 hours of inactivity.
         Revoking a session signs the user out immediately.
       </p>
@@ -413,13 +413,13 @@ export default function SessionsPage() {
 /* ── Mini components ── */
 function StatCard({ label, value, color }) {
   const colors = {
-    indigo:  'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-800',
-    violet:  'bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 border-violet-100 dark:border-violet-800',
+    brand:   'bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 border-brand-100 dark:border-brand-800',
+    accent:  'bg-accent-50 dark:bg-accent-900/20 text-accent-600 dark:text-accent-400 border-accent-100 dark:border-accent-700',
     sky:     'bg-sky-50 dark:bg-sky-900/20 text-sky-600 dark:text-sky-400 border-sky-100 dark:border-sky-800',
     emerald: 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800',
   }
   return (
-    <div className={`rounded-xl border px-4 py-3 ${colors[color] || colors.indigo}`}>
+    <div className={`rounded-xl border px-4 py-3 ${colors[color] || colors.brand}`}>
       <p className="text-2xl font-bold">{value}</p>
       <p className="text-xs font-medium mt-0.5 opacity-70">{label}</p>
     </div>

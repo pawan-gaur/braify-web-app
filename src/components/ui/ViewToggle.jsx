@@ -23,15 +23,15 @@ export function useView(storageKey, defaultView = 'grid') {
  */
 export default function ViewToggle({ view, onChange }) {
   return (
-    <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5 gap-0.5">
+    <div className="flex items-center bg-ink-8 dark:bg-gray-700 rounded-lg p-0.5 gap-0.5">
       {/* Card / Grid */}
       <button
         onClick={() => onChange('grid')}
         title="Card view"
         className={`p-1.5 rounded-md transition-all ${
           view === 'grid'
-            ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
-            : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
+            ? 'bg-gradient-accent text-white shadow-soft'
+            : 'text-ink-4 hover:text-ink dark:hover:text-gray-200'
         }`}
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -49,8 +49,8 @@ export default function ViewToggle({ view, onChange }) {
         title="Table view"
         className={`p-1.5 rounded-md transition-all ${
           view === 'table'
-            ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
-            : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
+            ? 'bg-gradient-accent text-white shadow-soft'
+            : 'text-ink-4 hover:text-ink dark:hover:text-gray-200'
         }`}
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -5,6 +5,7 @@ import { getTemplate, createTemplate, updateTemplate } from '../services/api'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
+import { IconArrowLeft } from '../components/ui/icons'
 
 export default function BuilderPage() {
   const { id }       = useParams()
@@ -87,8 +88,9 @@ export default function BuilderPage() {
           </svg>
           {fatalError}
         </div>
-        <button className="btn btn-secondary mt-3" onClick={() => navigate('/templates')}>
-          ← Back to Templates
+        <button className="btn btn-secondary mt-3 inline-flex items-center gap-1.5" onClick={() => navigate('/templates')}>
+          <IconArrowLeft />
+          Back to Templates
         </button>
       </div>
     )

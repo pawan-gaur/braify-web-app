@@ -10,7 +10,7 @@ export default function SharedBadge({ sourceOrgName, size = 'sm' }) {
   return (
     <span
       className={`inline-flex items-center font-semibold rounded-full whitespace-nowrap
-                  bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300
+                  bg-accent-100 text-accent-700 dark:bg-accent-900/40 dark:text-accent-300
                   ${px}`}
       title={`Shared by ${sourceOrgName}`}
     >
