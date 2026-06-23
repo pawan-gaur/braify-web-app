@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useAuth, ROLES } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
@@ -53,11 +53,26 @@ export default function PlatformSecurityPoliciesPage() {
   const { user } = useAuth()
   const { addToast } = useToast()
 
-  const [settings, setSettings] = useState(loadPlatformSettings)
-  const [baseline, setBaseline] = useState(() => JSON.stringify(loadPlatformSettings()))
+  const [settings, setSettings] = useState(null)
+  const [baseline, setBaseline] = useState('')
+  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
+  useEffect(() => {
+    let alive = true
+    loadPlatformSettings().then(s => {
+      if (!alive) return
+      setSettings(s); setBaseline(JSON.stringify(s)); setLoading(false)
+    })
+    return () => { alive = false }
+  }, [])
+
   if (user && user.role !== ROLES.PLATFORM_ADMIN) return <Navigate to="/dashboard" replace />
+  if (loading || !settings) return (
+    <div className="max-w-6xl mx-auto px-6 py-8 flex justify-center items-center min-h-[50vh]">
+      <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
 
   const sec = settings.security
   const dirty = JSON.stringify(settings) !== baseline
@@ -69,8 +84,9 @@ export default function PlatformSecurityPoliciesPage() {
   const save = async () => {
     setSaving(true)
     try {
-      await savePlatformSettings(settings)
-      setBaseline(JSON.stringify(settings))
+      const saved = await savePlatformSettings(settings)
+      setSettings(saved)
+      setBaseline(JSON.stringify(saved))
       addToast({ type: 'success', message: 'Security policies saved — applied platform-wide.' })
     } catch {
       addToast({ type: 'error', message: 'Could not save security policies.' })
@@ -211,7 +227,7 @@ export default function PlatformSecurityPoliciesPage() {
       )}
 
       <p className="mt-4 text-[11px] text-ink-4">
-        Saved to this browser for now — the platform-settings API will be connected next.
+        Changes are saved platform-wide and recorded in the audit log.
       </p>
     </div>
   )

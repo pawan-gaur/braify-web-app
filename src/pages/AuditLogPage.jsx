@@ -25,6 +25,7 @@ const ACTION_BADGE = {
   SESSION_REVOKED:  'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
   SENT:             'bg-teal-100   text-teal-700   dark:bg-teal-900/30   dark:text-teal-400',
   FEATURES_UPDATED: 'bg-accent-100 text-accent-700 dark:bg-accent-900/30 dark:text-accent-400',
+  PLATFORM_SETTINGS_UPDATED: 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400',
   CANCELLED:        'bg-gray-100   text-gray-600   dark:bg-gray-700/40   dark:text-gray-400',
 }
 
@@ -42,6 +43,7 @@ const ACTION_ICON = {
   SENT:             'M12 19l9 2-9-18-9 18 9-2zm0 0v-8',
   FEATURES_UPDATED: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z',
   CANCELLED:        'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z',
+  PLATFORM_SETTINGS_UPDATED: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z',
 }
 
 // ── Resource type meta ──────────────────────────────────────────────────────
@@ -51,6 +53,7 @@ const RESOURCE_LABEL = {
   USER:           { label: 'User / Profile', color: 'bg-sky-50    text-sky-600    dark:bg-sky-900/20    dark:text-sky-400' },
   ORGANIZATION:   { label: 'Organization',   color: 'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400' },
   E_SIGN:         { label: 'E-Sign',         color: 'bg-teal-50   text-teal-600   dark:bg-teal-900/20   dark:text-teal-400' },
+  PLATFORM:       { label: 'Platform',       color: 'bg-brand-50  text-brand-600  dark:bg-brand-900/20  dark:text-brand-400' },
 }
 
 // ── Severity dot ───────────────────────────────────────────────────────────
@@ -83,11 +86,12 @@ const RESOURCE_TYPES = [
   { value: 'E_SIGN',         label: 'E-Sign' },
   { value: 'ORGANIZATION',   label: 'Organization' },
   { value: 'USER',           label: 'User / Profile' },
+  { value: 'PLATFORM',       label: 'Platform' },
 ]
 
 // ── Action filter pills ─────────────────────────────────────────────────────
 const ALL_ACTIONS  = ['ALL', 'CREATED', 'UPDATED', 'DELETED', 'RESTORED', 'SENT',
-                      'FEATURES_UPDATED', 'CANCELLED',
+                      'FEATURES_UPDATED', 'PLATFORM_SETTINGS_UPDATED', 'CANCELLED',
                       'PASSWORD_CHANGED', 'AVATAR_UPDATED',
                       'DEACTIVATED', 'ACTIVATED', 'SESSION_REVOKED']
 const USER_ACTIONS = ['ALL', 'CREATED', 'UPDATED', 'DELETED', 'RESTORED',

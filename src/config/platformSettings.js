@@ -2,19 +2,15 @@
  * Platform-wide settings — managed by PLATFORM_ADMIN only, inherited by every
  * organisation, org admin, admin and user across the platform.
  *
- * ──────────────────────────────────────────────────────────────────────────
- * FRONTEND-ONLY persistence for now: settings are stored in localStorage so the
- * UI is fully functional while the backend is designed. The ONLY integration
- * points to swap later are `loadPlatformSettings()` / `savePlatformSettings()`:
- *
+ * Backed by the platform settings API (PLATFORM_ADMIN-only):
  *   loadPlatformSettings()  →  GET  /api/platform/settings
  *   savePlatformSettings(s) →  PUT  /api/platform/settings
  *
- * The shape below is intended to map 1:1 onto the backend document.
- * ──────────────────────────────────────────────────────────────────────────
+ * The shape below maps 1:1 onto the backend document; DEFAULT_PLATFORM_SETTINGS
+ * is used to fill in any missing keys and as the "reset to defaults" source.
  */
 
-const STORAGE_KEY = 'braify-platform-settings'
+import { http } from '../services/api'
 
 export const DEFAULT_PLATFORM_SETTINGS = {
   security: {
@@ -74,20 +70,20 @@ function withDefaults(defaults, stored) {
   return out
 }
 
+/** GET the platform settings (PLATFORM_ADMIN only). Falls back to defaults on error. */
 export function loadPlatformSettings() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return clone(DEFAULT_PLATFORM_SETTINGS)
-    return withDefaults(DEFAULT_PLATFORM_SETTINGS, JSON.parse(raw))
-  } catch {
-    return clone(DEFAULT_PLATFORM_SETTINGS)
-  }
+  return http.get('/platform/settings')
+    .then(r => withDefaults(DEFAULT_PLATFORM_SETTINGS, r.data))
+    .catch(() => clone(DEFAULT_PLATFORM_SETTINGS))
 }
 
+/** PUT the platform settings; returns the server-sanitised result. */
 export function savePlatformSettings(settings) {
-  // TODO(backend): replace with `return http.put('/platform/settings', settings).then(r => r.data)`
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
-  return Promise.resolve(settings)
+  return http.put('/platform/settings', settings)
+    .then(r => withDefaults(DEFAULT_PLATFORM_SETTINGS, r.data))
 }
 
-export { STORAGE_KEY as PLATFORM_SETTINGS_KEY }
+/** Deep clone of the defaults — used by "reset to defaults". */
+export function defaultPlatformSettings() {
+  return clone(DEFAULT_PLATFORM_SETTINGS)
+}

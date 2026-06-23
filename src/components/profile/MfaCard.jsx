@@ -112,7 +112,7 @@ export default function MfaCard() {
             Add a second step at sign-in using an authenticator app (Google Authenticator, Authy, 1Password…).
             {policy === 'REQUIRED' && (
               <span className="block mt-1 text-amber-600 dark:text-amber-400 font-medium">
-                Your organization requires 2FA.
+                2FA is required by policy.
               </span>
             )}
           </p>
@@ -164,7 +164,7 @@ export default function MfaCard() {
             )}
           </div>
           {policy === 'REQUIRED' && (
-            <p className="text-xs text-gray-400">Your organization requires 2FA, so it can't be turned off.</p>
+            <p className="text-xs text-gray-400">2FA is required by policy, so it can't be turned off.</p>
           )}
         </div>
       )}
