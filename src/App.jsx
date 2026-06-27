@@ -87,11 +87,11 @@ function ESignDocumentRouter() {
     </div>
   )
 
-  // DRAFT, PENDING, IN_REVIEW → builder (fields can be edited / doc can be sent)
-  // COMPLETED, CANCELLED, EXPIRED → read-only detail view
-  // Pass the already-fetched status as a prop so ESignBuilderPage knows
-  // immediately whether to show the Send step or navigate back after saving.
-  return ['DRAFT', 'PENDING', 'IN_REVIEW'].includes(status)
+  // DRAFT → builder (still being authored: place fields / send).
+  // Everything else (PENDING, IN_REVIEW, SIGNED, COMPLETED, …) → detail/view page.
+  // Editing a still-editable sent document (PENDING / IN_REVIEW) is reached via the
+  // explicit "Edit" button on the detail page → /esign/:id/edit (ESignBuilderPage).
+  return status === 'DRAFT'
     ? <ESignBuilderPage initialDocStatus={status} />
     : <ESignDetailPage />
 }
@@ -141,6 +141,7 @@ function Shell() {
           <Route path="/esign/new"      element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignBuilderPage /></FeatureRoute>} />
           <Route path="/esign/bulk"     element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignBulkPage /></FeatureRoute>} />
           <Route path="/esign/:id"      element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignDocumentRouter /></FeatureRoute>} />
+          <Route path="/esign/:id/edit" element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignBuilderPage /></FeatureRoute>} />
           <Route path="/esign/:id/view" element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignDetailPage /></FeatureRoute>} />
 
           {/* ── File Storage (feature-gated) ── */}

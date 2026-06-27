@@ -171,6 +171,21 @@ export default function ESignDetailPage() {
 
           {/* Actions */}
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Edit — only while the client hasn't signed yet (DRAFT / PENDING / IN_REVIEW) */}
+            {['DRAFT', 'PENDING', 'IN_REVIEW'].includes(doc.status) && (
+              <button
+                onClick={() => navigate(`/esign/${id}/edit`)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold
+                           border border-brand-300 text-brand bg-brand-50
+                           hover:bg-brand-100 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+                Edit
+              </button>
+            )}
             {isCompleted && (
               <button
                 onClick={handleDownload}
