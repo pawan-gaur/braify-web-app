@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth, ROLES } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { getQuotaConfig, getUsageHistory } from '../services/api'
+import { getQuotaConfig, getUsageHistory, getAllOrgUsage } from '../services/api'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import QuotaProgressBar from '../components/ui/QuotaProgressBar'
@@ -19,6 +19,18 @@ const MONTH_LABELS = [
 
 function fmtMonth(year, month) {
   return `${MONTH_LABELS[month - 1]} ${year}`
+}
+
+/** Renders a "used / limit" cell; shows ∞ when unlimited (-1). */
+function usageCell(cur, lim, unit = '') {
+  const c = (cur ?? 0).toLocaleString()
+  if (lim === -1 || lim == null) return <span>{c}{unit} <span className="text-ink-5">/ ∞</span></span>
+  const over = lim > 0 && cur / lim >= 0.8
+  return (
+    <span className={over ? 'text-amber-600 dark:text-amber-400 font-semibold' : ''}>
+      {c}{unit} <span className="text-ink-5">/ {lim.toLocaleString()}{unit}</span>
+    </span>
+  )
 }
 
 /** Micro bar-chart row for usage history */
@@ -40,7 +52,6 @@ function UsageHistoryChart({ history, field, label, color = '#2F5BF0', unit = ''
                 style={{ height: `${Math.max(pct, 4)}%`, background: color, opacity: 0.8 }}
                 title={`${fmtMonth(h.year, h.month)}: ${val.toLocaleString()}${unit}`}
               >
-                {/* Tooltip on hover */}
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1
                                 pointer-events-none opacity-0 group-hover:opacity-100
                                 bg-gray-900 text-white text-[10px] font-semibold px-2 py-1 rounded-lg
@@ -48,7 +59,7 @@ function UsageHistoryChart({ history, field, label, color = '#2F5BF0', unit = ''
                   {val.toLocaleString()}{unit}
                 </div>
               </div>
-              <span className="text-[9px] text-gray-400 writing-mode-vertical hidden sm:block truncate w-full text-center">
+              <span className="text-[9px] text-gray-400 hidden sm:block truncate w-full text-center">
                 {MONTH_LABELS[(h.month - 1) % 12]}
               </span>
             </div>
@@ -64,26 +75,31 @@ export default function UsagePage() {
   const { user } = useAuth()
   const toast    = useToast()
 
+  const isPlatformAdmin = user?.role === ROLES.PLATFORM_ADMIN
   const orgId = user?.organizationId
 
-  const [config,  setConfig]  = useState(null)
-  const [history, setHistory] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [config,   setConfig]   = useState(null)
+  const [history,  setHistory]  = useState([])
+  const [orgUsage, setOrgUsage] = useState([])   // PLATFORM_ADMIN: per-org rows
+  const [loading,  setLoading]  = useState(true)
 
   useEffect(() => {
-    if (!orgId) return
-    Promise.all([
-      getQuotaConfig(orgId),
-      getUsageHistory(orgId),
-    ])
+    if (isPlatformAdmin) {
+      getAllOrgUsage()
+        .then(setOrgUsage)
+        .catch(err => toast.error(err.message || 'Could not load usage data.'))
+        .finally(() => setLoading(false))
+      return
+    }
+    if (!orgId) { setLoading(false); return }
+    Promise.all([getQuotaConfig(orgId), getUsageHistory(orgId)])
       .then(([cfg, hist]) => {
         setConfig(cfg)
-        // Show last 6 months, oldest first
         setHistory([...hist].reverse().slice(0, 6))
       })
       .catch(err => toast.error(err.message || 'Could not load usage data.'))
       .finally(() => setLoading(false))
-  }, [orgId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isPlatformAdmin, orgId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return (
@@ -97,6 +113,71 @@ export default function UsagePage() {
   const now = new Date()
   const currentLabel = `${MONTH_LABELS[now.getMonth()]} ${now.getFullYear()}`
 
+  /* ════════════════════════════════════════════════════════════
+     PLATFORM_ADMIN — org-wide usage table
+     ════════════════════════════════════════════════════════════ */
+  if (isPlatformAdmin) {
+    return (
+      <div className="max-w-6xl mx-auto px-6 py-8">
+        <Breadcrumbs items={CRUMBS} />
+        <div className="mt-4 mb-8">
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-ink dark:text-white">Usage &amp; Quotas</h1>
+          <p className="text-sm text-ink-3 mt-1">
+            Current-month consumption across all organisations — {currentLabel}.
+          </p>
+        </div>
+
+        <div className="card p-0 overflow-hidden">
+          {orgUsage.length === 0 ? (
+            <div className="text-center text-ink-4 py-12 text-sm">No organisations to show.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-ink-7 dark:border-gray-700 bg-ink-8 dark:bg-gray-800/40">
+                    <th className="text-left  py-3 px-4 text-ink-3 font-semibold">Organisation</th>
+                    <th className="text-left  py-3 px-3 text-ink-3 font-semibold">Plan</th>
+                    <th className="text-right py-3 px-3 text-ink-3 font-semibold">Users</th>
+                    <th className="text-right py-3 px-3 text-ink-3 font-semibold">Documents</th>
+                    <th className="text-right py-3 px-3 text-ink-3 font-semibold">Storage</th>
+                    <th className="text-right py-3 px-3 text-ink-3 font-semibold">API calls</th>
+                    <th className="text-right py-3 px-4 text-ink-3 font-semibold">Emails</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-ink-7/60 dark:divide-gray-800">
+                  {orgUsage.map(o => (
+                    <tr key={o.organizationId} className="hover:bg-ink-8/60 dark:hover:bg-gray-700/30">
+                      <td className="py-3 px-4">
+                        <span className="font-semibold text-ink dark:text-gray-200">{o.organizationName}</span>
+                        {!o.active && <span className="ml-2 badge badge-gray text-[10px]">Inactive</span>}
+                      </td>
+                      <td className="py-3 px-3"><PlanBadge plan={o.plan} size="sm" /></td>
+                      <td className="py-3 px-3 text-right text-ink-2 dark:text-gray-300">{usageCell(o.users, o.maxUsers)}</td>
+                      <td className="py-3 px-3 text-right text-ink-2 dark:text-gray-300">{usageCell(o.docsThisMonth, o.maxDocsPerMonth)}</td>
+                      <td className="py-3 px-3 text-right text-ink-2 dark:text-gray-300">{usageCell(o.storageMb, o.maxStorageMb, ' MB')}</td>
+                      <td className="py-3 px-3 text-right text-ink-2 dark:text-gray-300">{usageCell(o.apiCallsThisMonth, o.maxApiCallsPerMonth)}</td>
+                      <td className="py-3 px-4 text-right text-ink-2 dark:text-gray-300 font-medium">{(o.emailsThisMonth ?? 0).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+        <p className="text-[11px] text-ink-4 mt-3">
+          Documents = PDFs generated + e-sign sends. Emails = bulk emails sent this month. “/ ∞” means unlimited.
+        </p>
+      </div>
+    )
+  }
+
+  /* ════════════════════════════════════════════════════════════
+     ORG_ADMIN — own organisation quotas + history
+     ════════════════════════════════════════════════════════════ */
+  const docsCurrent  = (config?.currentDocsThisMonth ?? 0) + (config?.currentEsignThisMonth ?? 0)
+  const apiCurrent   = config?.currentApiCallsThisMonth ?? 0
+  const emailCurrent = config?.currentEmailsThisMonth ?? 0
+
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">
       <Breadcrumbs items={CRUMBS} />
@@ -108,9 +189,7 @@ export default function UsagePage() {
             Monitor your organisation's resource consumption and current limits.
           </p>
         </div>
-        {config?.plan && (
-          <PlanBadge plan={config.plan} size="md" />
-        )}
+        {config?.subscriptionPlan && <PlanBadge plan={config.subscriptionPlan} size="md" />}
       </div>
 
       {/* ── Current month quotas ── */}
@@ -119,47 +198,35 @@ export default function UsagePage() {
           <h2 className="text-sm font-bold text-gray-700 dark:text-gray-200">
             Current Month — {currentLabel}
           </h2>
-          {config?.plan && (
+          {config?.subscriptionPlan && (
             <span className="text-[11px] text-gray-400">
-              Plan: <span className="font-semibold text-gray-600 dark:text-gray-300">{config.plan}</span>
+              Plan: <span className="font-semibold text-gray-600 dark:text-gray-300">{config.subscriptionPlan}</span>
             </span>
           )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <QuotaProgressBar
-            label="Users"
-            current={config?.currentUsers ?? 0}
-            limit={config?.maxUsers ?? -1}
-          />
-          <QuotaProgressBar
-            label="Documents / month"
-            current={config?.currentDocs ?? 0}
-            limit={config?.maxDocsPerMonth ?? -1}
-          />
-          <QuotaProgressBar
-            label="Storage"
-            current={config?.currentStorageMb ?? 0}
-            limit={config?.maxStorageMb ?? -1}
-            unit=" MB"
-          />
-          <QuotaProgressBar
-            label="API calls / month"
-            current={config?.currentApiCalls ?? 0}
-            limit={config?.maxApiCallsPerMonth ?? -1}
-          />
+          <QuotaProgressBar label="Users"
+            current={config?.currentUsers ?? 0} limit={config?.maxUsers ?? -1} />
+          <QuotaProgressBar label="Documents / month"
+            current={docsCurrent} limit={config?.maxDocsPerMonth ?? -1} />
+          <QuotaProgressBar label="Storage"
+            current={config?.currentStorageMb ?? 0} limit={config?.maxStorageMb ?? -1} unit=" MB" />
+          <QuotaProgressBar label="API calls / month"
+            current={apiCurrent} limit={config?.maxApiCallsPerMonth ?? -1} />
+          <QuotaProgressBar label="Emails sent / month"
+            current={emailCurrent} limit={-1} />
         </div>
 
-        {/* Upgrade nudge — shown when any quota ≥ 80% */}
+        {/* Upgrade nudge — shown when any limited quota ≥ 80% */}
         {config && [
-          { current: config.currentUsers,      limit: config.maxUsers,           },
-          { current: config.currentDocs,        limit: config.maxDocsPerMonth,   },
-          { current: config.currentStorageMb,   limit: config.maxStorageMb,      },
-          { current: config.currentApiCalls,    limit: config.maxApiCallsPerMonth},
+          { current: config.currentUsers,    limit: config.maxUsers },
+          { current: docsCurrent,            limit: config.maxDocsPerMonth },
+          { current: config.currentStorageMb, limit: config.maxStorageMb },
+          { current: apiCurrent,             limit: config.maxApiCallsPerMonth },
         ].some(q => q.limit > 0 && q.current / q.limit >= 0.8) && (
           <div className="mt-5 flex items-center gap-3 px-4 py-3 rounded-xl
-                          bg-amber-50 dark:bg-amber-900/20
-                          border border-amber-200 dark:border-amber-700">
+                          bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700">
             <svg className="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
@@ -178,34 +245,12 @@ export default function UsagePage() {
             Usage History — last {history.length} months
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-            <UsageHistoryChart
-              history={history}
-              field="docsGenerated"
-              label="PDFs generated"
-              color="#2F5BF0"
-            />
-            <UsageHistoryChart
-              history={history}
-              field="esignSent"
-              label="E-Sign documents sent"
-              color="#6D52E8"
-            />
-            <UsageHistoryChart
-              history={history}
-              field="storageMb"
-              label="Storage used"
-              color="#10b981"
-              unit=" MB"
-            />
-            <UsageHistoryChart
-              history={history}
-              field="apiCalls"
-              label="API calls"
-              color="#f59e0b"
-            />
+            <UsageHistoryChart history={history} field="docsGenerated" label="PDFs generated" color="#2F5BF0" />
+            <UsageHistoryChart history={history} field="esignSent"     label="E-Sign documents sent" color="#6D52E8" />
+            <UsageHistoryChart history={history} field="storageMb"     label="Storage used" color="#10b981" unit=" MB" />
+            <UsageHistoryChart history={history} field="apiCalls"      label="API calls" color="#f59e0b" />
           </div>
 
-          {/* Raw table */}
           <div className="mt-6 overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
@@ -220,21 +265,11 @@ export default function UsagePage() {
               <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
                 {[...history].reverse().map((h, i) => (
                   <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                    <td className="py-2 px-3 font-medium text-gray-700 dark:text-gray-300">
-                      {fmtMonth(h.year, h.month)}
-                    </td>
-                    <td className="py-2 px-3 text-right text-gray-600 dark:text-gray-400">
-                      {(h.docsGenerated || 0).toLocaleString()}
-                    </td>
-                    <td className="py-2 px-3 text-right text-gray-600 dark:text-gray-400">
-                      {(h.esignSent || 0).toLocaleString()}
-                    </td>
-                    <td className="py-2 px-3 text-right text-gray-600 dark:text-gray-400">
-                      {(h.storageMb || 0).toLocaleString()}
-                    </td>
-                    <td className="py-2 px-3 text-right text-gray-600 dark:text-gray-400">
-                      {(h.apiCalls || 0).toLocaleString()}
-                    </td>
+                    <td className="py-2 px-3 font-medium text-gray-700 dark:text-gray-300">{fmtMonth(h.year, h.month)}</td>
+                    <td className="py-2 px-3 text-right text-gray-600 dark:text-gray-400">{(h.docsGenerated || 0).toLocaleString()}</td>
+                    <td className="py-2 px-3 text-right text-gray-600 dark:text-gray-400">{(h.esignSent || 0).toLocaleString()}</td>
+                    <td className="py-2 px-3 text-right text-gray-600 dark:text-gray-400">{(h.storageMb || 0).toLocaleString()}</td>
+                    <td className="py-2 px-3 text-right text-gray-600 dark:text-gray-400">{(h.apiCalls || 0).toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>

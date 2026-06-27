@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getAuditLogs, getAuditLogStats, exportAuditLogs, getOrganizations } from '../services/api'
+import { getAuditLogs, getAuditLogStats, exportAuditLogs, verifyAuditIntegrity, getOrganizations } from '../services/api'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import { useToast } from '../context/ToastContext'
 import { useAuth, ROLES } from '../context/AuthContext'
@@ -26,6 +26,8 @@ const ACTION_BADGE = {
   SENT:             'bg-teal-100   text-teal-700   dark:bg-teal-900/30   dark:text-teal-400',
   FEATURES_UPDATED: 'bg-accent-100 text-accent-700 dark:bg-accent-900/30 dark:text-accent-400',
   PLATFORM_SETTINGS_UPDATED: 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400',
+  EXPORTED:         'bg-sky-100    text-sky-700    dark:bg-sky-900/30    dark:text-sky-400',
+  ACCESS_DENIED:    'bg-red-100    text-red-700    dark:bg-red-900/30    dark:text-red-400',
   CANCELLED:        'bg-gray-100   text-gray-600   dark:bg-gray-700/40   dark:text-gray-400',
 }
 
@@ -44,6 +46,8 @@ const ACTION_ICON = {
   FEATURES_UPDATED: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z',
   CANCELLED:        'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z',
   PLATFORM_SETTINGS_UPDATED: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z',
+  EXPORTED:         'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4',
+  ACCESS_DENIED:    'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636',
 }
 
 // ── Resource type meta ──────────────────────────────────────────────────────
@@ -91,7 +95,8 @@ const RESOURCE_TYPES = [
 
 // ── Action filter pills ─────────────────────────────────────────────────────
 const ALL_ACTIONS  = ['ALL', 'CREATED', 'UPDATED', 'DELETED', 'RESTORED', 'SENT',
-                      'FEATURES_UPDATED', 'PLATFORM_SETTINGS_UPDATED', 'CANCELLED',
+                      'FEATURES_UPDATED', 'PLATFORM_SETTINGS_UPDATED', 'EXPORTED',
+                      'ACCESS_DENIED', 'CANCELLED',
                       'PASSWORD_CHANGED', 'AVATAR_UPDATED',
                       'DEACTIVATED', 'ACTIVATED', 'SESSION_REVOKED']
 const USER_ACTIONS = ['ALL', 'CREATED', 'UPDATED', 'DELETED', 'RESTORED',
@@ -442,6 +447,7 @@ export default function AuditLogPage() {
   const [page,            setPage]           = useState(0)
   const [loading,         setLoading]        = useState(true)
   const [exporting,       setExporting]      = useState(false)
+  const [verifying,       setVerifying]      = useState(false)
   const [actionFilter,    setActionFilter]   = useState('ALL')
   const [typeFilter,      setTypeFilter]     = useState('')
   const [orgFilter,       setOrgFilter]      = useState('')
@@ -536,6 +542,23 @@ export default function AuditLogPage() {
     }
   }
 
+  const handleVerify = async () => {
+    setVerifying(true)
+    try {
+      const r = await verifyAuditIntegrity()
+      const legacy = r.legacyUnverified ? ` (${r.legacyUnverified.toLocaleString()} legacy entries pre-date integrity hashing)` : ''
+      if (r.intact) {
+        toast.success(`Integrity verified — ${(r.checked ?? 0).toLocaleString()} records intact.${legacy}`)
+      } else {
+        toast.error(`Tamper detected: ${r.broken} record(s) failed verification (first: ${r.firstBrokenId}).`)
+      }
+    } catch (e) {
+      toast.error(e.message || 'Integrity verification failed.')
+    } finally {
+      setVerifying(false)
+    }
+  }
+
   const canOpenResource = (entry) =>
     (entry.resourceType === 'TEMPLATE' || entry.resourceType === 'EMAIL_TEMPLATE' ||
      entry.resourceType === 'E_SIGN') &&
@@ -561,20 +584,39 @@ export default function AuditLogPage() {
           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-ink dark:text-white">Audit Log</h1>
           <p className="text-sm text-ink-3 mt-1 max-w-2xl">{scopeLabel(me?.role)}</p>
         </div>
-        <button
-          onClick={handleExport}
-          disabled={exporting}
-          className="btn btn-primary gap-2 shrink-0"
-        >
-          {exporting
-            ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/>
-            : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-              </svg>
-          }
-          {exporting ? 'Exporting…' : 'Export CSV'}
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          {isPlatformAdmin && (
+            <button
+              onClick={handleVerify}
+              disabled={verifying}
+              title="Re-verify the audit log's tamper-evidence hash chain"
+              className="btn btn-outline gap-2"
+            >
+              {verifying
+                ? <div className="w-4 h-4 border-2 border-brand border-t-transparent rounded-full animate-spin"/>
+                : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                  </svg>
+              }
+              {verifying ? 'Verifying…' : 'Verify integrity'}
+            </button>
+          )}
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="btn btn-primary gap-2"
+          >
+            {exporting
+              ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/>
+              : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+            }
+            {exporting ? 'Exporting…' : 'Export CSV'}
+          </button>
+        </div>
       </div>
 
       {/* ── Stats mini-cards ── */}

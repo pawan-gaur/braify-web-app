@@ -112,6 +112,10 @@ export const getAuditLogStats = (orgId = null) =>
 export const exportAuditLogs = (params = {}) =>
   http.get('/audit-logs/export', { params, responseType: 'blob' }).then(r => r.data)
 
+/** PLATFORM_ADMIN: verify the tamper-evidence hash chain. */
+export const verifyAuditIntegrity = () =>
+  http.get('/audit-logs/verify').then(r => r.data)
+
 export const getTemplateAuditLogs = (id) => http.get(`/audit-logs/template/${id}`).then(r => r.data)
 
 // ── Dashboard ──────────────────────────────────────────────
@@ -240,6 +244,8 @@ export const assignSubscription = (orgId, payload)  => http.put(`/organizations/
 export const getQuotaConfig    = (orgId)          => http.get(`/organizations/${orgId}/quota/config`).then(r => r.data)
 export const updateQuotaConfig = (orgId, payload) => http.put(`/organizations/${orgId}/quota/config`, payload).then(r => r.data)
 export const getUsageHistory   = (orgId)          => http.get(`/organizations/${orgId}/quota/usage`).then(r => r.data)
+/** PLATFORM_ADMIN: current-month usage for every organisation. */
+export const getAllOrgUsage    = ()               => http.get('/admin/usage').then(r => r.data)
 
 // ── Org Branding ────────────────────────────────────────────
 export const getBranding    = (orgId)           => http.get(`/organizations/${orgId}/branding`).then(r => r.data)
