@@ -77,7 +77,10 @@ export default function ESignSigningPage() {
       .then(d => {
         setDoc(d)
         setFields(d.fields || [])
-        if (d.sourcePdfBase64) {
+        // Prefer the pre-signed cloud URL; fall back to legacy embedded base64.
+        if (d.sourcePdfUrl) {
+          setPdfUrl(d.sourcePdfUrl)
+        } else if (d.sourcePdfBase64) {
           const bytes = Uint8Array.from(atob(d.sourcePdfBase64), c => c.charCodeAt(0))
           setPdfUrl(URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' })))
         }
