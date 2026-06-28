@@ -52,6 +52,7 @@ export default function ESignSigningPage() {
   const [fields,     setFields]     = useState([])
   const [submitting, setSubmitting] = useState(false)
   const [submitted,  setSubmitted]  = useState(false)
+  const [submitStatus, setSubmitStatus] = useState(null)   // doc status returned after submit
 
   /* modal state */
   const [activeField, setActiveField] = useState(null)
@@ -70,6 +71,18 @@ export default function ESignSigningPage() {
   const drawingRef = useRef(false)
   const lastPt     = useRef(null)
   const hasDrawn   = useRef(false)   // tracks whether the user has drawn anything
+
+  /* ── Which fields belong to the signatory holding this token ──────────────
+   * The backend tags the token with currentSignatoryId; a field is "mine" when it
+   * matches (unassigned fields default to the first signatory). Legacy single-signer
+   * documents have no currentSignatoryId, so every field is mine. */
+  const mySignatoryId  = doc?.currentSignatoryId || null
+  const coSignatories  = doc?.signatories || []
+  const firstSigId     = coSignatories[0]?.id
+  const isMine         = f => !mySignatoryId || (f.signatoryId || firstSigId) === mySignatoryId
+  const myFields       = fields.filter(isMine)
+  const mySignatory    = coSignatories.find(s => s.id === mySignatoryId)
+  const isMultiParty   = coSignatories.length > 1
 
   /* ── Load document ── */
   useEffect(() => {
@@ -209,7 +222,7 @@ export default function ESignSigningPage() {
 
   /* ── Submit ── */
   async function handleSubmit() {
-    const unsignedRequired = fields.filter(f => f.required && !f.signed)
+    const unsignedRequired = myFields.filter(f => f.required && !f.signed)
     if (unsignedRequired.length > 0) {
       alert(`Please sign all required fields (${unsignedRequired.length} remaining)`)
       return
@@ -217,7 +230,8 @@ export default function ESignSigningPage() {
     if (!confirm('Submit document? You cannot make changes after submitting.')) return
     setSubmitting(true)
     try {
-      await esignSubmitDocument(token)
+      const res = await esignSubmitDocument(token)
+      setSubmitStatus(res?.status || null)
       setSubmitted(true)
     } catch (e) {
       alert(e.message)
@@ -284,10 +298,24 @@ export default function ESignSigningPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/>
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Document Signed!</h1>
-          <p className="text-gray-500 text-sm">
-            Thank you, <strong>{doc?.clientName}</strong>. Your signed document will be emailed to you shortly.
-          </p>
+          {submitStatus === 'PARTIALLY_SIGNED' ? (
+            <>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Your part is signed!</h1>
+              <p className="text-gray-500 text-sm">
+                Thank you, <strong>{mySignatory?.name || doc?.clientName}</strong>. The remaining
+                signatories still need to sign — you'll receive the final signed document by email
+                once everyone has completed it.
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Document Signed!</h1>
+              <p className="text-gray-500 text-sm">
+                Thank you, <strong>{mySignatory?.name || doc?.clientName}</strong>. Your signed
+                document will be emailed to you shortly.
+              </p>
+            </>
+          )}
         </div>
 
         {/* ── Optional attachment upload card (only shown when creator enabled it) ── */}
@@ -385,8 +413,8 @@ export default function ESignSigningPage() {
     </div>
   )
 
-  const allRequiredSigned = fields.filter(f => f.required).every(f => f.signed)
-  const signedCount       = fields.filter(f => f.signed).length
+  const allRequiredSigned = myFields.filter(f => f.required).every(f => f.signed)
+  const signedCount       = myFields.filter(f => f.signed).length
 
   const isSignatureOrInitials = activeField &&
     (activeField.fieldType === 'SIGNATURE' || activeField.fieldType === 'INITIALS')
@@ -413,7 +441,7 @@ export default function ESignSigningPage() {
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-500">{signedCount}/{fields.length} signed</span>
+          <span className="text-sm text-gray-500">{signedCount}/{myFields.length} signed</span>
           <button
             onClick={handleSubmit}
             disabled={submitting || !allRequiredSigned}
@@ -429,8 +457,22 @@ export default function ESignSigningPage() {
       {/* Progress bar */}
       <div className="h-1 bg-gray-200">
         <div className="h-1 bg-accent transition-all duration-500"
-          style={{ width: fields.length ? `${(signedCount / fields.length) * 100}%` : '0%' }}/>
+          style={{ width: myFields.length ? `${(signedCount / myFields.length) * 100}%` : '0%' }}/>
       </div>
+
+      {/* "Signing as" banner (multi-party documents) */}
+      {mySignatory && isMultiParty && (
+        <div className="bg-accent-50 border-b border-accent-100 px-6 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+          <span className="text-gray-700">
+            You're signing as <strong>{mySignatory.name}</strong>
+            <span className="text-gray-400"> ({mySignatory.email})</span>
+          </span>
+          <span className="text-gray-400">·</span>
+          <span className="text-gray-500">
+            {coSignatories.length} signatories, {doc?.signingMode === 'SEQUENTIAL' ? 'sign in order' : 'sign in any order'}
+          </span>
+        </div>
+      )}
 
       {/* ── Main area ── */}
       <div className="flex-1 flex overflow-hidden">
@@ -455,6 +497,9 @@ export default function ESignSigningPage() {
                 {fields.map(f => {
                   const colors   = FIELD_COLORS[f.fieldType] || FIELD_COLORS.SIGNATURE
                   const isSigned = !!f.signed
+                  const mine     = isMine(f)
+                  const borderColor = isSigned ? '#16a34a' : (mine ? colors.border : '#cbd5e1')
+                  const bgColor     = isSigned ? 'rgba(22,163,74,0.07)' : (mine ? colors.bg : 'rgba(148,163,184,0.10)')
                   return (
                     <div
                       key={f.id}
@@ -464,17 +509,17 @@ export default function ESignSigningPage() {
                         top:        `${f.y}%`,
                         width:      `${f.width}%`,
                         height:     `${f.height}%`,
-                        border:     `2px dashed ${isSigned ? '#16a34a' : colors.border}`,
-                        background: isSigned ? 'rgba(22,163,74,0.07)' : colors.bg,
+                        border:     `2px dashed ${borderColor}`,
+                        background: bgColor,
                         borderRadius: 4,
-                        cursor:     isSigned ? 'default' : 'pointer',
+                        cursor:     (mine && !isSigned) ? 'pointer' : 'default',
                         boxSizing:  'border-box',
                         overflow:   'hidden',
                         display:    'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}
-                      onClick={() => { if (!isSigned) openModal(f) }}
+                      onClick={() => { if (mine && !isSigned) openModal(f) }}
                     >
                       {isSigned ? (
                         /* Render actual signed content */
@@ -501,13 +546,21 @@ export default function ESignSigningPage() {
                         ) : (
                           <span style={{ fontSize: 11, color: '#16a34a', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}><IconCheck className="w-3 h-3" /> Signed</span>
                         )
-                      ) : (
+                      ) : mine ? (
                         <span style={{
                           fontSize: 10, color: colors.border, fontWeight: 700,
                           textAlign: 'center', padding: '0 4px',
                           userSelect: 'none',
                         }}>
                           {f.required ? '* ' : ''}{f.label}
+                        </span>
+                      ) : (
+                        <span style={{
+                          fontSize: 9, color: '#94a3b8', fontWeight: 600,
+                          textAlign: 'center', padding: '0 4px',
+                          userSelect: 'none',
+                        }}>
+                          Other signer
                         </span>
                       )}
                     </div>
@@ -528,7 +581,7 @@ export default function ESignSigningPage() {
             Fields to Sign
           </h3>
           <div className="space-y-2">
-            {fields.map(f => {
+            {myFields.map(f => {
               const colors = FIELD_COLORS[f.fieldType] || FIELD_COLORS.SIGNATURE
               return (
                 <button
@@ -550,9 +603,35 @@ export default function ESignSigningPage() {
             })}
           </div>
 
-          {fields.length > 0 && allRequiredSigned && (
+          {myFields.length > 0 && allRequiredSigned && (
             <div className="mt-4 pt-4 border-t border-gray-100">
-              <p className="text-xs text-green-600 font-semibold text-center inline-flex items-center justify-center gap-1 w-full">All fields signed <IconCheck className="w-3.5 h-3.5" /></p>
+              <p className="text-xs text-green-600 font-semibold text-center inline-flex items-center justify-center gap-1 w-full">Your fields are signed <IconCheck className="w-3.5 h-3.5" /></p>
+            </div>
+          )}
+
+          {/* Co-signer status (multi-party documents) */}
+          {isMultiParty && (
+            <div className="mt-5 pt-4 border-t border-gray-100">
+              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Signatories</h3>
+              <div className="space-y-2">
+                {coSignatories.map(s => {
+                  const isMe = s.id === mySignatoryId
+                  const signed = s.status === 'SIGNED'
+                  return (
+                    <div key={s.id} className="flex items-center gap-2 text-xs">
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${signed ? 'bg-green-500' : 'bg-gray-300'}`}/>
+                      <span className="flex-1 min-w-0">
+                        <span className="block font-medium text-gray-700 truncate">
+                          {s.name}{isMe && <span className="text-accent font-semibold"> (you)</span>}
+                        </span>
+                      </span>
+                      <span className={`shrink-0 ${signed ? 'text-green-600' : 'text-gray-400'}`}>
+                        {signed ? 'Signed' : (s.status === 'VIEWED' ? 'Viewed' : 'Pending')}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           )}
         </div>

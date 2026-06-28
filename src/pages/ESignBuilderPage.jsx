@@ -30,6 +30,10 @@ const DEFAULT_FIELD_SIZE = { width: 18, height: 5 }
 const STEPS    = ['Setup', 'Place Fields', 'Send']
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+// Distinct colours used to tell signatories apart when placing per-signatory fields.
+const SIGNATORY_COLORS = ['#7c3aed', '#2563eb', '#059669', '#d97706', '#db2777', '#0891b2', '#ca8a04', '#dc2626']
+const signatoryColor = idx => SIGNATORY_COLORS[idx % SIGNATORY_COLORS.length]
+
 /* ─────────────────────────────── utilities ─────────────────────────────── */
 
 function buildAuthHeaders(config) {
@@ -78,6 +82,19 @@ export default function ESignBuilderPage({ initialDocStatus }) {
   })
   const [formErrors, setFormErrors] = useState({})
   const [creating, setCreating]     = useState(false)
+
+  /* ── recipient chip lists (CC on invitation + final signed-copy) ─────── */
+  const [inviteCc,          setInviteCc]          = useState([])   // CC on the signing invitation
+  const [inviteCcInput,     setInviteCcInput]     = useState('')
+  const [completionCc,      setCompletionCc]      = useState([])   // recipients of the final signed PDF
+  const [completionCcInput, setCompletionCcInput] = useState('')
+
+  /* ── signatories ──────────────────────────────────────────────────────── */
+  // In Setup these hold {name,email}; after create / in edit mode they also carry the
+  // server-assigned {id} used to tag each placed field.
+  const [signatories,       setSignatories]       = useState([{ name: '', email: '' }])
+  const [signingMode,       setSigningMode]       = useState('PARALLEL')   // PARALLEL | SEQUENTIAL
+  const [activeSignatoryIdx, setActiveSignatoryIdx] = useState(0)         // whose field is being placed
 
   /* ── PDF source selection ─────────────────────────────────────────────── */
   const [enabledSources, setEnabledSources] = useState({ single: true, template: false, api: false })
@@ -128,6 +145,41 @@ export default function ESignBuilderPage({ initialDocStatus }) {
 
   /* ── derived ──────────────────────────────────────────────────────────── */
   const activeSources = sourcePriority.filter(s => enabledSources[s])
+  const multiSig      = signatories.length > 1
+
+  /** Index of a field's owning signatory (defaults to the first signatory). */
+  function fieldSignatoryIdx(f) {
+    if (!f.signatoryId) return 0
+    const i = signatories.findIndex(s => s.id === f.signatoryId)
+    return i >= 0 ? i : 0
+  }
+  /** A field's display colour — by signatory when multi-party, else by field type. */
+  function fieldColor(f) {
+    return multiSig
+      ? signatoryColor(fieldSignatoryIdx(f))
+      : (FIELD_TYPES.find(t => t.type === f.fieldType)?.color || '#7c3aed')
+  }
+
+  /* ── signatory editing ────────────────────────────────────────────────── */
+  function updateSignatory(idx, patch) {
+    setSignatories(prev => prev.map((s, i) => (i === idx ? { ...s, ...patch } : s)))
+    setFormErrors(fe => ({ ...fe, signatories: undefined }))
+  }
+  function addSignatory() {
+    setSignatories(prev => [...prev, { name: '', email: '' }])
+  }
+  function removeSignatory(idx) {
+    setSignatories(prev => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== idx)))
+  }
+  function moveSignatory(idx, dir) {
+    setSignatories(prev => {
+      const ni = idx + dir
+      if (ni < 0 || ni >= prev.length) return prev
+      const arr = [...prev]
+      ;[arr[idx], arr[ni]] = [arr[ni], arr[idx]]
+      return arr
+    })
+  }
 
   /* ════════════════════════════════════════════════════════════════════════
      Effects
@@ -140,6 +192,12 @@ export default function ESignBuilderPage({ initialDocStatus }) {
       setDoc(d)
       setFields(d.fields || [])
       setForm(f => ({ ...f, title: d.title, clientEmail: d.clientEmail, clientName: d.clientName }))
+      setSignatories(d.signatories?.length
+        ? d.signatories.map(s => ({ id: s.id, name: s.name, email: s.email }))
+        : [{ name: d.clientName || '', email: d.clientEmail || '' }])
+      setSigningMode(d.signingMode || 'PARALLEL')
+      setInviteCc(d.ccEmails || [])
+      setCompletionCc(d.completionCcEmails || [])
       if (d.sourcePdfBase64) {
         setPdfUrl(base64ToBlobUrl(d.sourcePdfBase64))
       }
@@ -255,13 +313,52 @@ export default function ESignBuilderPage({ initialDocStatus }) {
      Step 0 — create document
   ════════════════════════════════════════════════════════════════════════ */
 
+  /** Adds the typed email to a chip list (deduped, case-insensitive). Returns false if invalid. */
+  function addEmailChip(raw, setList, errKey) {
+    const val = (raw || '').trim().replace(/,+$/, '').trim()
+    if (!val) return true
+    if (!EMAIL_RE.test(val)) {
+      setFormErrors(fe => ({ ...fe, [errKey]: 'Enter a valid email address' }))
+      return false
+    }
+    setList(prev => prev.some(x => x.toLowerCase() === val.toLowerCase()) ? prev : [...prev, val])
+    setFormErrors(fe => ({ ...fe, [errKey]: undefined }))
+    return true
+  }
+
+  /** Returns the final chip list including any unsubmitted text; null if that text is invalid. */
+  function flushEmailChips(raw, list, errKey) {
+    const val = (raw || '').trim().replace(/,+$/, '').trim()
+    if (!val) return list
+    if (!EMAIL_RE.test(val)) {
+      setFormErrors(fe => ({ ...fe, [errKey]: 'Enter a valid email address' }))
+      return null
+    }
+    return list.some(x => x.toLowerCase() === val.toLowerCase()) ? list : [...list, val]
+  }
+
+  const commitInviteCc = e => {
+    if (e) e.preventDefault()
+    if (addEmailChip(inviteCcInput, setInviteCc, 'inviteCc')) setInviteCcInput('')
+  }
+  const commitCompletionCc = e => {
+    if (e) e.preventDefault()
+    if (addEmailChip(completionCcInput, setCompletionCc, 'completionCc')) setCompletionCcInput('')
+  }
+
   function validateForm() {
     const errors = {}
     if (!form.title?.trim())    errors.title       = 'Document title is required'
-    if (!form.clientName?.trim()) errors.clientName = 'Client name is required'
-    if (!form.clientEmail?.trim()) errors.clientEmail = 'Client email is required'
-    else if (!EMAIL_RE.test(form.clientEmail.trim()))
-      errors.clientEmail = 'Enter a valid email address'
+
+    // Every signatory needs a name + valid email, and emails must be unique
+    if (!signatories.length ||
+        signatories.some(s => !s.name?.trim() || !s.email?.trim() || !EMAIL_RE.test(s.email.trim()))) {
+      errors.signatories = 'Each signatory needs a name and a valid email'
+    } else {
+      const emails = signatories.map(s => s.email.trim().toLowerCase())
+      if (new Set(emails).size !== emails.length)
+        errors.signatories = 'Each signatory must have a unique email'
+    }
 
     // At least one source must be enabled and minimally configured
     if (!activeSources.length) {
@@ -278,6 +375,15 @@ export default function ESignBuilderPage({ initialDocStatus }) {
 
   async function handleCreate() {
     if (!validateForm()) return
+
+    // Flush any address still typed in either cc box into its committed list.
+    const finalInviteCc = flushEmailChips(inviteCcInput, inviteCc, 'inviteCc')
+    if (finalInviteCc === null) return
+    const finalCc = flushEmailChips(completionCcInput, completionCc, 'completionCc')
+    if (finalCc === null) return
+    setInviteCc(finalInviteCc); setInviteCcInput('')
+    setCompletionCc(finalCc);   setCompletionCcInput('')
+
     setCreating(true)
     try {
       const resolved = await resolvePdfSource()
@@ -286,13 +392,20 @@ export default function ESignBuilderPage({ initialDocStatus }) {
         sourceType:      resolved.sourceType,
         pdfBase64:       resolved.pdfBase64,
         templateId:      resolved.templateId,
-        clientEmail:     form.clientEmail,
-        clientName:      form.clientName,
+        signatories:     signatories.map((s, i) => ({
+                            name: s.name.trim(), email: s.email.trim(), signingOrder: i + 1,
+                         })),
+        signingMode,
         tokenValidDays:  form.tokenValidDays,
         emailTemplateId: selectedEmailTemplateId || undefined,
+        ccEmails:           finalInviteCc.length ? finalInviteCc : undefined,
+        completionCcEmails: finalCc.length ? finalCc : undefined,
       })
       setDocId(created.id)
       setDoc(created)
+      // Adopt the server-assigned signatory IDs so placed fields can reference them
+      if (created.signatories?.length) setSignatories(created.signatories)
+      setActiveSignatoryIdx(0)
       setPdfUrl(resolved.blobUrl)
       window.history.replaceState(null, '', `/esign/${created.id}`)
       setStep(1)
@@ -327,6 +440,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
       fieldType: selectedType,
       label: typeDef?.label || selectedType,
       required: true,
+      signatoryId: signatories[activeSignatoryIdx]?.id,
     }])
   }
 
@@ -380,6 +494,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
         width: f.width, height: f.height,
         fieldType: f.fieldType, label: f.label,
         required: f.required ?? true,
+        signatoryId: f.signatoryId,
       }))
       await esignSaveFields(docId, payload)
       const alreadySent = ['PENDING', 'IN_REVIEW'].includes(initialDocStatus)
@@ -407,7 +522,10 @@ export default function ESignBuilderPage({ initialDocStatus }) {
     try {
       await esignSendDocument(docId, form.tokenValidDays)
       navigate('/esign')
-      showToast('Document sent to ' + (form.clientEmail || doc?.clientEmail) + '!', 'success')
+      const recipientNote = signatories.length > 1
+        ? `${signatories.length} signatories`
+        : (signatories[0]?.email || doc?.clientEmail)
+      showToast('Document sent to ' + recipientNote + '!', 'success')
     } catch (e) {
       showToast(e.message || 'Failed to send document', 'error')
     } finally {
@@ -904,30 +1022,117 @@ export default function ESignBuilderPage({ initialDocStatus }) {
               )}
             </div>
 
-            {/* Client details */}
-            <div className="grid grid-cols-2 gap-4">
-              <FormField label="Client Name" error={formErrors.clientName}>
-                <input
-                  className={inputCls + (formErrors.clientName ? ' border-red-400 focus:ring-red-400' : '')}
-                  placeholder="Jane Smith"
-                  value={form.clientName}
-                  onChange={e => { setForm(f => ({ ...f, clientName: e.target.value })); setFormErrors(fe => ({ ...fe, clientName: undefined })) }}
-                />
-              </FormField>
-              <FormField label="Client Email" error={formErrors.clientEmail}>
-                <input
-                  className={inputCls + (formErrors.clientEmail ? ' border-red-400 focus:ring-red-400' : '')}
-                  type="email"
-                  placeholder="jane@company.com"
-                  value={form.clientEmail}
-                  onChange={e => { setForm(f => ({ ...f, clientEmail: e.target.value })); setFormErrors(fe => ({ ...fe, clientEmail: undefined })) }}
-                  onBlur={() => {
-                    if (form.clientEmail && !EMAIL_RE.test(form.clientEmail.trim()))
-                      setFormErrors(fe => ({ ...fe, clientEmail: 'Enter a valid email address' }))
-                  }}
-                />
-              </FormField>
+            {/* Signatories */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+                  Signatories
+                  {formErrors.signatories && (
+                    <span className="ml-2 text-red-500 normal-case font-normal tracking-normal">
+                      — {formErrors.signatories}
+                    </span>
+                  )}
+                </label>
+                <button type="button" onClick={addSignatory}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-accent-600 dark:text-accent-400 hover:text-accent-700">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4"/>
+                  </svg>
+                  Add signatory
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {signatories.map((s, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: signatoryColor(i) }}
+                      title={`Signatory ${i + 1}`} />
+                    {signingMode === 'SEQUENTIAL' && (
+                      <span className="w-5 text-center text-xs font-bold text-gray-400 shrink-0">{i + 1}</span>
+                    )}
+                    <input
+                      className={inputCls + ' flex-1'}
+                      placeholder="Name"
+                      value={s.name || ''}
+                      onChange={e => updateSignatory(i, { name: e.target.value })}
+                    />
+                    <input
+                      className={inputCls + ' flex-1'}
+                      type="email"
+                      placeholder="email@company.com"
+                      value={s.email || ''}
+                      onChange={e => updateSignatory(i, { email: e.target.value })}
+                    />
+                    {signingMode === 'SEQUENTIAL' && signatories.length > 1 && (
+                      <div className="flex flex-col shrink-0">
+                        <button type="button" onClick={() => moveSignatory(i, -1)} disabled={i === 0}
+                          className="p-0.5 text-gray-400 hover:text-accent-600 disabled:opacity-30 disabled:cursor-not-allowed">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7"/></svg>
+                        </button>
+                        <button type="button" onClick={() => moveSignatory(i, 1)} disabled={i === signatories.length - 1}
+                          className="p-0.5 text-gray-400 hover:text-accent-600 disabled:opacity-30 disabled:cursor-not-allowed">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7"/></svg>
+                        </button>
+                      </div>
+                    )}
+                    <button type="button" onClick={() => removeSignatory(i)}
+                      disabled={signatories.length <= 1}
+                      className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                      title="Remove signatory">
+                      <IconX className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Signing order (only relevant with 2+ signatories) */}
+              {signatories.length > 1 && (
+                <div className="mt-3 flex items-center gap-2">
+                  <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 mr-1">Signing order:</span>
+                  {[
+                    { key: 'PARALLEL',   label: 'Any order' },
+                    { key: 'SEQUENTIAL', label: 'In order' },
+                  ].map(opt => (
+                    <button key={opt.key} type="button" onClick={() => setSigningMode(opt.key)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors
+                        ${signingMode === opt.key
+                          ? 'border-accent-500 bg-accent-50 dark:bg-accent-700/30 text-accent-700 dark:text-accent-300'
+                          : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-300'}`}>
+                      {opt.label}
+                    </button>
+                  ))}
+                  <span className="text-xs text-gray-400 ml-1">
+                    {signingMode === 'SEQUENTIAL'
+                      ? 'Each person is invited after the previous one signs.'
+                      : 'Everyone is invited at once.'}
+                  </span>
+                </div>
+              )}
             </div>
+
+            {/* CC on the signing invitation (optional) */}
+            <EmailChipsField
+              label="CC on the invitation email"
+              helper="These people are copied on the signing invitation (and any resend), so they're kept in the loop. Press Enter or comma to add."
+              emails={inviteCc}
+              input={inviteCcInput}
+              onInput={v => { setInviteCcInput(v); setFormErrors(fe => ({ ...fe, inviteCc: undefined })) }}
+              onCommit={commitInviteCc}
+              onRemove={email => setInviteCc(prev => prev.filter(x => x !== email))}
+              error={formErrors.inviteCc}
+            />
+
+            {/* Send a copy of the signed document to (optional) */}
+            <EmailChipsField
+              label="Send a copy of the signed document to"
+              helper="These people receive the final signed PDF by email once signing is complete. Press Enter or comma to add."
+              emails={completionCc}
+              input={completionCcInput}
+              onInput={v => { setCompletionCcInput(v); setFormErrors(fe => ({ ...fe, completionCc: undefined })) }}
+              onCommit={commitCompletionCc}
+              onRemove={email => setCompletionCc(prev => prev.filter(x => x !== email))}
+              error={formErrors.completionCc}
+            />
 
             <FormField label={`Link valid for (days): ${form.tokenValidDays}`}>
               <input type="range" min={1} max={30} value={form.tokenValidDays}
@@ -968,6 +1173,36 @@ export default function ESignBuilderPage({ initialDocStatus }) {
             <div className="w-56 shrink-0">
               <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200
                               dark:border-gray-700 p-4 shadow-sm sticky top-6">
+                {/* Signatory selector — choose whose field you're placing */}
+                {multiSig && (
+                  <div className="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+                    <h3 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-1">Placing fields for</h3>
+                    <p className="text-xs text-gray-400 mb-2">Fields you place are assigned to this signatory.</p>
+                    <div className="space-y-1.5">
+                      {signatories.map((s, i) => (
+                        <button key={s.id || i} onClick={() => setActiveSignatoryIdx(i)}
+                          className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-left border-2 transition-all
+                            ${activeSignatoryIdx === i
+                              ? 'border-accent-500 bg-accent-50 dark:bg-accent-700/30'
+                              : 'border-transparent bg-gray-50 dark:bg-gray-700'}`}>
+                          <span className="w-3 h-3 rounded-sm shrink-0" style={{ background: signatoryColor(i) }}/>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">
+                              {signingMode === 'SEQUENTIAL' ? `${i + 1}. ` : ''}{s.name || `Signatory ${i + 1}`}
+                            </span>
+                            <span className="block text-[10px] text-gray-400 truncate">{s.email}</span>
+                          </span>
+                          {activeSignatoryIdx === i && (
+                            <svg className="w-4 h-4 text-accent-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/>
+                            </svg>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <h3 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3">Field Types</h3>
                 <p className="text-xs text-gray-400 mb-3">Select a type, then click on the PDF to place</p>
                 <div className="space-y-2">
@@ -996,12 +1231,14 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                     Placed: {fields.length} field{fields.length !== 1 ? 's' : ''}
                   </p>
                   {fields.map(f => {
-                    const typeDef = FIELD_TYPES.find(t => t.type === f.fieldType)
+                    const owner = multiSig ? signatories[fieldSignatoryIdx(f)] : null
                     return (
                       <div key={f.id} className="flex items-center justify-between py-1">
-                        <span className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300">
-                          <span className="w-2 h-2 rounded-sm" style={{ background: typeDef?.color }}/>
-                          {f.label}
+                        <span className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 min-w-0">
+                          <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: fieldColor(f) }}/>
+                          <span className="truncate">
+                            {f.label}{owner ? ` · ${owner.name || owner.email}` : ''}
+                          </span>
                         </span>
                         <button onClick={() => removeField(f.id)}
                           className="text-gray-300 hover:text-red-400 transition-colors p-0.5">
@@ -1055,20 +1292,20 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                       className="absolute inset-0 w-full h-full border-none pointer-events-none"
                       title="PDF Preview" />
                     {fields.map(f => {
-                      const typeDef = FIELD_TYPES.find(t => t.type === f.fieldType)
+                      const color = fieldColor(f)
                       return (
                         <div key={f.id}
                           style={{
                             position: 'absolute',
                             left: `${f.x}%`, top: `${f.y}%`,
                             width: `${f.width}%`, height: `${f.height}%`,
-                            background: typeDef?.bg + 'cc',
-                            border: `2px dashed ${typeDef?.color}`,
+                            background: color + '22',
+                            border: `2px dashed ${color}`,
                             borderRadius: 4, cursor: 'grab', boxSizing: 'border-box',
                           }}
                           onMouseDown={e => onDragStart(e, f.id)}
                           onClick={e => e.stopPropagation()}>
-                          <span style={{ fontSize: 10, fontWeight: 700, color: typeDef?.color,
+                          <span style={{ fontSize: 10, fontWeight: 700, color,
                                          padding: '1px 4px', userSelect: 'none', display: 'block',
                                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {f.label}
@@ -1077,13 +1314,13 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                             onMouseDown={e => e.stopPropagation()}
                             onClick={e => { e.stopPropagation(); removeField(f.id) }}
                             style={{ position: 'absolute', top: -8, right: -8, width: 18, height: 18,
-                                     borderRadius: '50%', background: typeDef?.color, color: '#fff',
+                                     borderRadius: '50%', background: color, color: '#fff',
                                      border: 'none', cursor: 'pointer', fontSize: 12, lineHeight: '18px',
                                      textAlign: 'center', display: 'flex', alignItems: 'center',
                                      justifyContent: 'center' }}><IconX className="w-3 h-3" /></button>
                           <div
                             style={{ position: 'absolute', bottom: -4, right: -4, width: 12, height: 12,
-                                     background: typeDef?.color, borderRadius: 2, cursor: 'se-resize' }}
+                                     background: color, borderRadius: 2, cursor: 'se-resize' }}
                             onMouseDown={e => { e.stopPropagation(); onResizeStart(e, f.id) }} />
                         </div>
                       )
@@ -1126,13 +1363,35 @@ export default function ESignBuilderPage({ initialDocStatus }) {
 
           <div className="space-y-3 mb-6">
             <InfoRow label="Document" value={form.title || doc?.title}/>
-            <InfoRow label="Client"   value={`${form.clientName} <${form.clientEmail}>`}/>
+            <InfoRow
+              label={signatories.length > 1 ? `Signatories (${signatories.length})` : 'Signatory'}
+              value={signatories.length > 1
+                ? (signingMode === 'SEQUENTIAL' ? 'Sign in order' : 'Sign in any order')
+                : `${signatories[0]?.name} <${signatories[0]?.email}>`}/>
+            {signatories.length > 1 && (
+              <div className="py-2 border-b border-gray-100 dark:border-gray-700 space-y-1">
+                {signatories.map((s, i) => (
+                  <div key={s.id || i} className="flex items-center gap-2 text-sm">
+                    <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: signatoryColor(i) }}/>
+                    {signingMode === 'SEQUENTIAL' && <span className="text-xs font-bold text-gray-400">{i + 1}.</span>}
+                    <span className="font-medium text-gray-800 dark:text-gray-200">{s.name}</span>
+                    <span className="text-gray-400 truncate">{s.email}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <InfoRow label="Fields placed" value={`${fields.length} field${fields.length !== 1 ? 's' : ''}`}/>
             <InfoRow label="Link expires"  value={`${form.tokenValidDays} day${form.tokenValidDays !== 1 ? 's' : ''} after sending`}/>
             <InfoRow label="PDF source"
               value={activeSources.map(s => SOURCE_META[s].title).join(' → ') || '—'}/>
             <InfoRow label="Invitation email"
               value={selectedEmailTemplate ? selectedEmailTemplate.name : 'Default template'}/>
+            {inviteCc.length > 0 && (
+              <InfoRow label="Invitation CC" value={inviteCc.join(', ')}/>
+            )}
+            {completionCc.length > 0 && (
+              <InfoRow label="Signed copy to" value={completionCc.join(', ')}/>
+            )}
           </div>
 
           <button onClick={handleSend} disabled={sending}
@@ -1180,6 +1439,43 @@ function FormField({ label, children, error }) {
         </p>
       )}
     </div>
+  )
+}
+
+/** Reusable tag-style multi-email input (chips + free-text). Parent owns both the
+ *  committed `emails` array and the in-progress `input` text so callers can flush
+ *  unsubmitted text on submit. */
+function EmailChipsField({ label, helper, emails, input, onInput, onCommit, onRemove, error, placeholder = 'cc@company.com' }) {
+  return (
+    <FormField label={label} error={error}>
+      <div className={`w-full px-3 py-2 rounded-xl border bg-white dark:bg-gray-700
+                      flex flex-wrap items-center gap-1.5 min-h-[44px]
+                      focus-within:ring-2 focus-within:ring-accent-500
+                      ${error ? 'border-red-400' : 'border-gray-200 dark:border-gray-600'}`}>
+        {emails.map(email => (
+          <span key={email}
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium
+                       bg-accent-100 dark:bg-accent-900/30 text-accent-700 dark:text-accent-300">
+            {email}
+            <button type="button" onClick={() => onRemove(email)}
+              className="hover:text-red-500 transition-colors" title="Remove">
+              <IconX className="w-3 h-3" />
+            </button>
+          </span>
+        ))}
+        <input
+          type="email"
+          value={input}
+          onChange={e => onInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') onCommit(e) }}
+          onBlur={() => onCommit()}
+          placeholder={emails.length ? 'Add another…' : placeholder}
+          className="flex-1 min-w-[140px] bg-transparent border-none outline-none p-0
+                     text-sm text-gray-900 dark:text-white focus:ring-0"
+        />
+      </div>
+      {helper && <p className="mt-1 text-xs text-gray-400">{helper}</p>}
+    </FormField>
   )
 }
 
