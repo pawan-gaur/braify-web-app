@@ -64,11 +64,16 @@ export default function ESignDetailPage() {
       setAudit(a)
       setAttachments(atts || [])
 
-      if (d.signedPdfBase64) {
+      // Prefer pre-signed cloud URLs; fall back to legacy embedded base64.
+      if (d.signedPdfUrl) {
+        setPdfUrl(d.signedPdfUrl)
+      } else if (d.signedPdfBase64) {
         const bytes = Uint8Array.from(atob(d.signedPdfBase64), c => c.charCodeAt(0))
         setPdfUrl(URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' })))
       }
-      if (d.sourcePdfBase64) {
+      if (d.sourcePdfUrl) {
+        setSrcUrl(d.sourcePdfUrl)
+      } else if (d.sourcePdfBase64) {
         const bytes = Uint8Array.from(atob(d.sourcePdfBase64), c => c.charCodeAt(0))
         setSrcUrl(URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' })))
       }
