@@ -16,6 +16,7 @@ const STATUS_COLORS = {
   DRAFT:     'bg-gray-100 text-gray-600',
   PENDING:   'bg-yellow-100 text-yellow-700',
   IN_REVIEW: 'bg-blue-100 text-blue-700',
+  PARTIALLY_SIGNED: 'bg-purple-100 text-purple-700',
   SIGNED:    'bg-indigo-100 text-indigo-700',
   COMPLETED: 'bg-green-100 text-green-700',
   EXPIRED:   'bg-orange-100 text-orange-700',
@@ -149,20 +150,32 @@ export default function ESignDetailPage() {
               </span>
             </div>
             <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 flex-wrap">
-              <span className="flex items-center gap-1.5">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                </svg>
-                {doc.clientName}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                </svg>
-                {doc.clientEmail}
-              </span>
+              {doc.signatories?.length > 1 ? (
+                <span className="flex items-center gap-1.5">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-3-6.7"/>
+                  </svg>
+                  {doc.signatories.length} signatories · {doc.signingMode === 'SEQUENTIAL' ? 'sign in order' : 'sign in any order'}
+                </span>
+              ) : (
+                <>
+                  <span className="flex items-center gap-1.5">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                    {doc.clientName}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    </svg>
+                    {doc.clientEmail}
+                  </span>
+                </>
+              )}
               {doc.completedAt && (
                 <span className="flex items-center gap-1.5 text-green-600">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -220,6 +233,36 @@ export default function ESignDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Signatory progress (multi-party documents) */}
+      {doc.signatories?.length > 1 && (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 mb-5 shadow-sm">
+          <h3 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3">
+            Signatories ({doc.signatories.filter(s => s.status === 'SIGNED').length}/{doc.signatories.length} signed)
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {[...doc.signatories].sort((a, b) => (a.signingOrder || 0) - (b.signingOrder || 0)).map(s => {
+              const signed = s.status === 'SIGNED'
+              const viewed = s.status === 'VIEWED'
+              return (
+                <div key={s.id} className="flex items-center gap-2.5 rounded-xl border border-gray-100 dark:border-gray-700 px-3 py-2">
+                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${signed ? 'bg-green-500' : viewed ? 'bg-blue-400' : 'bg-gray-300'}`}/>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+                      {doc.signingMode === 'SEQUENTIAL' && <span className="text-gray-400">{s.signingOrder}. </span>}
+                      {s.name}
+                    </p>
+                    <p className="text-xs text-gray-400 truncate">{s.email}</p>
+                  </div>
+                  <span className={`text-xs font-semibold shrink-0 ${signed ? 'text-green-600' : viewed ? 'text-blue-600' : 'text-gray-400'}`}>
+                    {signed ? 'Signed' : viewed ? 'Viewed' : 'Pending'}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 mb-5 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 w-fit flex-wrap">
