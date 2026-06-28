@@ -18,6 +18,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { esignOpenDocument, esignSignField, esignSubmitDocument, esignUploadAttachment } from '../services/api'
 import { IconCheck } from '../components/ui/icons'
+import PdfPageCanvas from '../components/esign/PdfPageCanvas'
 
 const FIELD_COLORS = {
   SIGNATURE: { border: '#6D52E8', bg: 'rgba(109,82,232,0.12)' },
@@ -53,6 +54,11 @@ export default function ESignSigningPage() {
   const [submitting, setSubmitting] = useState(false)
   const [submitted,  setSubmitted]  = useState(false)
   const [submitStatus, setSubmitStatus] = useState(null)   // doc status returned after submit
+
+  /* multi-page PDF rendering */
+  const [pdfPageCount,   setPdfPageCount]   = useState(1)
+  const [pdfCurrentPage, setPdfCurrentPage] = useState(1)
+  const [pdfRenderFailed, setPdfRenderFailed] = useState(false)  // fall back to iframe if pdfjs can't load
 
   /* modal state */
   const [activeField, setActiveField] = useState(null)
@@ -421,6 +427,64 @@ export default function ESignSigningPage() {
   const isDateOrText = activeField &&
     (activeField.fieldType === 'DATE' || activeField.fieldType === 'TEXT')
 
+  /* A single field overlay box — used by both the per-page canvas view and the iframe fallback. */
+  const renderField = (f) => {
+    const colors      = FIELD_COLORS[f.fieldType] || FIELD_COLORS.SIGNATURE
+    const isSigned    = !!f.signed
+    const mine        = isMine(f)
+    const borderColor = isSigned ? '#16a34a' : (mine ? colors.border : '#cbd5e1')
+    const bgColor     = isSigned ? 'rgba(22,163,74,0.07)' : (mine ? colors.bg : 'rgba(148,163,184,0.10)')
+    return (
+      <div
+        key={f.id}
+        style={{
+          position:   'absolute',
+          left:       `${f.x}%`,
+          top:        `${f.y}%`,
+          width:      `${f.width}%`,
+          height:     `${f.height}%`,
+          border:     `2px dashed ${borderColor}`,
+          background: bgColor,
+          borderRadius: 4,
+          cursor:     (mine && !isSigned) ? 'pointer' : 'default',
+          boxSizing:  'border-box',
+          overflow:   'hidden',
+          display:    'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+        onClick={() => { if (mine && !isSigned) openModal(f) }}
+      >
+        {isSigned ? (
+          f._signedMethod === 'TYPE' ? (
+            <span style={{
+              fontFamily: 'cursive', color: '#1e293b', fontSize: 13, padding: '2px 4px',
+              overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
+              width: '100%', textAlign: 'center',
+            }}>
+              {f._signedValue}
+            </span>
+          ) : f._signedValue ? (
+            <img src={f._signedValue} alt="signature"
+              style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 2 }} />
+          ) : (
+            <span style={{ fontSize: 11, color: '#16a34a', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <IconCheck className="w-3 h-3" /> Signed
+            </span>
+          )
+        ) : mine ? (
+          <span style={{ fontSize: 10, color: colors.border, fontWeight: 700, textAlign: 'center', padding: '0 4px', userSelect: 'none' }}>
+            {f.required ? '* ' : ''}{f.label}
+          </span>
+        ) : (
+          <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 600, textAlign: 'center', padding: '0 4px', userSelect: 'none' }}>
+            Other signer
+          </span>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
 
@@ -477,14 +541,15 @@ export default function ESignSigningPage() {
       {/* ── Main area ── */}
       <div className="flex-1 flex overflow-hidden">
 
-        {/* PDF + overlays — A4 aspect-ratio container keeps % coords aligned */}
+        {/* PDF + overlays */}
         <div className="flex-1 overflow-y-auto">
-          {pdfUrl ? (
-            /*
-             * paddingTop: 141.4% locks the container to A4 aspect ratio (width × √2).
-             * Field x/y/width/height percentages were computed in the builder against
-             * the same ratio, so they map pixel-perfectly here at any window width.
-             */
+          {!pdfUrl ? (
+            <div className="flex items-center justify-center h-full min-h-96">
+              <Spinner/>
+            </div>
+          ) : pdfRenderFailed ? (
+            /* Fallback: single-page iframe (e.g. if the PDF can't be fetched for canvas
+             * rendering). % coords map against an A4 box, matching legacy single-page docs. */
             <div className="relative w-full" style={{ paddingTop: '141.4%' }}>
               <div className="absolute inset-0">
                 <iframe
@@ -492,85 +557,51 @@ export default function ESignSigningPage() {
                   className="absolute inset-0 w-full h-full border-none pointer-events-none"
                   title="Document to sign"
                 />
-
-                {/* Field overlays */}
-                {fields.map(f => {
-                  const colors   = FIELD_COLORS[f.fieldType] || FIELD_COLORS.SIGNATURE
-                  const isSigned = !!f.signed
-                  const mine     = isMine(f)
-                  const borderColor = isSigned ? '#16a34a' : (mine ? colors.border : '#cbd5e1')
-                  const bgColor     = isSigned ? 'rgba(22,163,74,0.07)' : (mine ? colors.bg : 'rgba(148,163,184,0.10)')
-                  return (
-                    <div
-                      key={f.id}
-                      style={{
-                        position:   'absolute',
-                        left:       `${f.x}%`,
-                        top:        `${f.y}%`,
-                        width:      `${f.width}%`,
-                        height:     `${f.height}%`,
-                        border:     `2px dashed ${borderColor}`,
-                        background: bgColor,
-                        borderRadius: 4,
-                        cursor:     (mine && !isSigned) ? 'pointer' : 'default',
-                        boxSizing:  'border-box',
-                        overflow:   'hidden',
-                        display:    'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                      onClick={() => { if (mine && !isSigned) openModal(f) }}
-                    >
-                      {isSigned ? (
-                        /* Render actual signed content */
-                        f._signedMethod === 'TYPE' ? (
-                          <span style={{
-                            fontFamily: 'cursive',
-                            color: '#1e293b',
-                            fontSize: 13,
-                            padding: '2px 4px',
-                            overflow: 'hidden',
-                            whiteSpace: 'nowrap',
-                            textOverflow: 'ellipsis',
-                            width: '100%',
-                            textAlign: 'center',
-                          }}>
-                            {f._signedValue}
-                          </span>
-                        ) : f._signedValue ? (
-                          <img
-                            src={f._signedValue}
-                            alt="signature"
-                            style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 2 }}
-                          />
-                        ) : (
-                          <span style={{ fontSize: 11, color: '#16a34a', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}><IconCheck className="w-3 h-3" /> Signed</span>
-                        )
-                      ) : mine ? (
-                        <span style={{
-                          fontSize: 10, color: colors.border, fontWeight: 700,
-                          textAlign: 'center', padding: '0 4px',
-                          userSelect: 'none',
-                        }}>
-                          {f.required ? '* ' : ''}{f.label}
-                        </span>
-                      ) : (
-                        <span style={{
-                          fontSize: 9, color: '#94a3b8', fontWeight: 600,
-                          textAlign: 'center', padding: '0 4px',
-                          userSelect: 'none',
-                        }}>
-                          Other signer
-                        </span>
-                      )}
-                    </div>
-                  )
-                })}
+                {fields.map(renderField)}
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-full min-h-96">
-              <Spinner/>
+            /* Page-by-page canvas render so multi-page documents are fully navigable. */
+            <div className="p-3">
+              {pdfPageCount > 1 && (
+                <div className="flex items-center justify-center gap-3 mb-3">
+                  <button type="button"
+                    onClick={() => setPdfCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={pdfCurrentPage <= 1}
+                    className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-600
+                               hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                    ‹ Prev
+                  </button>
+                  <span className="text-sm font-medium text-gray-600 px-2 py-1 rounded-lg bg-white border border-gray-200">
+                    Page {pdfCurrentPage} of {pdfPageCount}
+                  </span>
+                  <button type="button"
+                    onClick={() => setPdfCurrentPage(p => Math.min(pdfPageCount, p + 1))}
+                    disabled={pdfCurrentPage >= pdfPageCount}
+                    className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-600
+                               hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                    Next ›
+                  </button>
+                </div>
+              )}
+
+              <div className="relative w-full max-w-4xl mx-auto border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                <PdfPageCanvas
+                  source={pdfUrl}
+                  pageNumber={pdfCurrentPage}
+                  onPageCountChange={setPdfPageCount}
+                  onError={() => setPdfRenderFailed(true)}
+                />
+                <div className="absolute inset-0">
+                  {fields.filter(f => (f.page || 1) === pdfCurrentPage).map(renderField)}
+                </div>
+              </div>
+
+              {pdfPageCount > 1 && (
+                <p className="text-center text-xs text-gray-400 mt-2">
+                  This document has {pdfPageCount} pages — use Prev / Next to review and sign every page.
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -586,7 +617,7 @@ export default function ESignSigningPage() {
               return (
                 <button
                   key={f.id}
-                  onClick={() => { if (!f.signed) openModal(f) }}
+                  onClick={() => { setPdfCurrentPage(f.page || 1); if (!f.signed) openModal(f) }}
                   className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-left
                               border transition-colors
                               ${f.signed

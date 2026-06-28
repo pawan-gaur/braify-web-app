@@ -12,6 +12,7 @@ import {
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import { IconX, IconCheck, IconArrowRight, IconArrowLeft } from '../components/ui/icons'
+import PdfPageCanvas from '../components/esign/PdfPageCanvas'
 
 const FIELD_TYPES = [
   { type: 'SIGNATURE', label: 'Signature',  color: '#7c3aed', bg: '#ede9fe' },
@@ -59,11 +60,6 @@ async function fetchFileAsBase64(url, extraHeaders = {}) {
   })
 }
 
-function base64ToBlobUrl(base64) {
-  const b64   = base64.includes(',') ? base64.split(',')[1] : base64
-  const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0))
-  return URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }))
-}
 
 /* ══════════════════════════════════════════════════════════════════════════ */
 export default function ESignBuilderPage({ initialDocStatus }) {
@@ -123,7 +119,9 @@ export default function ESignBuilderPage({ initialDocStatus }) {
   const [fileApiTestInfo,setFileApiTestInfo]= useState(null)
 
   /* ── step 1 — field placement ─────────────────────────────────────────── */
-  const [pdfUrl,       setPdfUrl]       = useState(null)
+  const [pdfBase64ForPreview, setPdfBase64ForPreview] = useState(null)  // fed to PdfPageCanvas
+  const [pdfCurrentPage, setPdfCurrentPage] = useState(1)
+  const [pdfPageCount,   setPdfPageCount]   = useState(1)
   const [fields,       setFields]       = useState([])
   const [selectedType, setSelectedType] = useState('SIGNATURE')
   const [dragging,     setDragging]     = useState(null)
@@ -198,9 +196,8 @@ export default function ESignBuilderPage({ initialDocStatus }) {
       setSigningMode(d.signingMode || 'PARALLEL')
       setInviteCc(d.ccEmails || [])
       setCompletionCc(d.completionCcEmails || [])
-      if (d.sourcePdfBase64) {
-        setPdfUrl(base64ToBlobUrl(d.sourcePdfBase64))
-      }
+      setPdfBase64ForPreview(d.sourcePdfBase64 || null)
+      setPdfCurrentPage(1)
     }).catch(e => showToast(e.message, 'error'))
   }, [id])
 
@@ -292,15 +289,15 @@ export default function ESignBuilderPage({ initialDocStatus }) {
       try {
         if (src === 'single') {
           if (!pdfBase64) throw new Error('No PDF uploaded')
-          return { sourceType: 'UPLOAD', pdfBase64, blobUrl: base64ToBlobUrl(pdfBase64) }
+          return { sourceType: 'UPLOAD', pdfBase64, previewBase64: pdfBase64 }
         } else if (src === 'template') {
           if (!selectedTemplateId) throw new Error('No template selected')
           const previewB64 = await generatePdfAsBase64(selectedTemplateId, {})
-          return { sourceType: 'TEMPLATE', templateId: selectedTemplateId, blobUrl: base64ToBlobUrl(previewB64) }
+          return { sourceType: 'TEMPLATE', templateId: selectedTemplateId, previewBase64: previewB64 }
         } else {
           if (!fileApi.url) throw new Error('No API URL configured')
           const b64 = await fetchFileAsBase64(fileApi.url, buildAuthHeaders(fileApi))
-          return { sourceType: 'UPLOAD', pdfBase64: b64, blobUrl: base64ToBlobUrl(b64) }
+          return { sourceType: 'UPLOAD', pdfBase64: b64, previewBase64: b64 }
         }
       } catch (e) {
         lastErr = e
@@ -406,7 +403,8 @@ export default function ESignBuilderPage({ initialDocStatus }) {
       // Adopt the server-assigned signatory IDs so placed fields can reference them
       if (created.signatories?.length) setSignatories(created.signatories)
       setActiveSignatoryIdx(0)
-      setPdfUrl(resolved.blobUrl)
+      setPdfBase64ForPreview(resolved.previewBase64 || null)
+      setPdfCurrentPage(1)
       window.history.replaceState(null, '', `/esign/${created.id}`)
       setStep(1)
     } catch (e) {
@@ -432,7 +430,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
     const y    = toPercent(e.clientY - rect.top,  rect.height)
     const typeDef = FIELD_TYPES.find(t => t.type === selectedType)
     setFields(prev => [...prev, {
-      id: crypto.randomUUID(), page: 1,
+      id: crypto.randomUUID(), page: pdfCurrentPage,
       x:  Math.min(Math.max(x - DEFAULT_FIELD_SIZE.width  / 2, 0), 100 - DEFAULT_FIELD_SIZE.width),
       y:  Math.min(Math.max(y - DEFAULT_FIELD_SIZE.height / 2, 0), 100 - DEFAULT_FIELD_SIZE.height),
       width:  DEFAULT_FIELD_SIZE.width,
@@ -1279,53 +1277,87 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                 </span>
               </div>
 
-              {pdfUrl ? (
-                <div ref={overlayRef}
-                     className="relative w-full"
-                     style={{ paddingTop: '141.4%', cursor: 'crosshair' }}
-                     onClick={addField}
-                     onMouseMove={onMouseMove}
-                     onMouseUp={onMouseUp}
-                     onMouseLeave={onMouseUp}>
-                  <div className="absolute inset-0">
-                    <iframe src={pdfUrl + '#toolbar=0&view=FitH'}
-                      className="absolute inset-0 w-full h-full border-none pointer-events-none"
-                      title="PDF Preview" />
-                    {fields.map(f => {
-                      const color = fieldColor(f)
-                      return (
-                        <div key={f.id}
-                          style={{
-                            position: 'absolute',
-                            left: `${f.x}%`, top: `${f.y}%`,
-                            width: `${f.width}%`, height: `${f.height}%`,
-                            background: color + '22',
-                            border: `2px dashed ${color}`,
-                            borderRadius: 4, cursor: 'grab', boxSizing: 'border-box',
-                          }}
-                          onMouseDown={e => onDragStart(e, f.id)}
-                          onClick={e => e.stopPropagation()}>
-                          <span style={{ fontSize: 10, fontWeight: 700, color,
-                                         padding: '1px 4px', userSelect: 'none', display: 'block',
-                                         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {f.label}
-                          </span>
-                          <button
-                            onMouseDown={e => e.stopPropagation()}
-                            onClick={e => { e.stopPropagation(); removeField(f.id) }}
-                            style={{ position: 'absolute', top: -8, right: -8, width: 18, height: 18,
-                                     borderRadius: '50%', background: color, color: '#fff',
-                                     border: 'none', cursor: 'pointer', fontSize: 12, lineHeight: '18px',
-                                     textAlign: 'center', display: 'flex', alignItems: 'center',
-                                     justifyContent: 'center' }}><IconX className="w-3 h-3" /></button>
-                          <div
-                            style={{ position: 'absolute', bottom: -4, right: -4, width: 12, height: 12,
-                                     background: color, borderRadius: 2, cursor: 'se-resize' }}
-                            onMouseDown={e => { e.stopPropagation(); onResizeStart(e, f.id) }} />
-                        </div>
-                      )
-                    })}
+              {pdfBase64ForPreview ? (
+                <div className="p-4 max-h-[calc(100vh-9rem)] overflow-y-auto">
+                  {/* Page navigation — shown only for multi-page PDFs */}
+                  {pdfPageCount > 1 && (
+                    <div className="flex items-center justify-center gap-3 mb-3 sticky top-0 z-10">
+                      <button type="button"
+                        onClick={() => setPdfCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={pdfCurrentPage <= 1}
+                        className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800
+                                   hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                        <IconArrowLeft className="w-4 h-4" />
+                      </button>
+                      <span className="text-sm font-medium text-gray-600 dark:text-gray-300 px-2 py-1 rounded-lg bg-gray-50 dark:bg-gray-800">
+                        Page {pdfCurrentPage} of {pdfPageCount}
+                      </span>
+                      <button type="button"
+                        onClick={() => setPdfCurrentPage(p => Math.min(pdfPageCount, p + 1))}
+                        disabled={pdfCurrentPage >= pdfPageCount}
+                        className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800
+                                   hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                        <IconArrowRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* PDF page (canvas) + click-to-place field overlay */}
+                  <div ref={overlayRef}
+                       className="relative w-full border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white">
+                    <PdfPageCanvas
+                      source={pdfBase64ForPreview}
+                      pageNumber={pdfCurrentPage}
+                      onPageCountChange={setPdfPageCount}
+                    />
+                    <div className="absolute inset-0"
+                         style={{ cursor: 'crosshair' }}
+                         onClick={addField}
+                         onMouseMove={onMouseMove}
+                         onMouseUp={onMouseUp}
+                         onMouseLeave={onMouseUp}>
+                      {fields.filter(f => (f.page || 1) === pdfCurrentPage).map(f => {
+                        const color = fieldColor(f)
+                        return (
+                          <div key={f.id}
+                            style={{
+                              position: 'absolute',
+                              left: `${f.x}%`, top: `${f.y}%`,
+                              width: `${f.width}%`, height: `${f.height}%`,
+                              background: color + '22',
+                              border: `2px dashed ${color}`,
+                              borderRadius: 4, cursor: 'grab', boxSizing: 'border-box',
+                            }}
+                            onMouseDown={e => onDragStart(e, f.id)}
+                            onClick={e => e.stopPropagation()}>
+                            <span style={{ fontSize: 10, fontWeight: 700, color,
+                                           padding: '1px 4px', userSelect: 'none', display: 'block',
+                                           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {f.label}
+                            </span>
+                            <button
+                              onMouseDown={e => e.stopPropagation()}
+                              onClick={e => { e.stopPropagation(); removeField(f.id) }}
+                              style={{ position: 'absolute', top: -8, right: -8, width: 18, height: 18,
+                                       borderRadius: '50%', background: color, color: '#fff',
+                                       border: 'none', cursor: 'pointer', fontSize: 12, lineHeight: '18px',
+                                       textAlign: 'center', display: 'flex', alignItems: 'center',
+                                       justifyContent: 'center' }}><IconX className="w-3 h-3" /></button>
+                            <div
+                              style={{ position: 'absolute', bottom: -4, right: -4, width: 12, height: 12,
+                                       background: color, borderRadius: 2, cursor: 'se-resize' }}
+                              onMouseDown={e => { e.stopPropagation(); onResizeStart(e, f.id) }} />
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
+
+                  {pdfPageCount > 1 && (
+                    <p className="text-center text-xs text-gray-400 mt-2">
+                      Fields apply to the page shown. Switch pages to place fields on other pages.
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-80 text-gray-400 dark:text-gray-500">
