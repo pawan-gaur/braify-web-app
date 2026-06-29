@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   esignCreateDocument,
   esignGetDocument,
+  esignDownloadSource,
   esignSaveFields,
   esignSendDocument,
   getTemplates,
@@ -120,6 +121,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
 
   /* ── step 1 — field placement ─────────────────────────────────────────── */
   const [pdfBase64ForPreview, setPdfBase64ForPreview] = useState(null)  // fed to PdfPageCanvas
+  const [pdfLoading,     setPdfLoading]     = useState(false)           // fetching the existing PDF (edit mode)
   const [pdfCurrentPage, setPdfCurrentPage] = useState(1)
   const [pdfPageCount,   setPdfPageCount]   = useState(1)
   const [fields,       setFields]       = useState([])
@@ -186,6 +188,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
   // Load existing document (edit mode)
   useEffect(() => {
     if (!isEdit) return
+    setPdfLoading(true)   // show a loading state until the existing PDF is fetched
     esignGetDocument(id).then(d => {
       setDoc(d)
       setFields(d.fields || [])
@@ -196,9 +199,19 @@ export default function ESignBuilderPage({ initialDocStatus }) {
       setSigningMode(d.signingMode || 'PARALLEL')
       setInviteCc(d.ccEmails || [])
       setCompletionCc(d.completionCcEmails || [])
-      setPdfBase64ForPreview(d.sourcePdfBase64 || null)
       setPdfCurrentPage(1)
-    }).catch(e => showToast(e.message, 'error'))
+      // Render the existing PDF in the editor. Legacy docs embed base64; cloud docs are
+      // fetched via the same-origin source-pdf endpoint (no bucket CORS needed) as a blob.
+      if (d.sourcePdfBase64) {
+        setPdfBase64ForPreview(d.sourcePdfBase64)
+        setPdfLoading(false)
+      } else {
+        esignDownloadSource(id)
+          .then(blob => setPdfBase64ForPreview(URL.createObjectURL(blob)))
+          .catch(() => showToast('Could not load the document PDF', 'error'))
+          .finally(() => setPdfLoading(false))
+      }
+    }).catch(e => { showToast(e.message, 'error'); setPdfLoading(false) })
   }, [id])
 
   // Lazy-load PDF templates when template source is enabled
@@ -371,6 +384,10 @@ export default function ESignBuilderPage({ initialDocStatus }) {
   }
 
   async function handleCreate() {
+    // Returning to Setup after the document already exists: just advance — the document's
+    // title / PDF / signatories are fixed once created (no update endpoint), so don't re-create.
+    if (docId) { setStep(1); return }
+
     if (!validateForm()) return
 
     // Flush any address still typed in either cc box into its committed list.
@@ -857,16 +874,21 @@ export default function ESignBuilderPage({ initialDocStatus }) {
         <div className="flex items-center gap-3 mb-6">
           {STEPS.map((s, i) => (
             <div key={s} className="flex items-center gap-3">
-              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold
+              <button
+                type="button"
+                disabled={i >= step}
+                onClick={() => { if (i < step) setStep(i) }}
+                title={i < step ? `Back to ${s}` : undefined}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold
                               transition-colors duration-200
                               ${i === step
                                 ? 'bg-accent-600 text-white'
                                 : i < step
-                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
-                                  : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500'}`}>
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 cursor-pointer hover:brightness-95'
+                                  : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-default'}`}>
                 <span>{i < step ? <IconCheck className="w-4 h-4" /> : i + 1}</span>
                 <span>{s}</span>
-              </div>
+              </button>
               {i < STEPS.length - 1 && (
                 <div className={`h-0.5 w-8 rounded ${i < step ? 'bg-green-400' : 'bg-gray-200 dark:bg-gray-700'}`}/>
               )}
@@ -881,6 +903,19 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                         border border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Document Setup</h2>
 
+          {docId && (
+            <div className="flex items-start gap-2 mb-5 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200
+                            dark:border-blue-800 px-4 py-3 text-sm text-blue-800 dark:text-blue-300">
+              <svg className="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span>
+                This document has already been created — its PDF, title and signatories are now fixed.
+                Continue to adjust field placements, or cancel from the documents list to start over.
+              </span>
+            </div>
+          )}
+
           <div className="space-y-5">
             {/* Document title */}
             <FormField label="Document Title" error={formErrors.title}>
@@ -892,8 +927,22 @@ export default function ESignBuilderPage({ initialDocStatus }) {
               />
             </FormField>
 
-            {/* Multi-source PDF picker */}
-            {renderPdfSourceSection()}
+            {/* Multi-source PDF picker — locked once the document exists (PDF can't be changed) */}
+            {docId ? (
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">
+                  PDF Source
+                </label>
+                <div className="flex items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700
+                                bg-gray-50 dark:bg-gray-700/40 px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                  </svg>
+                  PDF already attached — to use a different file, cancel this document and create a new one.
+                </div>
+              </div>
+            ) : renderPdfSourceSection()}
 
             {/* ── Email Template (optional) ── */}
             <div className={`rounded-xl border-2 transition-colors
@@ -1085,25 +1134,27 @@ export default function ESignBuilderPage({ initialDocStatus }) {
 
               {/* Signing order (only relevant with 2+ signatories) */}
               {signatories.length > 1 && (
-                <div className="mt-3 flex items-center gap-2">
-                  <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 mr-1">Signing order:</span>
-                  {[
-                    { key: 'PARALLEL',   label: 'Any order' },
-                    { key: 'SEQUENTIAL', label: 'In order' },
-                  ].map(opt => (
-                    <button key={opt.key} type="button" onClick={() => setSigningMode(opt.key)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors
-                        ${signingMode === opt.key
-                          ? 'border-accent-500 bg-accent-50 dark:bg-accent-700/30 text-accent-700 dark:text-accent-300'
-                          : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-300'}`}>
-                      {opt.label}
-                    </button>
-                  ))}
-                  <span className="text-xs text-gray-400 ml-1">
+                <div className="mt-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 mr-1 shrink-0">Signing order:</span>
+                    {[
+                      { key: 'PARALLEL',   label: 'Any order' },
+                      { key: 'SEQUENTIAL', label: 'In order' },
+                    ].map(opt => (
+                      <button key={opt.key} type="button" onClick={() => setSigningMode(opt.key)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors shrink-0
+                          ${signingMode === opt.key
+                            ? 'border-accent-500 bg-accent-50 dark:bg-accent-700/30 text-accent-700 dark:text-accent-300'
+                            : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-300'}`}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1.5">
                     {signingMode === 'SEQUENTIAL'
                       ? 'Each person is invited after the previous one signs.'
                       : 'Everyone is invited at once.'}
-                  </span>
+                  </p>
                 </div>
               )}
             </div>
@@ -1261,6 +1312,14 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                     </span>
                   )}
                 </button>
+
+                <button
+                  onClick={() => setStep(0)}
+                  className="w-full mt-2 py-2 rounded-xl text-sm text-gray-500 hover:text-gray-700
+                             dark:text-gray-400 dark:hover:text-gray-200 transition-colors inline-flex items-center justify-center gap-1.5"
+                >
+                  <IconArrowLeft className="w-4 h-4" /> Back to Setup
+                </button>
               </div>
             </div>
 
@@ -1358,6 +1417,13 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                       Fields apply to the page shown. Switch pages to place fields on other pages.
                     </p>
                   )}
+                </div>
+              ) : pdfLoading ? (
+                <div className="flex items-center justify-center h-80 text-gray-400 dark:text-gray-500">
+                  <div className="text-center">
+                    <div className="w-8 h-8 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-3"/>
+                    <p>Loading PDF…</p>
+                  </div>
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-80 text-gray-400 dark:text-gray-500">
