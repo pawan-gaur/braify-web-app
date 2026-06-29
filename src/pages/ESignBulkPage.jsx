@@ -2,13 +2,15 @@ import { useState, useRef, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 import * as pdfjsLib from 'pdfjs-dist'
-import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
+import PdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?worker'
 import { esignBulkCreate, getTemplates, generatePdfAsBase64, getEmailTemplates } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import { IconCheck, IconX, IconChevronRight } from '../components/ui/icons'
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl
+// Bundle the pdf.js worker via Vite's ?worker (a .js chunk) rather than ?url (a .mjs file),
+// which some prod static hosts serve with a non-JS MIME type and refuse to load.
+pdfjsLib.GlobalWorkerOptions.workerPort = new PdfjsWorker()
 
 const CRUMBS = [
   { label: 'Dashboard', to: '/' },

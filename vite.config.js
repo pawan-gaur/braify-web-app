@@ -3,6 +3,11 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  // pdf.js ships an ES-module worker; emit bundled workers (?worker imports) as ES modules
+  // so they resolve correctly in the production build.
+  worker: {
+    format: 'es',
+  },
   build: {
     // Split heavy libraries into their own cacheable chunks instead of one
     // ~4.4 MB bundle. Combined with React.lazy routes, the landing/login path

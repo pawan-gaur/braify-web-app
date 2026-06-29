@@ -1,8 +1,12 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as pdfjsLib from 'pdfjs-dist'
-import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
+// Bundle the worker via Vite's ?worker (emits a .js chunk and instantiates it for us)
+// instead of ?url. A ?url import emits a .mjs file, and many production static hosts serve
+// .mjs with a non-JS MIME type, which blocks the module worker from loading — leaving the
+// PDF blank in prod while it works in dev. ?worker sidesteps the MIME/path problem entirely.
+import PdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?worker'
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl
+pdfjsLib.GlobalWorkerOptions.workerPort = new PdfjsWorker()
 
 /**
  * Renders a single page of a PDF to a <canvas> via pdfjs-dist.
@@ -18,10 +22,12 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl
  */
 export default function PdfPageCanvas({ source, pageNumber, onPageCountChange, onError }) {
   const canvasRef = useRef(null)
+  const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     if (!source || !canvasRef.current) return
     let cancelled = false
+    setFailed(false)
 
     ;(async () => {
       try {
@@ -58,12 +64,22 @@ export default function PdfPageCanvas({ source, pageNumber, onPageCountChange, o
         ctx.clearRect(0, 0, canvas.width, canvas.height)
         await page.render({ canvasContext: ctx, viewport: scaled }).promise
       } catch (err) {
-        if (!cancelled) { console.error('PDF render error:', err); onError?.(err) }
+        if (!cancelled) { console.error('PDF render error:', err); setFailed(true); onError?.(err) }
       }
     })()
 
     return () => { cancelled = true }
   }, [source, pageNumber])
+
+  if (failed) {
+    return (
+      <div className="w-full flex flex-col items-center justify-center gap-1 bg-gray-50 text-center px-4"
+           style={{ minHeight: 360 }}>
+        <p className="text-sm font-medium text-gray-500">Unable to display the PDF</p>
+        <p className="text-xs text-gray-400">Please reload the page, or try a different browser.</p>
+      </div>
+    )
+  }
 
   return <canvas ref={canvasRef} className="block w-full" />
 }
