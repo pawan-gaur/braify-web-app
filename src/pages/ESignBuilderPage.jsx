@@ -1162,7 +1162,8 @@ export default function ESignBuilderPage({ initialDocStatus }) {
             {/* CC on the signing invitation (optional) */}
             <EmailChipsField
               label="CC on the invitation email"
-              helper="These people are copied on the signing invitation (and any resend), so they're kept in the loop. Press Enter or comma to add."
+              name="esign-invite-cc"
+              helper="These people get a courtesy notification that the document was sent — without the signing link, so they can't sign it. Press Enter or comma to add."
               emails={inviteCc}
               input={inviteCcInput}
               onInput={v => { setInviteCcInput(v); setFormErrors(fe => ({ ...fe, inviteCc: undefined })) }}
@@ -1174,6 +1175,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
             {/* Send a copy of the signed document to (optional) */}
             <EmailChipsField
               label="Send a copy of the signed document to"
+              name="esign-completion-cc"
               helper="These people receive the final signed PDF by email once signing is complete. Press Enter or comma to add."
               emails={completionCc}
               input={completionCcInput}
@@ -1543,7 +1545,7 @@ function FormField({ label, children, error }) {
 /** Reusable tag-style multi-email input (chips + free-text). Parent owns both the
  *  committed `emails` array and the in-progress `input` text so callers can flush
  *  unsubmitted text on submit. */
-function EmailChipsField({ label, helper, emails, input, onInput, onCommit, onRemove, error, placeholder = 'cc@company.com' }) {
+function EmailChipsField({ label, helper, emails, input, onInput, onCommit, onRemove, error, name, placeholder = 'cc@company.com' }) {
   return (
     <FormField label={label} error={error}>
       <div className={`w-full px-3 py-2 rounded-xl border bg-white dark:bg-gray-700
@@ -1568,6 +1570,11 @@ function EmailChipsField({ label, helper, emails, input, onInput, onCommit, onRe
           onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') onCommit(e) }}
           onBlur={() => onCommit()}
           placeholder={emails.length ? 'Add another…' : placeholder}
+          /* Distinct name + disabled autofill so the browser doesn't fill both CC fields at once */
+          name={name}
+          autoComplete="off"
+          data-lpignore="true"
+          data-1p-ignore="true"
           className="flex-1 min-w-[140px] bg-transparent border-none outline-none p-0
                      text-sm text-gray-900 dark:text-white focus:ring-0"
         />

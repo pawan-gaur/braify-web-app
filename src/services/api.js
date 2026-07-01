@@ -194,6 +194,7 @@ export const esignSaveFields      = (id, fields)           => http.put(`/esign/d
 export const esignSendDocument    = (id, days = 7)         => http.post(`/esign/documents/${id}/send?tokenValidDays=${days}`).then(r => r.data)
 export const esignCancelDocument  = (id)                   => http.post(`/esign/documents/${id}/cancel`).then(r => r.data)
 export const esignResendDocument  = (id, days = 7)         => http.post(`/esign/documents/${id}/resend?tokenValidDays=${days}`).then(r => r.data)
+export const esignResendSignatory = (id, signatoryId, days = 7) => http.post(`/esign/documents/${id}/signatories/${signatoryId}/resend?tokenValidDays=${days}`).then(r => r.data)
 export const esignGetAudit        = (id)                   => http.get(`/esign/documents/${id}/audit`).then(r => r.data)
 export const esignDownloadSigned  = (id)                   => http.get(`/esign/documents/${id}/signed-pdf`, { responseType: 'blob' }).then(r => r.data)
 export const esignDownloadSource  = (id)                   => http.get(`/esign/documents/${id}/source-pdf`, { responseType: 'blob' }).then(r => r.data)
@@ -222,6 +223,12 @@ export const esignUploadAttachment = (token, file) => {
 }
 export const esignDownloadClientAttachment = (token, attachmentId) =>
   http.get(`/esign/sign/${token}/attachments/${attachmentId}`, { headers: { Authorization: `Bearer ${token}` }, responseType: 'blob' }).then(r => r.data)
+export const esignDownloadSignSource = (token) =>
+  http.get(`/esign/sign/${token}/source-pdf`, { headers: { Authorization: `Bearer ${token}` }, responseType: 'blob' }).then(r => r.data)
+
+// ── E-Sign View (read-only, CC recipients — uses VIEW token) ──
+export const esignOpenView        = (token)                => http.get(`/esign/view/${token}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data)
+export const esignViewPdf         = (token)                => http.get(`/esign/view/${token}/pdf`, { headers: { Authorization: `Bearer ${token}` }, responseType: 'blob' }).then(r => r.data)
 
 // ── E-Sign Verify (public) ─────────────────────────────────
 export const esignVerifyDocument  = (id)                   => http.get(`/esign/verify/${id}`).then(r => r.data)

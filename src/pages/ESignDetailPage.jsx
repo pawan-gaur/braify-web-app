@@ -7,7 +7,7 @@
  */
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { esignGetDocument, esignGetAudit, esignDownloadSigned, esignListAttachments, esignDownloadAttachment } from '../services/api'
+import { esignGetDocument, esignGetAudit, esignDownloadSigned, esignListAttachments, esignDownloadAttachment, esignResendSignatory } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import { IconCheck } from '../components/ui/icons'
@@ -54,6 +54,7 @@ export default function ESignDetailPage() {
   const [srcUrl,      setSrcUrl]      = useState(null)  // source PDF blob URL
   const [loading,     setLoading]     = useState(true)
   const [tab,         setTab]         = useState('overview') // overview | pdf | audit | attachments
+  const [resendingSig, setResendingSig] = useState(null)     // signatoryId currently being resent
 
   useEffect(() => {
     Promise.all([
@@ -108,6 +109,19 @@ export default function ESignDetailPage() {
       URL.revokeObjectURL(url)
     } catch (e) {
       showToast(e.message, 'error')
+    }
+  }
+
+  async function handleResendSignatory(sig) {
+    setResendingSig(sig.id)
+    try {
+      const updated = await esignResendSignatory(id, sig.id)
+      setDoc(prev => ({ ...prev, ...updated }))   // refresh signatory statuses without dropping PDF urls
+      showToast(`Invitation resent to ${sig.email}`, 'success')
+    } catch (e) {
+      showToast(e.message || 'Failed to resend invitation', 'error')
+    } finally {
+      setResendingSig(null)
     }
   }
 
@@ -241,26 +255,111 @@ export default function ESignDetailPage() {
             Signatories ({doc.signatories.filter(s => s.status === 'SIGNED').length}/{doc.signatories.length} signed)
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {[...doc.signatories].sort((a, b) => (a.signingOrder || 0) - (b.signingOrder || 0)).map(s => {
-              const signed = s.status === 'SIGNED'
-              const viewed = s.status === 'VIEWED'
-              return (
-                <div key={s.id} className="flex items-center gap-2.5 rounded-xl border border-gray-100 dark:border-gray-700 px-3 py-2">
-                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${signed ? 'bg-green-500' : viewed ? 'bg-blue-400' : 'bg-gray-300'}`}/>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
-                      {doc.signingMode === 'SEQUENTIAL' && <span className="text-gray-400">{s.signingOrder}. </span>}
-                      {s.name}
-                    </p>
-                    <p className="text-xs text-gray-400 truncate">{s.email}</p>
+            {(() => {
+              const sorted = [...doc.signatories].sort((a, b) => (a.signingOrder || 0) - (b.signingOrder || 0))
+              const canResend = ['PENDING', 'IN_REVIEW', 'PARTIALLY_SIGNED'].includes(doc.status)
+              // In sequential mode only the current (first not-yet-signed) signatory can be re-invited.
+              const currentSeqId = doc.signingMode === 'SEQUENTIAL'
+                ? sorted.find(s => s.status !== 'SIGNED')?.id
+                : null
+              return sorted.map(s => {
+                const signed = s.status === 'SIGNED'
+                const viewed = s.status === 'VIEWED'
+                const eligible = canResend && !signed &&
+                  (doc.signingMode !== 'SEQUENTIAL' || s.id === currentSeqId)
+                return (
+                  <div key={s.id} className="flex items-center gap-2.5 rounded-xl border border-gray-100 dark:border-gray-700 px-3 py-2">
+                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${signed ? 'bg-green-500' : viewed ? 'bg-blue-400' : 'bg-gray-300'}`}/>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+                        {doc.signingMode === 'SEQUENTIAL' && <span className="text-gray-400">{s.signingOrder}. </span>}
+                        {s.name}
+                      </p>
+                      <p className="text-xs text-gray-400 truncate">{s.email}</p>
+                    </div>
+                    <div className="flex flex-col items-end shrink-0 gap-1">
+                      <span className={`text-xs font-semibold ${signed ? 'text-green-600' : viewed ? 'text-blue-600' : 'text-gray-400'}`}>
+                        {signed ? 'Signed' : viewed ? 'Viewed' : 'Pending'}
+                      </span>
+                      {eligible && (
+                        <button
+                          onClick={() => handleResendSignatory(s)}
+                          disabled={resendingSig === s.id}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-accent-600 dark:text-accent-400
+                                     hover:text-accent-700 disabled:opacity-50 transition-colors"
+                          title={`Resend the invitation to ${s.email}`}>
+                          {resendingSig === s.id ? (
+                            <>
+                              <span className="w-3 h-3 border-2 border-accent-500 border-t-transparent rounded-full animate-spin"/>
+                              Resending…
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                              </svg>
+                              Resend
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <span className={`text-xs font-semibold shrink-0 ${signed ? 'text-green-600' : viewed ? 'text-blue-600' : 'text-gray-400'}`}>
-                    {signed ? 'Signed' : viewed ? 'Viewed' : 'Pending'}
-                  </span>
-                </div>
-              )
-            })}
+                )
+              })
+            })()}
           </div>
+        </div>
+      )}
+
+      {/* CC + copy recipients with delivery status */}
+      {((doc.ccEmails?.length || 0) + (doc.completionCcEmails?.length || 0)) > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 mb-5 shadow-sm">
+          <h3 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3">Notifications</h3>
+
+          {doc.ccEmails?.length > 0 && (() => {
+            const notified = doc.status !== 'DRAFT'   // CC courtesy notice goes out when the doc is sent
+            return (
+              <div className="mb-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
+                  CC on invitation
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {doc.ccEmails.map(email => (
+                    <div key={email} className="flex items-center justify-between gap-2 rounded-xl border border-gray-100 dark:border-gray-700 px-3 py-2">
+                      <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{email}</span>
+                      <span className={`text-xs font-semibold shrink-0 ${notified ? 'text-green-600' : 'text-gray-400'}`}>
+                        {notified ? 'Notified' : 'Pending'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
+
+          {doc.completionCcEmails?.length > 0 && (() => {
+            const sent = doc.status === 'COMPLETED'   // signed copy is emailed only once fully completed
+            return (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
+                  Copy of signed document
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {doc.completionCcEmails.map(email => (
+                    <div key={email} className="flex items-center justify-between gap-2 rounded-xl border border-gray-100 dark:border-gray-700 px-3 py-2">
+                      <span className="text-sm text-gray-700 dark:text-gray-300 truncate">{email}</span>
+                      <span className={`text-xs font-semibold shrink-0 ${sent ? 'text-green-600' : 'text-gray-400'}`}
+                            title={sent ? 'Signed copy emailed' : 'Will be emailed once all signatories complete'}>
+                        {sent ? 'Sent' : 'Pending'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
         </div>
       )}
 

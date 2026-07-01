@@ -16,7 +16,7 @@
  */
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
-import { esignOpenDocument, esignSignField, esignSubmitDocument, esignUploadAttachment } from '../services/api'
+import { esignOpenDocument, esignSignField, esignSubmitDocument, esignUploadAttachment, esignDownloadSignSource } from '../services/api'
 import { IconCheck } from '../components/ui/icons'
 import PdfPageCanvas from '../components/esign/PdfPageCanvas'
 
@@ -96,12 +96,16 @@ export default function ESignSigningPage() {
       .then(d => {
         setDoc(d)
         setFields(d.fields || [])
-        // Prefer the pre-signed cloud URL; fall back to legacy embedded base64.
-        if (d.sourcePdfUrl) {
-          setPdfUrl(d.sourcePdfUrl)
-        } else if (d.sourcePdfBase64) {
+        // Load the PDF SAME-ORIGIN so pdf.js can render it page-by-page. Using the cloud
+        // pre-signed URL directly fails CORS in pdf.js and forces the single-page fallback
+        // (all fields collapse onto one page). Legacy docs still carry embedded base64.
+        if (d.sourcePdfBase64) {
           const bytes = Uint8Array.from(atob(d.sourcePdfBase64), c => c.charCodeAt(0))
           setPdfUrl(URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' })))
+        } else {
+          esignDownloadSignSource(token)
+            .then(blob => setPdfUrl(URL.createObjectURL(blob)))
+            .catch(() => { if (d.sourcePdfUrl) setPdfUrl(d.sourcePdfUrl) })  // last-resort fallback
         }
       })
       .catch(e => setError(e.message))

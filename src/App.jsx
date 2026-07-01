@@ -41,6 +41,7 @@ const BulkEmailJobsPage      = lazy(() => import('./pages/BulkEmailJobsPage'))
 const BulkEmailSendPage      = lazy(() => import('./pages/BulkEmailSendPage'))
 const BulkEmailDetailPage    = lazy(() => import('./pages/BulkEmailDetailPage'))
 const ESignVerifyPage        = lazy(() => import('./pages/ESignVerifyPage'))
+const ESignViewPage          = lazy(() => import('./pages/ESignViewPage'))
 const GetStartedPage         = lazy(() => import('./pages/GetStartedPage'))
 const OnboardingRequestsPage = lazy(() => import('./pages/OnboardingRequestsPage'))
 const OrgSettingsPage        = lazy(() => import('./pages/BrandingPage'))
@@ -212,8 +213,9 @@ function AppRoutes() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password"  element={<ResetPasswordPage />} />
       {/* E-Sign public routes */}
-      <Route path="/sign/:token"    element={<ESignSigningPage />} />
-      <Route path="/verify/:id"     element={<ESignVerifyPage />} />
+      <Route path="/sign/:token"        element={<ESignSigningPage />} />
+      <Route path="/esign/view/:token"  element={<ESignViewPage />} />
+      <Route path="/verify/:id"         element={<ESignVerifyPage />} />
 
       {/* Everything else is protected */}
       <Route
