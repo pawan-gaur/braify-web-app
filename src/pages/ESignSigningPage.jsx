@@ -66,6 +66,13 @@ export default function ESignSigningPage() {
   const [typedText,   setTypedText]   = useState('')
   const [saving,      setSaving]      = useState(false)
 
+  /* "adopt once, click to apply" — the signer's reusable value per field type
+     (SIGNATURE / INITIALS / DATE). After the first time they fill one, clicking
+     another field of the same type applies the same value without re-drawing. */
+  const [adopted,     setAdopted]     = useState({})       // fieldType -> { value, method }
+  const [applyingId,  setApplyingId]  = useState(null)     // field currently being auto-applied
+  const [applyingAll, setApplyingAll] = useState(false)
+
   /* post-submission attachment state */
   const [attachments,  setAttachments]  = useState([])
   const [uploading,    setUploading]    = useState(false)
@@ -181,7 +188,47 @@ export default function ESignSigningPage() {
     setTimeout(() => clearCanvas(), 0)
   }
 
-  /* ── Apply signature ── */
+  /* Field types whose value can be reused ("adopted") across fields. TEXT is per-field. */
+  const REUSABLE = ['SIGNATURE', 'INITIALS', 'DATE']
+
+  /* ── Core: persist a value onto a field and update local state ── */
+  async function signFieldWith(field, value, method) {
+    const timeZone = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone } catch { return undefined } })()
+    const updated = await esignSignField(token, field.id, { signingMethod: method, value, timeZone })
+    setFields(prev => prev.map(f =>
+      f.id === field.id
+        ? { ...f, ...updated, signed: true, _signedValue: value, _signedMethod: method }
+        : f
+    ))
+  }
+
+  /* ── Click a field: reuse the adopted value if we have one, else open the modal ── */
+  function handleFieldClick(field) {
+    if (!isMine(field) || field.signed) return
+    const a = adopted[field.fieldType]
+    if (a) {
+      setApplyingId(field.id)
+      signFieldWith(field, a.value, a.method)
+        .catch(e => alert(e.message))
+        .finally(() => setApplyingId(null))
+    } else {
+      openModal(field)
+    }
+  }
+
+  /* ── Apply the adopted value to every remaining field the signer owns ── */
+  async function applyAdoptedToAll() {
+    const targets = fields.filter(f => isMine(f) && !f.signed && adopted[f.fieldType])
+    if (!targets.length) return
+    setApplyingAll(true)
+    for (const f of targets) {
+      try { await signFieldWith(f, adopted[f.fieldType].value, adopted[f.fieldType].method) }
+      catch { /* keep going; failures stay unsigned */ }
+    }
+    setApplyingAll(false)
+  }
+
+  /* ── Apply signature from the modal (and adopt it for reuse) ── */
   async function handleSignField() {
     if (!activeField) return
     setSaving(true)
@@ -213,14 +260,13 @@ export default function ESignSigningPage() {
         method = modalTab   // 'DRAW' or 'UPLOAD'
       }
 
-      const timeZone = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone } catch { return undefined } })()
-      const updated = await esignSignField(token, activeField.id, { signingMethod: method, value, timeZone })
+      await signFieldWith(activeField, value, method)
 
-      setFields(prev => prev.map(f =>
-        f.id === activeField.id
-          ? { ...f, ...updated, signed: true, _signedValue: value, _signedMethod: method }
-          : f
-      ))
+      // Remember this value so the signer can click other same-type fields to auto-fill them.
+      if (REUSABLE.includes(activeField.fieldType)) {
+        setAdopted(a => ({ ...a, [activeField.fieldType]: { value, method } }))
+      }
+
       setActiveField(null)
       clearCanvas()
       setTypedText('')
@@ -469,7 +515,7 @@ export default function ESignSigningPage() {
           alignItems: 'center',
           justifyContent: 'center',
         }}
-        onClick={() => { if (mine && !isSigned) openModal(f) }}
+        onClick={() => handleFieldClick(f)}
       >
         {isSigned ? (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
@@ -503,7 +549,11 @@ export default function ESignSigningPage() {
           </div>
         ) : mine ? (
           <span style={{ fontSize: 10, color: colors.border, fontWeight: 700, textAlign: 'center', padding: '0 4px', userSelect: 'none' }}>
-            {f.required ? '* ' : ''}{f.label}
+            {applyingId === f.id
+              ? 'Applying…'
+              : adopted[f.fieldType]
+                ? 'Click to apply'
+                : `${f.required ? '* ' : ''}${f.label}`}
           </span>
         ) : (
           <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 600, textAlign: 'center', padding: '0 4px', userSelect: 'none' }}>
@@ -646,7 +696,7 @@ export default function ESignSigningPage() {
               return (
                 <button
                   key={f.id}
-                  onClick={() => { setPdfCurrentPage(f.page || 1); if (!f.signed) openModal(f) }}
+                  onClick={() => { setPdfCurrentPage(f.page || 1); handleFieldClick(f) }}
                   className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-left
                               border transition-colors
                               ${f.signed
@@ -662,6 +712,19 @@ export default function ESignSigningPage() {
               )
             })}
           </div>
+
+          {/* Fill every remaining field with the signature/initials/date you already provided */}
+          {myFields.some(f => !f.signed && adopted[f.fieldType]) && (
+            <button
+              onClick={applyAdoptedToAll}
+              disabled={applyingAll}
+              className="mt-3 w-full py-2 rounded-xl text-xs font-semibold text-white
+                         disabled:opacity-60 transition-all hover:opacity-90"
+              style={{ background: 'linear-gradient(135deg,#6D52E8,#5a3fd6)' }}
+            >
+              {applyingAll ? 'Applying…' : 'Apply to all remaining fields'}
+            </button>
+          )}
 
           {myFields.length > 0 && allRequiredSigned && (
             <div className="mt-4 pt-4 border-t border-gray-100">
