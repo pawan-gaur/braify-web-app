@@ -213,7 +213,8 @@ export default function ESignSigningPage() {
         method = modalTab   // 'DRAW' or 'UPLOAD'
       }
 
-      const updated = await esignSignField(token, activeField.id, { signingMethod: method, value })
+      const timeZone = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone } catch { return undefined } })()
+      const updated = await esignSignField(token, activeField.id, { signingMethod: method, value, timeZone })
 
       setFields(prev => prev.map(f =>
         f.id === activeField.id
@@ -438,6 +439,17 @@ export default function ESignSigningPage() {
     const mine        = isMine(f)
     const borderColor = isSigned ? '#16a34a' : (mine ? colors.border : '#cbd5e1')
     const bgColor     = isSigned ? 'rgba(22,163,74,0.07)' : (mine ? colors.bg : 'rgba(148,163,184,0.10)')
+
+    // Prefer the value signed in THIS session, else the value returned by the server
+    // (so later signatories see the actual signatures already applied by earlier ones).
+    const sigValue  = f._signedValue  || f.value
+    const sigMethod = f._signedMethod || f.signingMethod
+    // Prefer the backend-formatted timestamp (rendered in the SIGNER's timezone with GMT offset).
+    const dateStr   = f.signedAtDisplay || fmtSignedAt(f.signedAt)
+    const caption   = f.signerName
+      ? (dateStr ? `${f.signerName} (${dateStr})` : f.signerName)
+      : dateStr
+
     return (
       <div
         key={f.id}
@@ -460,22 +472,35 @@ export default function ESignSigningPage() {
         onClick={() => { if (mine && !isSigned) openModal(f) }}
       >
         {isSigned ? (
-          f._signedMethod === 'TYPE' ? (
-            <span style={{
-              fontFamily: 'cursive', color: '#1e293b', fontSize: 13, padding: '2px 4px',
-              overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
-              width: '100%', textAlign: 'center',
-            }}>
-              {f._signedValue}
-            </span>
-          ) : f._signedValue ? (
-            <img src={f._signedValue} alt="signature"
-              style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 2 }} />
-          ) : (
-            <span style={{ fontSize: 11, color: '#16a34a', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              <IconCheck className="w-3 h-3" /> Signed
-            </span>
-          )
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+              {sigMethod === 'TYPE' ? (
+                <span style={{ fontFamily: 'cursive', color: '#1e293b', fontSize: 13, padding: '2px 4px',
+                               overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>
+                  {sigValue}
+                </span>
+              ) : sigValue ? (
+                <img src={sigValue} alt="signature"
+                  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', padding: 2 }} />
+              ) : (
+                <span style={{ fontSize: 11, color: '#16a34a', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <IconCheck className="w-3 h-3" /> Signed
+                </span>
+              )}
+            </div>
+            {(f.signerName || dateStr) && (
+              <div title={caption}
+                style={{ color: '#2563eb', textAlign: 'center', padding: '1px 3px', lineHeight: 1.15,
+                         borderTop: '1px solid rgba(37,99,235,0.35)' }}>
+                {f.signerName && (
+                  <div style={{ fontSize: 7, fontWeight: 600, wordBreak: 'break-word' }}>{f.signerName}</div>
+                )}
+                {dateStr && (
+                  <div style={{ fontSize: 6.5, wordBreak: 'break-word' }}>{dateStr}</div>
+                )}
+              </div>
+            )}
+          </div>
         ) : mine ? (
           <span style={{ fontSize: 10, color: colors.border, fontWeight: 700, textAlign: 'center', padding: '0 4px', userSelect: 'none' }}>
             {f.required ? '* ' : ''}{f.label}
@@ -844,6 +869,16 @@ function Center({ children }) {
 
 function Spinner() {
   return <div className="w-10 h-10 border-4 border-accent border-t-transparent rounded-full animate-spin"/>
+}
+
+/** Compact signature-caption timestamp, e.g. "Jun 29, 2026 15:00". */
+function fmtSignedAt(dt) {
+  if (!dt) return ''
+  try {
+    return new Date(dt).toLocaleString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    })
+  } catch { return '' }
 }
 
 function formatBytes(bytes) {
