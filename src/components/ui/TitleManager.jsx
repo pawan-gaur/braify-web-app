@@ -54,6 +54,7 @@ const TITLE_MAP = [
   // ── Settings ─────────────────────────────────────────────────────────
   { exact:  '/settings/org-settings',   title: 'Organization Settings' },
   { exact:  '/settings/api-keys',       title: 'API Keys' },
+  { exact:  '/settings/placeholders',   title: 'Global Placeholders' },
 
   // ── Misc ─────────────────────────────────────────────────────────────
   { exact:  '/audit-log',               title: 'Audit Log' },

@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { getUsers, searchUsers, getOrganizations, createUser, updateUser, enableUser, disableUser } from '../services/api'
+import { getUsers, searchUsers, getOrganizations, createUser, updateUser, enableUser, disableUser, resendInvite } from '../services/api'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import { useToast } from '../context/ToastContext'
 import { useAuth, ROLES } from '../context/AuthContext'
@@ -57,6 +57,7 @@ export default function UsersPage() {
   const [showForm, setShowForm] = useState(false)
   const [editUser, setEditUser] = useState(null)
   const [saving,   setSaving]   = useState(false)
+  const [resendingId, setResendingId] = useState(null)
 
   const [form, setForm] = useState({
     email: '', firstName: '', lastName: '',
@@ -152,6 +153,18 @@ export default function UsersPage() {
       load(query, orgFilter)
     } catch (err) {
       toast.error(err.message || 'Failed to enable user.')
+    }
+  }
+
+  const handleResendInvite = async (u) => {
+    setResendingId(u.id)
+    try {
+      await resendInvite(u.id)
+      toast.success(`Invitation re-sent to ${u.email}.`)
+    } catch (err) {
+      toast.error(err.message || 'Failed to resend invite.')
+    } finally {
+      setResendingId(null)
     }
   }
 
@@ -265,6 +278,12 @@ export default function UsersPage() {
                   className="text-xs px-2.5 py-1 rounded-lg border border-ink-7 dark:border-gray-600 text-ink-3 hover:border-primary hover:text-primary transition-colors">
                   Edit
                 </button>
+                {u.mustChangePassword && (
+                  <button onClick={() => handleResendInvite(u)} disabled={resendingId === u.id}
+                    className="text-xs px-2.5 py-1 rounded-lg border border-amber-200 text-amber-600 hover:bg-amber-50 hover:border-amber-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    {resendingId === u.id ? 'Sending…' : 'Resend Invite'}
+                  </button>
+                )}
                 {u.active ? (
                   <button onClick={() => handleDisable(u)}
                     className="text-xs px-2.5 py-1 rounded-lg border border-red-200 text-red-400 hover:bg-red-50 hover:border-red-400 transition-colors">
@@ -338,6 +357,14 @@ export default function UsersPage() {
                                    text-ink-3 hover:border-primary hover:text-primary transition-colors">
                         Edit
                       </button>
+                      {u.mustChangePassword && (
+                        <button onClick={() => handleResendInvite(u)} disabled={resendingId === u.id}
+                          className="text-xs px-2.5 py-1 rounded-lg border border-amber-200
+                                     text-amber-600 hover:bg-amber-50 hover:border-amber-400 transition-colors
+                                     disabled:opacity-50 disabled:cursor-not-allowed">
+                          {resendingId === u.id ? 'Sending…' : 'Resend Invite'}
+                        </button>
+                      )}
                       {u.active ? (
                         <button onClick={() => handleDisable(u)}
                           className="text-xs px-2.5 py-1 rounded-lg border border-red-200

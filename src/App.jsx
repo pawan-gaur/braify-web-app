@@ -50,6 +50,7 @@ const SharedTemplatesPage    = lazy(() => import('./pages/SharedTemplatesPage'))
 const ApiDocsPage            = lazy(() => import('./pages/ApiDocsPage'))
 const OrgDetailPage          = lazy(() => import('./pages/OrgDetailPage'))
 const ApiKeysPage            = lazy(() => import('./pages/ApiKeysPage'))
+const GlobalPlaceholdersPage = lazy(() => import('./pages/GlobalPlaceholdersPage'))
 const FilesPage              = lazy(() => import('./pages/FilesPage'))
 const FeatureDetailPage      = lazy(() => import('./pages/FeatureDetailPage'))
 const PlatformSettingsPage         = lazy(() => import('./pages/PlatformSettingsPage'))
@@ -167,6 +168,7 @@ function Shell() {
           <Route path="/settings/platform/access"   element={<PlatformUserAccessPage />} />
           <Route path="/settings/org-settings" element={<OrgSettingsPage />} />
           <Route path="/settings/api-keys"   element={<ApiKeysPage />} />
+          <Route path="/settings/placeholders" element={<GlobalPlaceholdersPage />} />
           <Route path="/usage"              element={<UsagePage />} />
           <Route path="/shared-templates"   element={<SharedTemplatesPage />} />
           <Route path="/api-docs"           element={<ApiDocsPage />} />

@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getEmailTemplates, deleteEmailTemplate, sendEmailTemplate } from '../services/api'
+import { getEmailTemplates, getInternalEmailTemplates, deleteEmailTemplate, sendEmailTemplate, getGlobalPlaceholders } from '../services/api'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
@@ -90,13 +90,19 @@ export default function EmailTemplatesPage() {
 
   const [tableSortKey, setTableSortKey] = useState('updatedAt_desc')
 
+  // Platform admins can switch between org templates ('mine') and the platform's
+  // built-in system templates ('system' → INTERNAL, invite/reset/onboarding/e-sign).
+  const isPlatformAdmin = can('manageOrgs')
+  const [scope, setScope] = useState('mine')
+
   const load = useCallback(() => {
     setLoading(true)
-    getEmailTemplates()
+    const fetch = scope === 'system' ? getInternalEmailTemplates() : getEmailTemplates()
+    fetch
       .then(setTemplates)
       .catch(err => toast.error(err.message || 'Could not load email templates.'))
       .finally(() => setLoading(false))
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [scope]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load() }, [load])
 
@@ -174,10 +180,28 @@ export default function EmailTemplatesPage() {
             Email Templates
           </h1>
           <p className="text-sm text-ink-3 mt-1">
-            {templates.length} template{templates.length !== 1 ? 's' : ''} saved
+            {scope === 'system'
+              ? `${templates.length} system template${templates.length !== 1 ? 's' : ''} — built-in, used by the platform (invite, reset, onboarding, e-sign)`
+              : `${templates.length} template${templates.length !== 1 ? 's' : ''} saved`}
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {isPlatformAdmin && (
+            <div className="flex rounded-xl border border-ink-7 dark:border-gray-700 overflow-hidden text-sm">
+              <button
+                onClick={() => { setScope('mine'); setActiveCategory('all') }}
+                className={`px-3 py-2 font-semibold transition-colors ${scope === 'mine' ? 'bg-primary text-white' : 'text-ink-3 hover:bg-ink-8 dark:hover:bg-gray-700'}`}
+              >
+                My Templates
+              </button>
+              <button
+                onClick={() => { setScope('system'); setActiveCategory('all') }}
+                className={`px-3 py-2 font-semibold transition-colors ${scope === 'system' ? 'bg-primary text-white' : 'text-ink-3 hover:bg-ink-8 dark:hover:bg-gray-700'}`}
+              >
+                System
+              </button>
+            </div>
+          )}
           <ViewToggle view={view} onChange={setView} />
           {/* Split button: quick blank OR from library */}
           <div className="flex rounded-xl overflow-hidden shadow-sm">
@@ -261,7 +285,8 @@ export default function EmailTemplatesPage() {
         )}
       </div>
 
-      {/* Category filter tabs */}
+      {/* Category filter tabs (system templates have no category, so hide them there) */}
+      {scope !== 'system' && (
       <div className="flex items-center gap-1 mb-6 flex-wrap">
         {CATEGORY_TABS.map(tab => {
           const count = tab.key === 'all'
@@ -288,6 +313,7 @@ export default function EmailTemplatesPage() {
           )
         })}
       </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-20 text-gray-400 gap-3">
@@ -685,8 +711,26 @@ function SendEmailModal({ template, onClose }) {
   const [placeholders, setPlaceholders] = useState(
     Object.fromEntries((template.placeholders || []).map(p => [p, '']))
   )
+  const [globals, setGlobals] = useState({})   // key → value for org-level placeholders
   const [sending, setSending] = useState(false)
   const [sent,    setSent]    = useState(false)
+
+  /* Load org globals and prefill any matching placeholder fields. */
+  useEffect(() => {
+    getGlobalPlaceholders()
+      .then(list => {
+        const map = Object.fromEntries((list || []).map(p => [p.key, p.value ?? '']))
+        setGlobals(map)
+        setPlaceholders(prev => {
+          const next = { ...prev }
+          for (const key of Object.keys(next)) {
+            if ((next[key] == null || next[key] === '') && key in map) next[key] = map[key]
+          }
+          return next
+        })
+      })
+      .catch(() => {})
+  }, [])
 
   const handleSend = async () => {
     if (!to.trim()) { toast.error('Recipient email is required'); return }
@@ -779,13 +823,18 @@ function SendEmailModal({ template, onClose }) {
               <div className="space-y-2.5">
                 {template.placeholders.map(key => (
                   <div key={key}>
-                    <label className="block text-[11px] text-gray-400 dark:text-gray-500 mb-0.5 font-mono">
+                    <label className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500 mb-0.5 font-mono">
                       {`{{${key}}}`}
+                      {key in globals && (
+                        <span className="px-1.5 py-0.5 rounded-full bg-brand-50 text-brand-600 dark:bg-brand-900/30 dark:text-brand-300 text-[9px] font-sans font-bold not-italic">
+                          global
+                        </span>
+                      )}
                     </label>
                     <input
                       type="text"
                       className="input w-full text-sm"
-                      placeholder={`Value for ${key}…`}
+                      placeholder={key in globals ? 'Using global value — override here' : `Value for ${key}…`}
                       value={placeholders[key] || ''}
                       onChange={e => setPlaceholder(key, e.target.value)}
                       disabled={sending || sent}

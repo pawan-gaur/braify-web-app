@@ -71,11 +71,18 @@ export const deleteTemplate = (id) => http.delete(`/templates/${id}`)
 
 // ── Email templates ────────────────────────────────────────
 export const getEmailTemplates    = ()         => http.get('/email-templates').then(r => r.data)
+export const getInternalEmailTemplates = ()    => http.get('/email-templates/internal').then(r => r.data)
 export const getEmailTemplate     = (id)       => http.get(`/email-templates/${id}`).then(r => r.data)
 export const createEmailTemplate  = (payload)  => http.post('/email-templates', payload).then(r => r.data)
 export const updateEmailTemplate  = (id, p)    => http.put(`/email-templates/${id}`, p).then(r => r.data)
 export const deleteEmailTemplate  = (id)       => http.delete(`/email-templates/${id}`)
 export const sendEmailTemplate    = (id, payload) => http.post(`/email-templates/${id}/send`, payload).then(r => r.data)
+
+// ── Global placeholders (org-level, auto-injected into email + PDF) ─────────
+export const getGlobalPlaceholders   = ()          => http.get('/global-placeholders').then(r => r.data)
+export const createGlobalPlaceholder = (payload)   => http.post('/global-placeholders', payload).then(r => r.data)
+export const updateGlobalPlaceholder = (id, p)     => http.put(`/global-placeholders/${id}`, p).then(r => r.data)
+export const deleteGlobalPlaceholder = (id)        => http.delete(`/global-placeholders/${id}`)
 
 // ── Email template versions ────────────────────────────────
 export const getEmailTemplateVersions    = (id)    => http.get(`/email-templates/${id}/versions`).then(r => r.data)
@@ -151,6 +158,7 @@ export const updateUser     = (id, payload)        => http.put(`/users/${id}`, p
 export const deactivateUser = (id)                 => http.delete(`/users/${id}`)
 export const enableUser     = (id)                 => http.put(`/users/${id}/enable`)
 export const disableUser    = (id)                 => http.put(`/users/${id}/disable`)
+export const resendInvite   = (id)                 => http.post(`/users/${id}/resend-invite`)
 
 // ── Sessions ───────────────────────────────────────────────
 export const getSessions          = ()   => http.get('/sessions').then(r => r.data)
