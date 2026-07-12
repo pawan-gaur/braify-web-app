@@ -109,6 +109,11 @@ const NAV_SECTIONS = [
         icon: 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z',
       },
       {
+        to: '/settings/placeholders', label: 'Global Placeholders',
+        minRole: ROLES.ADMIN,
+        icon: 'M7 20l4-16m2 16l4-16M6 9h14M4 15h14',
+      },
+      {
         to: '/api-docs', label: 'API Docs',
         minRole: ROLES.ADMIN,
         icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4',

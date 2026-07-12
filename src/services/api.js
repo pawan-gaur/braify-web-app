@@ -5,6 +5,8 @@ const TOKEN_KEY = 'pdf-builder-token'
 export const http = axios.create({
   baseURL: '/api',
   headers: { 'Content-Type': 'application/json' },
+  // Send the httpOnly refresh cookie to /api/auth/refresh (same-origin, harmless elsewhere).
+  withCredentials: true,
 })
 
 /**
@@ -17,16 +19,51 @@ http.interceptors.request.use(config => {
   return config
 })
 
+/* ── Silent-refresh coordination ─────────────────────────────────────────────
+ * The access token is short-lived (~30 min). When it expires mid-work an API call
+ * returns 401. Rather than bouncing the user to /login (which wipes unsaved work),
+ * we transparently POST /api/auth/refresh ONCE — the httpOnly refresh cookie proves
+ * the session is still alive — store the new access token, and replay the failed
+ * request. Any other requests that 401 while a refresh is in flight queue behind it
+ * and are replayed with the new token. Only if the refresh itself fails (session
+ * truly expired/revoked) do we clear state and redirect to /login.
+ */
+let isRefreshing   = false
+let refreshWaiters = []
+
+/** Resolve/reject every queued request once the single in-flight refresh settles. */
+const flushWaiters = (newToken) => {
+  refreshWaiters.forEach(cb => cb(newToken))
+  refreshWaiters = []
+}
+
+// Endpoints that must NEVER trigger a refresh attempt (pre-auth flows + refresh itself).
+const NO_REFRESH = [
+  '/auth/refresh', '/auth/login', '/auth/forgot-password',
+  '/auth/reset-password', '/auth/accept-invite', '/auth/validate-token',
+]
+
+// Bare axios call (bypasses these interceptors) so the refresh request can't recurse.
+const requestRefresh = () =>
+  axios.post('/api/auth/refresh', {}, { withCredentials: true }).then(r => r.data?.token)
+
+/** Terminal failure — clear the access token and send the user to /login. */
+const hardLogout = (message) => {
+  localStorage.removeItem(TOKEN_KEY)
+  if (window.location.pathname !== '/login') window.location.href = '/login'
+  return Promise.reject(new Error(message || 'Session expired. Please log in again.'))
+}
+
 /**
  * Response interceptor — normalises every API error into a plain Error whose
- * .message is the text returned by the backend.
- * 401 responses trigger a hard redirect to /login so the user can re-authenticate.
+ * .message is the text returned by the backend, and drives the silent-refresh flow.
  */
 http.interceptors.response.use(
   res => res,
   async err => {
-    let   data    = err.response?.data
-    const status  = err.response?.status
+    let   data     = err.response?.data
+    const status   = err.response?.status
+    const original = err.config
 
     // Blob responses (PDF preview / download / export use responseType:'blob')
     // deliver JSON error bodies as a Blob, so `data.message` is invisible. Read
@@ -39,11 +76,36 @@ http.interceptors.response.use(
       } catch { /* keep the Blob if it can't be read */ }
     }
 
-    // Unauthorised → session expired or token revoked → send to login
-    if (status === 401 && !err.config?.url?.includes('/auth/')) {
-      localStorage.removeItem(TOKEN_KEY)
-      window.location.href = '/login'
-      return Promise.reject(new Error('Session expired. Please log in again.'))
+    const skipRefresh = NO_REFRESH.some(p => original?.url?.includes(p))
+
+    // Unauthorised → try a single silent refresh, then replay the original request.
+    if (status === 401 && original && !original._retry && !skipRefresh) {
+      original._retry = true
+
+      // A refresh is already running — queue this request behind it.
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          refreshWaiters.push(newToken => {
+            if (!newToken) { reject(new Error('Session expired. Please log in again.')); return }
+            original.headers.Authorization = `Bearer ${newToken}`
+            resolve(http(original))
+          })
+        })
+      }
+
+      isRefreshing = true
+      try {
+        const newToken = await requestRefresh()
+        if (!newToken) throw new Error('No token returned from refresh')
+        localStorage.setItem(TOKEN_KEY, newToken)   // request interceptor picks this up on replay
+        flushWaiters(newToken)
+        return http(original)                       // replay the original request
+      } catch {
+        flushWaiters(null)                          // release queued callers as failed
+        return hardLogout('Session expired. Please log in again.')
+      } finally {
+        isRefreshing = false
+      }
     }
 
     // Backend sends { message, status, timestamp } via GlobalExceptionHandler
@@ -71,11 +133,18 @@ export const deleteTemplate = (id) => http.delete(`/templates/${id}`)
 
 // ── Email templates ────────────────────────────────────────
 export const getEmailTemplates    = ()         => http.get('/email-templates').then(r => r.data)
+export const getInternalEmailTemplates = ()    => http.get('/email-templates/internal').then(r => r.data)
 export const getEmailTemplate     = (id)       => http.get(`/email-templates/${id}`).then(r => r.data)
 export const createEmailTemplate  = (payload)  => http.post('/email-templates', payload).then(r => r.data)
 export const updateEmailTemplate  = (id, p)    => http.put(`/email-templates/${id}`, p).then(r => r.data)
 export const deleteEmailTemplate  = (id)       => http.delete(`/email-templates/${id}`)
 export const sendEmailTemplate    = (id, payload) => http.post(`/email-templates/${id}/send`, payload).then(r => r.data)
+
+// ── Global placeholders (org-level, auto-injected into email + PDF) ─────────
+export const getGlobalPlaceholders   = ()          => http.get('/global-placeholders').then(r => r.data)
+export const createGlobalPlaceholder = (payload)   => http.post('/global-placeholders', payload).then(r => r.data)
+export const updateGlobalPlaceholder = (id, p)     => http.put(`/global-placeholders/${id}`, p).then(r => r.data)
+export const deleteGlobalPlaceholder = (id)        => http.delete(`/global-placeholders/${id}`)
 
 // ── Email template versions ────────────────────────────────
 export const getEmailTemplateVersions    = (id)    => http.get(`/email-templates/${id}/versions`).then(r => r.data)
@@ -151,6 +220,7 @@ export const updateUser     = (id, payload)        => http.put(`/users/${id}`, p
 export const deactivateUser = (id)                 => http.delete(`/users/${id}`)
 export const enableUser     = (id)                 => http.put(`/users/${id}/enable`)
 export const disableUser    = (id)                 => http.put(`/users/${id}/disable`)
+export const resendInvite   = (id)                 => http.post(`/users/${id}/resend-invite`)
 
 // ── Sessions ───────────────────────────────────────────────
 export const getSessions          = ()   => http.get('/sessions').then(r => r.data)

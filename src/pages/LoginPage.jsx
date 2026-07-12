@@ -74,7 +74,7 @@ export default function LoginPage() {
                    l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">PDF Builder</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Braify</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Sign in to your workspace</p>
         </div>
 
