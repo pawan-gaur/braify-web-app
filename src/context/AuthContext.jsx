@@ -144,10 +144,11 @@ export function AuthProvider({ children }) {
   /* ── Logout ── */
   const logout = useCallback(async () => {
     try {
-      if (token) {
-        await http.post('/auth/logout', {}, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+      // The request interceptor attaches the CURRENT access token (which may have
+      // been silently rotated since login), and the backend clears the refresh
+      // cookie. Reading from state would risk sending a stale token.
+      if (localStorage.getItem(TOKEN_KEY)) {
+        await http.post('/auth/logout', {})
       }
     } catch { /* ignore network errors on logout */ }
     finally {
@@ -159,7 +160,7 @@ export function AuthProvider({ children }) {
       document.documentElement.style.removeProperty('--brand-primary')
       document.documentElement.style.removeProperty('--brand-accent')
     }
-  }, [token])
+  }, [])
 
   /* ── Permission helpers ── */
   const can = useCallback((action) => {
