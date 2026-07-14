@@ -854,10 +854,10 @@ function BrandingPreviewModal({ org, onClose }) {
           ) : (
             <div className="space-y-4">
               {/* Logo */}
-              {branding.logoBase64 && (
+              {(branding.logoUrl || branding.logoBase64) && (
                 <div>
                   <p className="text-xs font-semibold text-gray-500 mb-2">Logo</p>
-                  <img src={branding.logoBase64} alt="Org logo" className="h-12 max-w-full object-contain rounded-lg border border-gray-100 dark:border-gray-700 p-1" />
+                  <img src={branding.logoUrl || branding.logoBase64} alt="Org logo" className="h-12 max-w-full object-contain rounded-lg border border-gray-100 dark:border-gray-700 p-1" />
                 </div>
               )}
               {/* Color */}
