@@ -58,6 +58,7 @@ export default function OrgSettingsPage() {
   /* Branding form state */
   const [form, setForm] = useState({
     logoBase64:      null,
+    logoUrl:         null,
     primaryColor:    DEFAULT_PRIMARY,
     accentColor:     DEFAULT_ACCENT,
     emailSenderName: '',
@@ -95,6 +96,7 @@ export default function OrgSettingsPage() {
         const data = brandingResult.value
         setForm({
           logoBase64:        data.logoBase64        || null,
+          logoUrl:           data.logoUrl           || null,
           primaryColor:      data.primaryColor      || DEFAULT_PRIMARY,
           accentColor:       data.accentColor       || DEFAULT_ACCENT,
           emailSenderName:   data.emailSenderName   || '',
@@ -135,6 +137,8 @@ export default function OrgSettingsPage() {
     try {
       const res = await updateBranding(orgId, form)
       setFeatureRoleAccess(res.featureRoleAccess ?? null)
+      // Sync logo state with what the server persisted (base64 may be offloaded → null, url set).
+      setForm(f => ({ ...f, logoBase64: res.logoBase64 || null, logoUrl: res.logoUrl || null }))
       if (form.primaryColor) document.documentElement.style.setProperty('--brand-primary', form.primaryColor)
       if (form.accentColor)  document.documentElement.style.setProperty('--brand-accent',  form.accentColor)
       toast.success('Settings saved successfully.')
@@ -273,8 +277,9 @@ function IdentityTab({ form, set, saving, onSave }) {
             Appears in PDF document headers, outgoing emails, and the web app navigation.
           </p>
           <LogoUpload
-            currentLogo={form.logoBase64}
-            onLogoChange={v => set('logoBase64', v)}
+            logoBase64={form.logoBase64}
+            logoUrl={form.logoUrl}
+            onChange={({ base64, url }) => { set('logoBase64', base64 ?? null); set('logoUrl', url ?? null) }}
             label=""
           />
         </div>
@@ -627,8 +632,8 @@ function PdfPreview({ form }) {
     <div className="card p-0 overflow-hidden">
       <div className="px-5 py-4 flex items-center gap-4 bg-white dark:bg-gray-800"
         style={{ borderBottom: `3px solid ${form.primaryColor}` }}>
-        {form.logoBase64 ? (
-          <img src={form.logoBase64} alt="Logo" className="h-10 max-w-[100px] object-contain shrink-0" />
+        {(form.logoBase64 || form.logoUrl) ? (
+          <img src={form.logoBase64 || form.logoUrl} alt="Logo" className="h-10 max-w-[100px] object-contain shrink-0" />
         ) : (
           <div className="w-14 h-10 rounded border-2 border-dashed border-gray-200 dark:border-gray-600
                           flex items-center justify-center shrink-0">
@@ -664,8 +669,8 @@ function EmailPreview({ form }) {
       <div className="h-1.5 w-full" style={{ background: form.primaryColor }} />
       <div className="p-5 bg-white dark:bg-gray-800">
         <div className="flex items-center gap-3 mb-4">
-          {form.logoBase64 ? (
-            <img src={form.logoBase64} alt="Logo" className="h-8 max-w-[80px] object-contain" />
+          {(form.logoBase64 || form.logoUrl) ? (
+            <img src={form.logoBase64 || form.logoUrl} alt="Logo" className="h-8 max-w-[80px] object-contain" />
           ) : (
             <div className="w-10 h-8 rounded border-2 border-dashed border-gray-200 dark:border-gray-600
                             flex items-center justify-center">
@@ -710,8 +715,8 @@ function AppThemePreview({ form }) {
     <div className="card overflow-hidden">
       {/* Mock top nav */}
       <div className="px-4 py-3 flex items-center gap-3" style={{ background: p }}>
-        {form.logoBase64 ? (
-          <img src={form.logoBase64} alt="Logo" className="h-7 max-w-[80px] object-contain" />
+        {(form.logoBase64 || form.logoUrl) ? (
+          <img src={form.logoBase64 || form.logoUrl} alt="Logo" className="h-7 max-w-[80px] object-contain" />
         ) : (
           <div className="flex items-center gap-1.5">
             <div className="w-6 h-6 rounded bg-white/20" />
