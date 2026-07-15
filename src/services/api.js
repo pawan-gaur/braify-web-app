@@ -254,6 +254,7 @@ export const esignBulkCreate = (documents, sendImmediately = true, label, allowC
   http.post('/esign/documents/bulk', { documents, sendImmediately, label, allowClientUpload, allowedClientUploadFileTypes }).then(r => r.data)
 
 export const esignCreateDocument  = (payload)              => http.post('/esign/documents', payload).then(r => r.data)
+export const esignSuggestContacts = ()                     => http.get('/esign/contacts').then(r => r.data)
 export const esignListDocuments   = ({ page = 0, size = 20, status } = {}) => {
   const params = new URLSearchParams({ page, size })
   if (status) params.set('status', status)

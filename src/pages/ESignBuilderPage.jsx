@@ -14,6 +14,8 @@ import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import { IconX, IconCheck, IconArrowRight, IconArrowLeft } from '../components/ui/icons'
 import PdfPageCanvas from '../components/esign/PdfPageCanvas'
+import EmailAutocomplete from '../components/ui/EmailAutocomplete'
+import useEmailContacts, { addLocalContacts } from '../hooks/useEmailContacts'
 
 const FIELD_TYPES = [
   { type: 'SIGNATURE', label: 'Signature',  color: '#7c3aed', bg: '#ede9fe' },
@@ -91,6 +93,9 @@ export default function ESignBuilderPage({ initialDocStatus }) {
   // server-assigned {id} used to tag each placed field.
   const [signatories,       setSignatories]       = useState([{ name: '', email: '' }])
   const [signingMode,       setSigningMode]       = useState('PARALLEL')   // PARALLEL | SEQUENTIAL
+
+  // Org address book for recipient autocomplete (fetched once per session, filtered locally).
+  const emailContacts = useEmailContacts()
   const [activeSignatoryIdx, setActiveSignatoryIdx] = useState(0)         // whose field is being placed
 
   /* ── PDF source selection ─────────────────────────────────────────────── */
@@ -356,6 +361,10 @@ export default function ESignBuilderPage({ initialDocStatus }) {
     if (addEmailChip(completionCcInput, setCompletionCc, 'completionCc')) setCompletionCcInput('')
   }
 
+  // Add a chosen suggestion as a chip and clear the in-progress text.
+  const pickInviteCc     = email => { if (addEmailChip(email, setInviteCc, 'inviteCc'))         setInviteCcInput('') }
+  const pickCompletionCc = email => { if (addEmailChip(email, setCompletionCc, 'completionCc')) setCompletionCcInput('') }
+
   function validateForm() {
     const errors = {}
     if (!form.title?.trim())    errors.title       = 'Document title is required'
@@ -417,6 +426,12 @@ export default function ESignBuilderPage({ initialDocStatus }) {
       })
       setDocId(created.id)
       setDoc(created)
+      // Make the just-used recipients suggestible immediately (before the next server refresh).
+      addLocalContacts([
+        ...signatories.map(s => ({ name: s.name, email: s.email })),
+        ...finalInviteCc.map(email => ({ email })),
+        ...finalCc.map(email => ({ email })),
+      ])
       // Adopt the server-assigned signatory IDs so placed fields can reference them
       if (created.signatories?.length) setSignatories(created.signatories)
       setActiveSignatoryIdx(0)
@@ -1103,12 +1118,18 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                       value={s.name || ''}
                       onChange={e => updateSignatory(i, { name: e.target.value })}
                     />
-                    <input
-                      className={inputCls + ' flex-1'}
-                      type="email"
+                    <EmailAutocomplete
+                      className={inputCls}
+                      name={`signatory-email-${i}`}
                       placeholder="email@company.com"
                       value={s.email || ''}
-                      onChange={e => updateSignatory(i, { email: e.target.value })}
+                      contacts={emailContacts}
+                      onChange={val => updateSignatory(i, { email: val })}
+                      onSelect={c => updateSignatory(i, {
+                        email: c.email,
+                        // Fill the name only if the user hasn't already typed one.
+                        ...(s.name?.trim() ? {} : { name: c.name || '' }),
+                      })}
                     />
                     {signingMode === 'SEQUENTIAL' && signatories.length > 1 && (
                       <div className="flex flex-col shrink-0">
@@ -1170,6 +1191,8 @@ export default function ESignBuilderPage({ initialDocStatus }) {
               onCommit={commitInviteCc}
               onRemove={email => setInviteCc(prev => prev.filter(x => x !== email))}
               error={formErrors.inviteCc}
+              contacts={emailContacts}
+              onPick={pickInviteCc}
             />
 
             {/* Send a copy of the signed document to (optional) */}
@@ -1183,6 +1206,8 @@ export default function ESignBuilderPage({ initialDocStatus }) {
               onCommit={commitCompletionCc}
               onRemove={email => setCompletionCc(prev => prev.filter(x => x !== email))}
               error={formErrors.completionCc}
+              contacts={emailContacts}
+              onPick={pickCompletionCc}
             />
 
             <FormField label={`Link valid for (days): ${form.tokenValidDays}`}>
@@ -1542,42 +1567,108 @@ function FormField({ label, children, error }) {
   )
 }
 
-/** Reusable tag-style multi-email input (chips + free-text). Parent owns both the
- *  committed `emails` array and the in-progress `input` text so callers can flush
- *  unsubmitted text on submit. */
-function EmailChipsField({ label, helper, emails, input, onInput, onCommit, onRemove, error, name, placeholder = 'cc@company.com' }) {
+/** Ranks a contact against a lowercased query: email-prefix best, then name-prefix, then substrings. */
+function rankContact(c, q) {
+  const email = (c.email || '').toLowerCase()
+  const name  = (c.name  || '').toLowerCase()
+  if (email.startsWith(q)) return 0
+  if (name.startsWith(q))  return 1
+  if (email.includes(q))   return 2
+  if (name.includes(q))    return 3
+  return 99
+}
+
+/** Reusable tag-style multi-email input (chips + free-text) with recipient autocomplete.
+ *  Parent owns both the committed `emails` array and the in-progress `input` text so callers
+ *  can flush unsubmitted text on submit. Pass `contacts` + `onPick(email)` to enable suggestions. */
+function EmailChipsField({ label, helper, emails, input, onInput, onCommit, onRemove, error, name,
+                           placeholder = 'cc@company.com', contacts = [], onPick }) {
+  const [open, setOpen]     = useState(false)
+  const [active, setActive] = useState(0)
+  const blurTimer = useRef(null)
+
+  const q = (input || '').trim().toLowerCase()
+  const chosen = new Set(emails.map(e => e.toLowerCase()))
+  const matches = !q ? [] : contacts
+    .filter(c => rankContact(c, q) < 99 && !chosen.has((c.email || '').toLowerCase()) && (c.email || '').toLowerCase() !== q)
+    .sort((a, b) => rankContact(a, q) - rankContact(b, q) || (b.useCount || 0) - (a.useCount || 0))
+    .slice(0, 7)
+  const showList = open && matches.length > 0
+
+  function pick(c) { onPick?.(c.email); setOpen(false); setActive(0) }
+
+  function onKeyDown(e) {
+    if (showList && e.key === 'ArrowDown') { e.preventDefault(); setActive(a => Math.min(a + 1, matches.length - 1)); return }
+    if (showList && e.key === 'ArrowUp')   { e.preventDefault(); setActive(a => Math.max(a - 1, 0)); return }
+    if (e.key === 'Escape') { setOpen(false); return }
+    if (e.key === 'Enter' || e.key === ',') {
+      // With a suggestion highlighted, Enter picks it; otherwise commit the typed text.
+      if (showList && e.key === 'Enter' && matches[active]) { e.preventDefault(); pick(matches[active]); return }
+      onCommit(e)
+    }
+  }
+
   return (
     <FormField label={label} error={error}>
-      <div className={`w-full px-3 py-2 rounded-xl border bg-white dark:bg-gray-700
-                      flex flex-wrap items-center gap-1.5 min-h-[44px]
-                      focus-within:ring-2 focus-within:ring-accent-500
-                      ${error ? 'border-red-400' : 'border-gray-200 dark:border-gray-600'}`}>
-        {emails.map(email => (
-          <span key={email}
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium
-                       bg-accent-100 dark:bg-accent-900/30 text-accent-700 dark:text-accent-300">
-            {email}
-            <button type="button" onClick={() => onRemove(email)}
-              className="hover:text-red-500 transition-colors" title="Remove">
-              <IconX className="w-3 h-3" />
-            </button>
-          </span>
-        ))}
-        <input
-          type="email"
-          value={input}
-          onChange={e => onInput(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') onCommit(e) }}
-          onBlur={() => onCommit()}
-          placeholder={emails.length ? 'Add another…' : placeholder}
-          /* Distinct name + disabled autofill so the browser doesn't fill both CC fields at once */
-          name={name}
-          autoComplete="off"
-          data-lpignore="true"
-          data-1p-ignore="true"
-          className="flex-1 min-w-[140px] bg-transparent border-none outline-none p-0
-                     text-sm text-gray-900 dark:text-white focus:ring-0"
-        />
+      <div className="relative">
+        <div className={`w-full px-3 py-2 rounded-xl border bg-white dark:bg-gray-700
+                        flex flex-wrap items-center gap-1.5 min-h-[44px]
+                        focus-within:ring-2 focus-within:ring-accent-500
+                        ${error ? 'border-red-400' : 'border-gray-200 dark:border-gray-600'}`}>
+          {emails.map(email => (
+            <span key={email}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium
+                         bg-accent-100 dark:bg-accent-900/30 text-accent-700 dark:text-accent-300">
+              {email}
+              <button type="button" onClick={() => onRemove(email)}
+                className="hover:text-red-500 transition-colors" title="Remove">
+                <IconX className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+          <input
+            type="email"
+            value={input}
+            onChange={e => { onInput(e.target.value); setOpen(true); setActive(0) }}
+            onFocus={() => setOpen(true)}
+            onKeyDown={onKeyDown}
+            onBlur={() => { blurTimer.current = setTimeout(() => { setOpen(false); onCommit() }, 120) }}
+            placeholder={emails.length ? 'Add another…' : placeholder}
+            /* Distinct name + disabled autofill so the browser doesn't fill both CC fields at once */
+            name={name}
+            autoComplete="off"
+            data-lpignore="true"
+            data-1p-ignore="true"
+            role="combobox"
+            aria-expanded={showList}
+            aria-autocomplete="list"
+            className="flex-1 min-w-[140px] bg-transparent border-none outline-none p-0
+                       text-sm text-gray-900 dark:text-white focus:ring-0"
+          />
+        </div>
+        {showList && (
+          <ul
+            role="listbox"
+            className="absolute z-50 mt-1 w-full max-h-60 overflow-auto rounded-xl border border-gray-200
+                       dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg py-1"
+            onMouseDown={e => { e.preventDefault(); clearTimeout(blurTimer.current) }}
+          >
+            {matches.map((c, i) => (
+              <li
+                key={c.email}
+                role="option"
+                aria-selected={i === active}
+                onMouseEnter={() => setActive(i)}
+                onClick={() => pick(c)}
+                className={`px-3 py-2 cursor-pointer text-sm flex flex-col
+                  ${i === active ? 'bg-accent-50 dark:bg-accent-900/30' : ''}`}
+              >
+                <span className="font-medium text-gray-900 dark:text-white truncate">{c.name || c.email}</span>
+                {c.name && <span className="text-xs text-gray-500 dark:text-gray-400 truncate">{c.email}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
       {helper && <p className="mt-1 text-xs text-gray-400">{helper}</p>}
     </FormField>

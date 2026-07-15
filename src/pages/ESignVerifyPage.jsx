@@ -103,17 +103,26 @@ export default function ESignVerifyPage() {
               {data.completedAt && (
                 <InfoRow label="Completed At"   value={fmtDate(data.completedAt)}/>
               )}
+              <InfoRow label="Integrity" value={<IntegrityBadge data={data}/>}/>
               {data.signedPdfHash && (
                 <div className="pt-2">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
-                    Document Hash (SHA-256)
+                    File Hash (SHA-256)
                   </p>
                   <p className="text-[10px] font-mono text-gray-400 break-all bg-gray-50
                                 border border-gray-200 rounded-lg px-3 py-2">
                     {data.signedPdfHash}
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
-                    Compare this hash with your downloaded PDF to verify document integrity.
+                    {data.pdfAvailable === false
+                      ? 'The stored file could not be retrieved to re-verify its hash right now.'
+                      : data.integrityVerified
+                        ? 'We re-hashed the stored file and it matches this value. To check your own copy, run SHA-256 on the downloaded PDF and compare it here.'
+                        : 'Warning: the stored file no longer matches this hash — it may have been altered.'}
+                  </p>
+                  <p className="text-[10px] text-gray-300 mt-1">
+                    Note: this is the hash of the whole PDF file. The fingerprint printed inside the
+                    document’s audit page covers the content before that page was added, so it differs by design.
                   </p>
                 </div>
               )}
@@ -134,6 +143,16 @@ export default function ESignVerifyPage() {
       </p>
     </div>
   )
+}
+
+function IntegrityBadge({ data }) {
+  // pdfAvailable === false → could not re-hash; integrityVerified → stored file matches recorded hash
+  const cls = 'px-2 py-0.5 rounded-full text-xs font-bold'
+  if (data.pdfAvailable === false)
+    return <span className={`${cls} bg-gray-100 text-gray-500`}>Not checked</span>
+  if (data.integrityVerified)
+    return <span className={`${cls} bg-green-100 text-green-700`}>Intact</span>
+  return <span className={`${cls} bg-red-100 text-red-700`}>Altered</span>
 }
 
 function InfoRow({ label, value }) {
