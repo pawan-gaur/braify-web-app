@@ -1,22 +1,26 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import EmailTemplateBuilder from '../components/builder/EmailTemplateBuilder'
-import { getEmailTemplate, createEmailTemplate, updateEmailTemplate, sendEmailTemplate } from '../services/api'
+import { getEmailTemplate, createEmailTemplate, updateEmailTemplate, sendEmailTemplate, getBranding } from '../services/api'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import { useToast } from '../context/ToastContext'
+import { useAuth } from '../context/AuthContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import { IconArrowLeft } from '../components/ui/icons'
+import { buildStandardEmail } from '../data/standardEmailTemplate'
 
 export default function EmailBuilderPage() {
   const { id }       = useParams()
   const navigate     = useNavigate()
   const location     = useLocation()
   const toast        = useToast()
+  const { user }     = useAuth()
   const isEdit       = Boolean(id)
   const libraryTmpl  = location.state?.libraryTemplate || null
 
   const [template,    setTemplate]    = useState(null)
-  const [loading,     setLoading]     = useState(isEdit)
+  const [starter,     setStarter]     = useState(null)   // standard branded starter (new, non-library)
+  const [loading,     setLoading]     = useState(true)
   const [saving,      setSaving]      = useState(false)
   const [fatalError,  setFatalError]  = useState(null)
 
@@ -32,12 +36,26 @@ export default function EmailBuilderPage() {
   ]
 
   useEffect(() => {
-    if (!isEdit) return
-    getEmailTemplate(id)
-      .then(setTemplate)
-      .catch(err => setFatalError(err.message || 'Email template not found.'))
-      .finally(() => setLoading(false))
-  }, [id, isEdit])
+    if (isEdit) {
+      getEmailTemplate(id)
+        .then(setTemplate)
+        .catch(err => setFatalError(err.message || 'Email template not found.'))
+        .finally(() => setLoading(false))
+      return
+    }
+    // New template picked from the library — no starter fetch needed.
+    if (libraryTmpl) { setLoading(false); return }
+    // Blank new template → start from the platform-standard branded design, resolved
+    // from the org's branding (logo/accent/footer) so the builder is on-brand + WYSIWYG.
+    const orgId = user?.organizationId
+    const done = (branding) => {
+      const orgName = branding?.organizationName || user?.organizationName || ''
+      setStarter(buildStandardEmail(branding || {}, orgName))
+      setLoading(false)
+    }
+    if (orgId) getBranding(orgId).then(done).catch(() => done(null))
+    else done(null)
+  }, [id, isEdit]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = async (payload) => {
     setSaving(true)
@@ -115,7 +133,7 @@ export default function EmailBuilderPage() {
       </div>
       <EmailTemplateBuilder
         initialTemplate={template}
-        libraryTemplate={!isEdit ? libraryTmpl : null}
+        libraryTemplate={!isEdit ? (libraryTmpl || starter) : null}
         onSave={handleSave}
         isSaving={saving}
         templateId={id}

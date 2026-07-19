@@ -46,6 +46,33 @@ const FOOTER = `
 
 // ─── Template definitions ────────────────────────────────────────────────────
 export const EMAIL_LIBRARY = [
+  // ══ STANDARD ═══════════════════════════════════════════════════════════════
+  // Selecting this routes to the dynamic branded starter (real org logo/accent/footer
+  // from Branding) — the htmlContent below is only the library preview thumbnail.
+  {
+    id: 'lib-standard-branded',
+    standard: true,
+    name: 'Standard — Branded',
+    category: 'transactional',
+    description: "Your organization's branded starter — logo, colors and footer are applied automatically from Branding.",
+    tags: ['standard', 'branded', 'recommended'],
+    accent: '#6366f1',
+    htmlContent: `
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#EEF2F6;${BASE_FONT}padding:24px 12px;"><tr><td align="center">
+  <table width="600" cellpadding="0" cellspacing="0" border="0" style="background:#fff;border:1px solid #E2E8F0;border-radius:16px;overflow:hidden;max-width:600px;">
+    <tr><td style="height:4px;background:#6366f1;font-size:0;line-height:0;">&nbsp;</td></tr>
+    <tr><td style="padding:22px 32px;text-align:left;border-bottom:1px solid #EEF2F6;"><div style="display:inline-block;vertical-align:middle;width:34px;height:34px;line-height:34px;border-radius:8px;background:#6366f1;color:#fff;text-align:center;font-weight:700;font-size:16px;margin-right:10px;${BASE_FONT}">{{company_initial}}</div><span style="display:inline-block;vertical-align:middle;${BASE_FONT}font-size:15px;font-weight:700;color:#0F172A;">{{company_name}}</span></td></tr>
+    <tr><td style="padding:36px 32px 8px;">
+      <h1 style="margin:0 0 14px;${BASE_FONT}font-size:26px;line-height:1.25;font-weight:700;color:#0F172A;">Your headline goes here</h1>
+      <p style="margin:0 0 22px;${BASE_FONT}font-size:15px;line-height:1.6;color:#475569;">Hi {{firstName}}, write your message here — this header and footer keep every email on-brand.</p>
+      <div style="text-align:center;margin:28px 0 8px;"><a href="#" style="display:inline-block;${BASE_FONT}background:#6366f1;color:#fff;font-size:15px;font-weight:700;padding:15px 40px;border-radius:10px;text-decoration:none;">Call to action</a></div>
+    </td></tr>
+    <tr><td style="padding:22px 32px 28px;background:#F8FAFC;border-top:1px solid #EEF2F6;">
+      <p style="margin:0;${BASE_FONT}font-size:12px;line-height:1.6;color:#94A3B8;">This email was sent by {{company_name}}.</p>
+    </td></tr>
+  </table>
+</td></tr></table>`,
+  },
   // ══ TRANSACTIONAL ══════════════════════════════════════════════════════════
   {
     id: 'lib-welcome',

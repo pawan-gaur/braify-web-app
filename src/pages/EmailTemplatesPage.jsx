@@ -160,7 +160,9 @@ export default function EmailTemplatesPage() {
 
   /* Navigate to builder with a library template pre-loaded */
   const handleLibrarySelect = (libTmpl) => {
-    if (!libTmpl) { navigate('/email-builder'); return }
+    // "Start from scratch" and the "Standard — Branded" card both use the dynamic
+    // org-branded starter (built in the builder from live Branding), not static HTML.
+    if (!libTmpl || libTmpl.standard) { navigate('/email-builder'); return }
     navigate('/email-builder', { state: { libraryTemplate: libTmpl } })
   }
 
