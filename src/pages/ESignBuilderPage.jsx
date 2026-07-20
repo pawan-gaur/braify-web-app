@@ -134,6 +134,38 @@ export default function ESignBuilderPage({ initialDocStatus }) {
   const [dragging,     setDragging]     = useState(null)
   const [resizing,     setResizing]     = useState(null)
   const overlayRef = useRef(null)
+  const pdfScrollRef = useRef(null)   // scrollable PDF area — reset to top on page change
+
+  /* Change page and scroll the PDF area back to the top so the next page starts clean. */
+  const changePdfPage = (p) => {
+    const next = Math.min(pdfPageCount, Math.max(1, p))
+    if (next === pdfCurrentPage) return
+    setPdfCurrentPage(next)
+    requestAnimationFrame(() => pdfScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }))
+  }
+
+  /* Prev / Page X of Y / Next pager — rendered above AND below the PDF page so you can
+     advance without scrolling back up after placing a field near the bottom. */
+  const renderPdfPager = (pos) => {
+    if (pdfPageCount <= 1) return null
+    return (
+      <div className={`flex items-center justify-center gap-3 ${pos === 'top' ? 'mb-3 sticky top-0 z-10' : 'mt-4'}`}>
+        <button type="button" onClick={() => changePdfPage(pdfCurrentPage - 1)} disabled={pdfCurrentPage <= 1}
+          className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800
+                     hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+          <IconArrowLeft className="w-4 h-4" />
+        </button>
+        <span className="text-sm font-medium text-gray-600 dark:text-gray-300 px-2 py-1 rounded-lg bg-gray-50 dark:bg-gray-800">
+          Page {pdfCurrentPage} of {pdfPageCount}
+        </span>
+        <button type="button" onClick={() => changePdfPage(pdfCurrentPage + 1)} disabled={pdfCurrentPage >= pdfPageCount}
+          className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800
+                     hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+          <IconArrowRight className="w-4 h-4" />
+        </button>
+      </div>
+    )
+  }
 
   /* ── email template (optional) ───────────────────────────────────────── */
   const [emailTemplates,        setEmailTemplates]        = useState([])
@@ -1364,29 +1396,9 @@ export default function ESignBuilderPage({ initialDocStatus }) {
               </div>
 
               {pdfBase64ForPreview ? (
-                <div className="p-4 max-h-[calc(100vh-9rem)] overflow-y-auto">
-                  {/* Page navigation — shown only for multi-page PDFs */}
-                  {pdfPageCount > 1 && (
-                    <div className="flex items-center justify-center gap-3 mb-3 sticky top-0 z-10">
-                      <button type="button"
-                        onClick={() => setPdfCurrentPage(p => Math.max(1, p - 1))}
-                        disabled={pdfCurrentPage <= 1}
-                        className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800
-                                   hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-                        <IconArrowLeft className="w-4 h-4" />
-                      </button>
-                      <span className="text-sm font-medium text-gray-600 dark:text-gray-300 px-2 py-1 rounded-lg bg-gray-50 dark:bg-gray-800">
-                        Page {pdfCurrentPage} of {pdfPageCount}
-                      </span>
-                      <button type="button"
-                        onClick={() => setPdfCurrentPage(p => Math.min(pdfPageCount, p + 1))}
-                        disabled={pdfCurrentPage >= pdfPageCount}
-                        className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800
-                                   hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-                        <IconArrowRight className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
+                <div ref={pdfScrollRef} className="p-4 max-h-[calc(100vh-9rem)] overflow-y-auto">
+                  {/* Page navigation (top) — multi-page PDFs only */}
+                  {renderPdfPager('top')}
 
                   {/* PDF page (canvas) + click-to-place field overlay */}
                   <div ref={overlayRef}
@@ -1438,6 +1450,9 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                       })}
                     </div>
                   </div>
+
+                  {/* Page navigation (bottom) — advance without scrolling back up */}
+                  {renderPdfPager('bottom')}
 
                   {pdfPageCount > 1 && (
                     <p className="text-center text-xs text-gray-400 mt-2">

@@ -6,7 +6,7 @@
  * The PDF is fetched same-origin as a blob and rendered page-by-page via pdf.js, so there is no
  * built-in download control and cloud PDFs render without needing bucket CORS.
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { esignOpenView, esignViewPdf } from '../services/api'
 import PdfPageCanvas from '../components/esign/PdfPageCanvas'
@@ -26,6 +26,36 @@ export default function ESignViewPage() {
   const [error,   setError]   = useState(null)
   const [pageCount, setPageCount] = useState(1)
   const [page,      setPage]      = useState(1)
+  const pageWrapRef = useRef(null)   // page canvas wrapper — scrolled to top on page change
+
+  /* Change page and scroll the page canvas back to the top. */
+  const changePage = (p) => {
+    const next = Math.min(pageCount, Math.max(1, p))
+    if (next === page) return
+    setPage(next)
+    requestAnimationFrame(() =>
+      pageWrapRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  }
+
+  /* Read-only Prev / Page X of Y / Next pager — rendered above and below the page. */
+  const renderPager = (pos) => {
+    if (pageCount <= 1) return null
+    return (
+      <div className={`flex items-center justify-center gap-3 py-2 ${pos === 'top' ? 'bg-gray-50 border-b border-gray-200' : ''}`}>
+        <button type="button" onClick={() => changePage(page - 1)} disabled={page <= 1}
+          className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-600
+                     hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+          ‹ Prev
+        </button>
+        <span className="text-sm font-medium text-gray-600">Page {page} of {pageCount}</span>
+        <button type="button" onClick={() => changePage(page + 1)} disabled={page >= pageCount}
+          className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-600
+                     hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+          Next ›
+        </button>
+      </div>
+    )
+  }
 
   useEffect(() => {
     let objectUrl
@@ -104,31 +134,21 @@ export default function ESignViewPage() {
         </div>
       )}
 
-      {/* Page navigation */}
-      {pageCount > 1 && (
-        <div className="flex items-center justify-center gap-3 py-2 bg-gray-50 border-b border-gray-200">
-          <button type="button" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}
-            className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-600
-                       hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-            ‹ Prev
-          </button>
-          <span className="text-sm font-medium text-gray-600">Page {page} of {pageCount}</span>
-          <button type="button" onClick={() => setPage(p => Math.min(pageCount, p + 1))} disabled={page >= pageCount}
-            className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-600
-                       hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-            Next ›
-          </button>
-        </div>
-      )}
+      {/* Page navigation (top) */}
+      {renderPager('top')}
 
       {/* PDF */}
       <div className="flex-1 overflow-y-auto">
         <div className="p-3">
-          <div className="relative w-full max-w-4xl mx-auto border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+          <div ref={pageWrapRef} className="relative w-full max-w-4xl mx-auto border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm scroll-mt-4">
             {pdfUrl
               ? <PdfPageCanvas source={pdfUrl} pageNumber={page} onPageCountChange={setPageCount} />
               : <div className="h-96 flex items-center justify-center text-gray-400 text-sm">No document to display</div>}
           </div>
+
+          {/* Page navigation (bottom) */}
+          {renderPager('bottom')}
+
           <p className="text-center text-xs text-gray-400 mt-3">
             This is a read-only view. {completed ? 'You are viewing the signed document.' : 'The document is still being signed.'}
           </p>

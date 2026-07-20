@@ -84,6 +84,7 @@ export default function ESignSigningPage() {
   const drawingRef = useRef(false)
   const lastPt     = useRef(null)
   const hasDrawn   = useRef(false)   // tracks whether the user has drawn anything
+  const pageWrapRef = useRef(null)   // page canvas wrapper — scrolled to top on page change
 
   /* ── Which fields belong to the signatory holding this token ──────────────
    * The backend tags the token with currentSignatoryId; a field is "mine" when it
@@ -473,6 +474,47 @@ export default function ESignSigningPage() {
   const allRequiredSigned = myFields.filter(f => f.required).every(f => f.signed)
   const signedCount       = myFields.filter(f => f.signed).length
 
+  /* Change page and scroll the page canvas back to the top so the signer starts clean. */
+  const changePage = (p) => {
+    const next = Math.min(pdfPageCount, Math.max(1, p))
+    if (next === pdfCurrentPage) return
+    setPdfCurrentPage(next)
+    requestAnimationFrame(() =>
+      pageWrapRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  }
+
+  /* Prev / Page X of Y / Next pager. On the last page, Next becomes Submit Document.
+     Rendered both above and below the page canvas so the signer never scrolls back up. */
+  const renderPager = (pos) => {
+    if (pdfPageCount <= 1) return null
+    const isLast = pdfCurrentPage >= pdfPageCount
+    return (
+      <div className={`flex items-center justify-center gap-3 ${pos === 'top' ? 'mb-3' : 'mt-4'}`}>
+        <button type="button" onClick={() => changePage(pdfCurrentPage - 1)} disabled={pdfCurrentPage <= 1}
+          className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-600
+                     hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+          ‹ Prev
+        </button>
+        <span className="text-sm font-medium text-gray-600 px-2 py-1 rounded-lg bg-white border border-gray-200">
+          Page {pdfCurrentPage} of {pdfPageCount}
+        </span>
+        {isLast ? (
+          <button type="button" onClick={handleSubmit} disabled={submitting || !allRequiredSigned}
+            className="px-4 py-1.5 rounded-lg bg-green-600 text-white text-sm font-semibold
+                       hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            {submitting ? 'Submitting…' : 'Submit Document'}
+          </button>
+        ) : (
+          <button type="button" onClick={() => changePage(pdfCurrentPage + 1)}
+            className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-600
+                       hover:bg-gray-50 transition-colors">
+            Next ›
+          </button>
+        )}
+      </div>
+    )
+  }
+
   const isSignatureOrInitials = activeField &&
     (activeField.fieldType === 'SIGNATURE' || activeField.fieldType === 'INITIALS')
   const isDateOrText = activeField &&
@@ -642,29 +684,9 @@ export default function ESignSigningPage() {
           ) : (
             /* Page-by-page canvas render so multi-page documents are fully navigable. */
             <div className="p-3">
-              {pdfPageCount > 1 && (
-                <div className="flex items-center justify-center gap-3 mb-3">
-                  <button type="button"
-                    onClick={() => setPdfCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={pdfCurrentPage <= 1}
-                    className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-600
-                               hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-                    ‹ Prev
-                  </button>
-                  <span className="text-sm font-medium text-gray-600 px-2 py-1 rounded-lg bg-white border border-gray-200">
-                    Page {pdfCurrentPage} of {pdfPageCount}
-                  </span>
-                  <button type="button"
-                    onClick={() => setPdfCurrentPage(p => Math.min(pdfPageCount, p + 1))}
-                    disabled={pdfCurrentPage >= pdfPageCount}
-                    className="px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-600
-                               hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-                    Next ›
-                  </button>
-                </div>
-              )}
+              {renderPager('top')}
 
-              <div className="relative w-full max-w-4xl mx-auto border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+              <div ref={pageWrapRef} className="relative w-full max-w-4xl mx-auto border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm scroll-mt-4">
                 <PdfPageCanvas
                   source={pdfUrl}
                   pageNumber={pdfCurrentPage}
@@ -675,6 +697,8 @@ export default function ESignSigningPage() {
                   {fields.filter(f => (f.page || 1) === pdfCurrentPage).map(renderField)}
                 </div>
               </div>
+
+              {renderPager('bottom')}
 
               {pdfPageCount > 1 && (
                 <p className="text-center text-xs text-gray-400 mt-2">
