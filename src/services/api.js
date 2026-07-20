@@ -266,6 +266,7 @@ export const esignSendDocument    = (id, days = 7)         => http.post(`/esign/
 export const esignCancelDocument  = (id)                   => http.post(`/esign/documents/${id}/cancel`).then(r => r.data)
 export const esignResendDocument  = (id, days = 7)         => http.post(`/esign/documents/${id}/resend?tokenValidDays=${days}`).then(r => r.data)
 export const esignResendSignatory = (id, signatoryId, days = 7) => http.post(`/esign/documents/${id}/signatories/${signatoryId}/resend?tokenValidDays=${days}`).then(r => r.data)
+export const esignResendCopy      = (id)                   => http.post(`/esign/documents/${id}/resend-copy`).then(r => r.data)
 export const esignGetAudit        = (id)                   => http.get(`/esign/documents/${id}/audit`).then(r => r.data)
 export const esignDownloadSigned  = (id)                   => http.get(`/esign/documents/${id}/signed-pdf`, { responseType: 'blob' }).then(r => r.data)
 export const esignDownloadSource  = (id)                   => http.get(`/esign/documents/${id}/source-pdf`, { responseType: 'blob' }).then(r => r.data)

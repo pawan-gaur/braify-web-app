@@ -139,7 +139,8 @@ export default function ESignVerifyPage() {
       </div>
 
       <p className="text-xs text-gray-400 mt-6">
-        Powered by <span className="font-semibold text-accent">Braify e-Sign</span>
+        Powered by <a href="https://braify.com/" target="_blank" rel="noopener noreferrer"
+          className="font-semibold text-accent hover:underline">Braify e-Sign</a>
       </p>
     </div>
   )

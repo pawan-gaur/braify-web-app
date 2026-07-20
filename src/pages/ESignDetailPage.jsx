@@ -7,7 +7,7 @@
  */
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { esignGetDocument, esignGetAudit, esignDownloadSigned, esignListAttachments, esignDownloadAttachment, esignResendSignatory } from '../services/api'
+import { esignGetDocument, esignGetAudit, esignDownloadSigned, esignListAttachments, esignDownloadAttachment, esignResendSignatory, esignResendCopy } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import { IconCheck } from '../components/ui/icons'
@@ -55,6 +55,7 @@ export default function ESignDetailPage() {
   const [loading,     setLoading]     = useState(true)
   const [tab,         setTab]         = useState('overview') // overview | pdf | audit | attachments
   const [resendingSig, setResendingSig] = useState(null)     // signatoryId currently being resent
+  const [resendingCopy, setResendingCopy] = useState(false)  // resending the final signed copy
 
   useEffect(() => {
     Promise.all([
@@ -122,6 +123,23 @@ export default function ESignDetailPage() {
       showToast(e.message || 'Failed to resend invitation', 'error')
     } finally {
       setResendingSig(null)
+    }
+  }
+
+  async function handleResendCopy() {
+    setResendingCopy(true)
+    try {
+      const updated = await esignResendCopy(id)
+      setDoc(prev => ({ ...prev, ...updated }))   // refresh notification statuses without dropping PDF urls
+      const failed = (updated.completionNotifications || []).filter(n => n.status === 'FAILED').length
+      showToast(
+        failed ? `Signed copy resent — ${failed} recipient(s) failed` : 'Signed copy resent to all recipients',
+        failed ? 'error' : 'success',
+      )
+    } catch (e) {
+      showToast(e.message || 'Failed to resend the signed copy', 'error')
+    } finally {
+      setResendingCopy(false)
     }
   }
 
@@ -538,6 +556,14 @@ export default function ESignDetailPage() {
 
       {/* ── Tab: Audit Trail ── */}
       {tab === 'audit' && (
+        <div className="space-y-4">
+        {(doc.status === 'COMPLETED' || (doc.completionNotifications?.length > 0)) && (
+          <NotificationsPanel
+            doc={doc}
+            onResend={handleResendCopy}
+            resending={resendingCopy}
+          />
+        )}
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
           {audit.length === 0 ? (
             <div className="flex items-center justify-center h-40 text-gray-400">
@@ -584,6 +610,74 @@ export default function ESignDetailPage() {
               })}
             </div>
           )}
+        </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Who was emailed the final signed document, with per-recipient delivery status + a resend action. */
+const NOTIF_ROLE_LABELS = {
+  SIGNATORY:     'Signatory',
+  CREATOR:       'Sender',
+  COMPLETION_CC: 'Copy recipient',
+  INVITATION_CC: 'CC (view only)',
+}
+
+function NotificationsPanel({ doc, onResend, resending }) {
+  const notifs = doc.completionNotifications || []
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Signed-copy notifications</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            {notifs.length
+              ? `${notifs.length} recipient${notifs.length > 1 ? 's' : ''} emailed the final document`
+              : 'No notification record yet for this document.'}
+          </p>
+        </div>
+        {doc.status === 'COMPLETED' && (
+          <button
+            onClick={onResend}
+            disabled={resending}
+            className="btn btn-accent shrink-0 text-sm px-3 py-2 disabled:opacity-60"
+            title="Re-send the signed PDF to everyone below">
+            {resending ? (
+              <span className="inline-flex items-center gap-2">
+                <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"/>
+                Resending…
+              </span>
+            ) : 'Resend final copy'}
+          </button>
+        )}
+      </div>
+
+      {notifs.length === 0 ? (
+        <div className="px-5 py-6 text-sm text-gray-400">
+          Use “Resend final copy” to send the signed document and record who was notified.
+        </div>
+      ) : (
+        <div className="divide-y divide-gray-100 dark:divide-gray-700">
+          {notifs.map((n, i) => (
+            <div key={`${n.email}-${i}`} className="flex items-center gap-3 px-5 py-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+                  {n.name ? `${n.name} · ` : ''}{n.email}
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {NOTIF_ROLE_LABELS[n.role] || n.role}
+                  {n.withAttachment ? ' · PDF attached' : ' · notice only'}
+                  {n.sentAt ? ` · ${fmtDateTime(n.sentAt)}` : ''}
+                </p>
+              </div>
+              <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase
+                ${n.status === 'SENT' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                {n.status === 'SENT' ? 'Sent' : 'Failed'}
+              </span>
+            </div>
+          ))}
         </div>
       )}
     </div>
