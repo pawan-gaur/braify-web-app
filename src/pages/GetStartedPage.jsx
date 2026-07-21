@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import BrandLogo from '../components/ui/BrandLogo'
+import AuthLayout from '../components/auth/AuthLayout'
 import { useNavigate } from 'react-router-dom'
 import { submitOnboardingRequest } from '../services/api'
 
@@ -107,7 +107,7 @@ export default function GetStartedPage() {
 
   /* Auto-focus first input on step change */
   useEffect(() => {
-    const t = setTimeout(() => firstInputRef.current?.focus(), 100)
+    const t = setTimeout(() => firstInputRef.current?.focus({ preventScroll: true }), 100)
     return () => clearTimeout(t)
   }, [step])
 
@@ -166,38 +166,26 @@ export default function GetStartedPage() {
   }
 
   return (
-    <div className="min-h-screen bg-ink-9">
-      {/* ── Glass header ───────────────────────────────────────────────── */}
-      <header className="fixed top-0 inset-x-0 z-50 bg-white/80 backdrop-blur-md border-b border-ink-7">
-        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-          <button
-            onClick={() => navigate('/')}
-            className="flex items-center gap-2 font-semibold text-ink hover:opacity-70 transition-opacity"
-          >
-            <BrandLogo size={28} />
-            Braify
-          </button>
-          <button
-            onClick={() => navigate('/login')}
-            className="text-sm text-ink-3 hover:text-ink transition-colors"
-          >
-            Already have an account? <span className="text-brand font-semibold">Sign in</span>
-          </button>
-        </div>
-      </header>
-
-      {/* ── Main ───────────────────────────────────────────────────────── */}
-      <div className="pt-32 pb-16 px-4">
-        <div className="max-w-xl mx-auto animate-fade-in-up">
+    <AuthLayout
+      headerRight={
+        <button
+          onClick={() => navigate('/login')}
+          className="text-sm text-ink-3 hover:text-ink transition-colors"
+        >
+          Already have an account? <span className="text-brand font-semibold">Sign in</span>
+        </button>
+      }
+    >
+      <div className="animate-fade-in-up">
           <Progress step={step} total={3} />
 
-          <div className="bg-white rounded-hero border border-ink-7 shadow-soft p-8 md:p-10">
+          <div>
 
             {/* ═══════════ STEP 0: Identity ═══════════ */}
             {step === 0 && (
               <div className="space-y-6 animate-fade-in-up">
                 <div>
-                  <h1 className="display-2">Let's get you set up</h1>
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Let's get you set up</h1>
                   <p className="text-ink-3 mt-2 text-[15px]">
                     We'll create your workspace in under a minute.
                   </p>
@@ -209,7 +197,7 @@ export default function GetStartedPage() {
                     <label className="form-label">Your name</label>
                     <input
                       ref={firstInputRef}
-                      className="form-input-hero"
+                      className="form-input"
                       placeholder="Jane Smith"
                       value={form.applicantName}
                       onChange={e => set('applicantName', e.target.value)}
@@ -224,7 +212,7 @@ export default function GetStartedPage() {
                     <div className="relative">
                       <input
                         type="email"
-                        className="form-input-hero pr-12"
+                        className="form-input pr-12"
                         placeholder="jane@company.com"
                         value={form.applicantEmail}
                         onChange={e => set('applicantEmail', e.target.value)}
@@ -239,7 +227,7 @@ export default function GetStartedPage() {
                   <div>
                     <label className="form-label">Organization name</label>
                     <input
-                      className="form-input-hero"
+                      className="form-input"
                       placeholder="Acme Corporation"
                       value={form.organizationName}
                       onChange={e => set('organizationName', e.target.value)}
@@ -315,7 +303,7 @@ export default function GetStartedPage() {
             {step === 1 && (
               <div className="space-y-6 animate-fade-in-up">
                 <div>
-                  <h1 className="display-2">What will you use?</h1>
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white">What will you use?</h1>
                   <p className="text-ink-3 mt-2 text-[15px]">
                     Pick the features your team needs. You can change this later.
                   </p>
@@ -364,7 +352,7 @@ export default function GetStartedPage() {
             {step === 2 && (
               <div className="space-y-6 animate-fade-in-up">
                 <div>
-                  <h1 className="display-2">All set?</h1>
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white">All set?</h1>
                   <p className="text-ink-3 mt-2 text-[15px]">
                     We'll send you a confirmation email and review your application within 1–2 business days.
                   </p>
@@ -430,7 +418,7 @@ export default function GetStartedPage() {
                 <button
                   onClick={next}
                   disabled={!canAdvance()}
-                  className="btn btn-primary btn-lg gap-2"
+                  className="btn btn-accent btn-lg gap-2"
                 >
                   Continue
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -441,7 +429,7 @@ export default function GetStartedPage() {
                 <button
                   onClick={handleSubmit}
                   disabled={loading}
-                  className="btn btn-primary btn-lg gap-2"
+                  className="btn btn-accent btn-lg gap-2"
                 >
                   {loading && (
                     <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
@@ -456,19 +444,15 @@ export default function GetStartedPage() {
           </div>
 
           {/* Footer note */}
-          <div className="text-center mt-6 space-y-3">
-            <p className="text-xs text-ink-5">
-              Press <kbd className="kbd">Enter</kbd> to advance · <kbd className="kbd">Esc</kbd> to clear
-            </p>
+          <div className="text-center mt-6">
             <p className="text-xs text-ink-5">
               By submitting, you agree to our{' '}
               <a href="#" className="underline hover:text-ink-3">Terms</a>{' '}and{' '}
               <a href="#" className="underline hover:text-ink-3">Privacy Policy</a>.
             </p>
           </div>
-        </div>
       </div>
-    </div>
+    </AuthLayout>
   )
 }
 
@@ -504,7 +488,7 @@ function SuccessScreen({ form, onHome }) {
           </div>
         </div>
 
-        <h1 className="display-2 mb-3">Application submitted</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">Application submitted</h1>
         <p className="text-ink-3 leading-relaxed mb-2">
           Thanks, <strong className="text-ink font-semibold">{form.applicantName}</strong>.
           We've received your request for <strong className="text-ink font-semibold">{form.organizationName}</strong>.
@@ -532,7 +516,7 @@ function SuccessScreen({ form, onHome }) {
           </ol>
         </div>
 
-        <button onClick={onHome} className="btn btn-primary btn-lg w-full">
+        <button onClick={onHome} className="btn btn-accent btn-lg w-full">
           Back to home
         </button>
         <p className="text-xs text-ink-5 mt-4">

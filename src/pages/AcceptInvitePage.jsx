@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import BrandLogo from '../components/ui/BrandLogo'
+import AuthLayout from '../components/auth/AuthLayout'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { validateInviteToken, acceptInvite } from '../services/api'
 
@@ -44,14 +44,8 @@ export default function AcceptInvitePage() {
 
   /* ── Layout shell ── */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-brand-900 to-accent-700 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="flex justify-center mb-8">
-          <BrandLogo size={56} />
-        </div>
-
-        <div className="card dark:bg-gray-800 p-8">
+    <AuthLayout>
+        <div>
           {validating ? (
             <div className="flex flex-col items-center gap-4 py-8 text-gray-400">
               <svg className="animate-spin h-8 w-8 text-brand" viewBox="0 0 24 24" fill="none">
@@ -70,7 +64,7 @@ export default function AcceptInvitePage() {
               </div>
               <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-2">Link Invalid</h2>
               <p className="text-sm text-gray-500 mb-6">{tokenError}</p>
-              <button className="btn btn-primary" onClick={() => navigate('/login')}>Go to Login</button>
+              <button className="btn btn-accent" onClick={() => navigate('/login')}>Go to Login</button>
             </div>
           ) : done ? (
             <div className="text-center py-4">
@@ -81,13 +75,13 @@ export default function AcceptInvitePage() {
               </div>
               <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-2">All set!</h2>
               <p className="text-sm text-gray-500 mb-6">Your password has been set. You can now sign in.</p>
-              <button className="btn btn-primary" onClick={() => navigate('/login')}>Sign In</button>
+              <button className="btn btn-accent" onClick={() => navigate('/login')}>Sign In</button>
             </div>
           ) : (
             <>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Accept Invitation</h1>
-              <p className="text-sm text-gray-500 mb-6">
-                Hi <strong>{tokenInfo?.firstName}</strong>! Set a password for <strong>{tokenInfo?.email}</strong>.
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Accept invitation</h1>
+              <p className="text-[15px] text-gray-500 dark:text-gray-400 mb-6">
+                Hi <strong className="text-gray-700 dark:text-gray-200">{tokenInfo?.firstName}</strong>! Set a password for <strong className="text-gray-700 dark:text-gray-200">{tokenInfo?.email}</strong>.
               </p>
 
               {error && (
@@ -133,14 +127,13 @@ export default function AcceptInvitePage() {
                   />
                 </div>
                 <button type="submit" disabled={submitting}
-                  className="w-full btn btn-primary py-2.5 justify-center mt-2">
+                  className="w-full btn btn-accent py-2.5 justify-center mt-2">
                   {submitting ? 'Setting password…' : 'Set Password & Activate Account'}
                 </button>
               </form>
             </>
           )}
         </div>
-      </div>
-    </div>
+    </AuthLayout>
   )
 }

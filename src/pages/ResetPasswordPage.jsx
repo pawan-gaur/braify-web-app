@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import BrandLogo from '../components/ui/BrandLogo'
+import AuthLayout from '../components/auth/AuthLayout'
 import { useSearchParams, useNavigate, Link } from 'react-router-dom'
 import { validateInviteToken, resetPassword } from '../services/api'
 
@@ -46,13 +46,14 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-brand-900 to-accent-700 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="flex justify-center mb-8">
-          <BrandLogo size={56} />
-        </div>
-
-        <div className="card dark:bg-gray-800 p-8">
+    <AuthLayout
+      headerRight={
+        <Link to="/login" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
+          ← Back to <span className="text-brand font-semibold">Sign in</span>
+        </Link>
+      }
+    >
+        <div>
           {validating ? (
             <div className="flex flex-col items-center gap-4 py-8 text-gray-400">
               <svg className="animate-spin h-8 w-8 text-brand" viewBox="0 0 24 24" fill="none">
@@ -70,7 +71,7 @@ export default function ResetPasswordPage() {
               </div>
               <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-2">Link Invalid</h2>
               <p className="text-sm text-gray-500 mb-6">{tokenError}</p>
-              <Link to="/forgot-password" className="btn btn-primary">Request new link</Link>
+              <Link to="/forgot-password" className="btn btn-accent">Request new link</Link>
             </div>
           ) : done ? (
             <div className="text-center py-4">
@@ -81,13 +82,13 @@ export default function ResetPasswordPage() {
               </div>
               <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-2">Password reset!</h2>
               <p className="text-sm text-gray-500 mb-6">Your password has been updated. You can now sign in.</p>
-              <button className="btn btn-primary" onClick={() => navigate('/login')}>Sign In</button>
+              <button className="btn btn-accent" onClick={() => navigate('/login')}>Sign In</button>
             </div>
           ) : (
             <>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Reset password</h1>
-              <p className="text-sm text-gray-500 mb-6">
-                Resetting password for <strong>{tokenInfo?.email}</strong>.
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Reset password</h1>
+              <p className="text-[15px] text-gray-500 dark:text-gray-400 mb-6">
+                Resetting password for <strong className="text-gray-700 dark:text-gray-200">{tokenInfo?.email}</strong>.
               </p>
 
               {error && (
@@ -123,14 +124,13 @@ export default function ResetPasswordPage() {
                     onChange={e => setConfirm(e.target.value)} required />
                 </div>
                 <button type="submit" disabled={submitting}
-                  className="w-full btn btn-primary py-2.5 justify-center mt-2">
+                  className="w-full btn btn-accent py-2.5 justify-center mt-2">
                   {submitting ? 'Resetting…' : 'Reset Password'}
                 </button>
               </form>
             </>
           )}
         </div>
-      </div>
-    </div>
+    </AuthLayout>
   )
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import BrandLogo from '../components/ui/BrandLogo'
+import AuthLayout from '../components/auth/AuthLayout'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import useDocumentTitle from '../hooks/useDocumentTitle'
@@ -59,23 +59,26 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-50 via-white to-accent-50
-                    dark:from-gray-950 dark:via-gray-900 dark:to-brand-900
-                    flex items-center justify-center px-4">
+    <AuthLayout
+      headerRight={
+        <Link to="/get-started" className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
+          New here? <span className="text-brand font-semibold">Get started</span>
+        </Link>
+      }
+    >
+      <div>
 
-      <div className="w-full max-w-md">
-
-        {/* Logo / brand */}
-        <div className="text-center mb-8">
-          <div className="inline-flex mb-4">
-            <BrandLogo size={56} />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Braify</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Sign in to your workspace</p>
+        {/* Heading */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            {mfaToken ? 'Verify it’s you' : 'Welcome back'}
+          </h1>
+          <p className="text-[15px] text-gray-500 dark:text-gray-400 mt-2">
+            {mfaToken ? 'Enter your authenticator code to continue.' : 'Sign in to your Braify workspace.'}
+          </p>
         </div>
 
-        {/* Card */}
-        <div className="card dark:bg-gray-800 dark:border-gray-700 p-8">
+        <div>
 
           {error && (
             <div className="flex items-start gap-2.5 bg-red-50 dark:bg-red-900/20 border border-red-200
@@ -93,27 +96,21 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                Email address
-              </label>
+              <label className="form-label">Email address</label>
               <input
                 type="email"
                 autoComplete="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
-                           bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100
-                           placeholder-gray-400 dark:placeholder-gray-500
-                           outline-none focus:border-primary focus:ring-2 focus:ring-primary/10
-                           transition-all text-sm"
+                className="form-input"
               />
             </div>
 
             {/* Password */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label className="block text-sm font-medium text-ink-2 dark:text-gray-300">
                   Password
                 </label>
                 <Link to="/forgot-password"
@@ -128,11 +125,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full px-4 py-2.5 pr-10 rounded-xl border border-gray-200 dark:border-gray-600
-                             bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100
-                             placeholder-gray-400 dark:placeholder-gray-500
-                             outline-none focus:border-primary focus:ring-2 focus:ring-primary/10
-                             transition-all text-sm"
+                  className="form-input pr-10"
                 />
                 <button
                   type="button"
@@ -182,6 +175,31 @@ export default function LoginPage() {
           </form>
           )}
 
+          {/* Social sign-in (disabled — no Google OAuth backend yet) */}
+          {!mfaToken && (
+            <>
+              <div className="flex items-center gap-3 my-6">
+                <span className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+                <span className="text-xs font-medium text-gray-400">Or continue with</span>
+                <span className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+              </div>
+              <button
+                type="button"
+                disabled
+                aria-disabled="true"
+                title="Google sign-in is coming soon"
+                className="w-full flex items-center justify-center gap-3 rounded-xl border border-gray-200
+                           dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm font-semibold
+                           text-gray-500 dark:text-gray-400 opacity-60 cursor-not-allowed"
+              >
+                <GoogleIcon className="w-4 h-4" />
+                Continue with Google
+                <span className="text-[10px] font-semibold text-gray-400 border border-gray-200
+                                 dark:border-gray-600 rounded-full px-1.5 py-0.5">Soon</span>
+              </button>
+            </>
+          )}
+
           {/* MFA verification step */}
           {mfaToken && (
           <form onSubmit={handleMfaSubmit} className="space-y-5">
@@ -197,10 +215,7 @@ export default function LoginPage() {
               value={code}
               onChange={e => setCode(e.target.value)}
               placeholder="123456"
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600
-                         bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 tracking-[0.3em]
-                         text-center font-mono text-lg placeholder-gray-400 dark:placeholder-gray-500
-                         outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+              className="form-input text-center font-mono text-lg tracking-[0.3em]"
             />
             <button
               type="submit"
@@ -229,14 +244,24 @@ export default function LoginPage() {
           )}
         </div>
 
-        {/* Default credentials hint
-        <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-5">
-          Default platform admin: <span className="font-mono">admin@platform.com</span>
-          {' / '}
-          <span className="font-mono">Admin@1234</span>
-        </p>
-		 */}
+        {!mfaToken && (
+          <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-8">
+            Don’t have an account?{' '}
+            <Link to="/get-started" className="text-brand font-semibold hover:text-brand-hover">Get started</Link>
+          </p>
+        )}
       </div>
-    </div>
+    </AuthLayout>
+  )
+}
+
+function GoogleIcon({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="#4285F4" d="M23.52 12.27c0-.79-.07-1.54-.2-2.27H12v4.51h6.47a5.53 5.53 0 0 1-2.4 3.63v3h3.88c2.27-2.09 3.57-5.17 3.57-8.87z"/>
+      <path fill="#34A853" d="M12 24c3.24 0 5.96-1.08 7.95-2.91l-3.88-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09A12 12 0 0 0 12 24z"/>
+      <path fill="#FBBC05" d="M5.27 14.29a7.2 7.2 0 0 1 0-4.58V6.62H1.29a12 12 0 0 0 0 10.76l3.98-3.09z"/>
+      <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.44-3.44C17.95 1.19 15.24 0 12 0A12 12 0 0 0 1.29 6.62l3.98 3.09C6.22 6.86 8.87 4.75 12 4.75z"/>
+    </svg>
   )
 }
