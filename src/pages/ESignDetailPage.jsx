@@ -7,7 +7,7 @@
  */
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { esignGetDocument, esignGetAudit, esignDownloadSigned, esignListAttachments, esignDownloadAttachment, esignResendSignatory, esignResendCopy } from '../services/api'
+import { esignGetDocument, esignGetAudit, esignDownloadSigned, esignListAttachments, esignDownloadAttachment, esignResendSignatory, esignResendCopy, esignResendCopyTo } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import { IconCheck } from '../components/ui/icons'
@@ -55,7 +55,8 @@ export default function ESignDetailPage() {
   const [loading,     setLoading]     = useState(true)
   const [tab,         setTab]         = useState('overview') // overview | pdf | audit | attachments
   const [resendingSig, setResendingSig] = useState(null)     // signatoryId currently being resent
-  const [resendingCopy, setResendingCopy] = useState(false)  // resending the final signed copy
+  const [resendingCopy, setResendingCopy] = useState(false)  // resending the final signed copy (all)
+  const [resendingEmail, setResendingEmail] = useState(null) // recipient email currently being resent
 
   useEffect(() => {
     Promise.all([
@@ -140,6 +141,23 @@ export default function ESignDetailPage() {
       showToast(e.message || 'Failed to resend the signed copy', 'error')
     } finally {
       setResendingCopy(false)
+    }
+  }
+
+  async function handleResendOne(email) {
+    setResendingEmail(email)
+    try {
+      const updated = await esignResendCopyTo(id, email)
+      setDoc(prev => ({ ...prev, ...updated }))   // refresh notification statuses without dropping PDF urls
+      const rec = (updated.completionNotifications || []).find(n => n.email?.toLowerCase() === email.toLowerCase())
+      showToast(
+        rec?.status === 'FAILED' ? `Could not resend to ${email}` : `Signed copy resent to ${email}`,
+        rec?.status === 'FAILED' ? 'error' : 'success',
+      )
+    } catch (e) {
+      showToast(e.message || `Failed to resend to ${email}`, 'error')
+    } finally {
+      setResendingEmail(null)
     }
   }
 
@@ -562,6 +580,8 @@ export default function ESignDetailPage() {
             doc={doc}
             onResend={handleResendCopy}
             resending={resendingCopy}
+            onResendOne={handleResendOne}
+            resendingEmail={resendingEmail}
           />
         )}
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
@@ -625,8 +645,9 @@ const NOTIF_ROLE_LABELS = {
   INVITATION_CC: 'CC (view only)',
 }
 
-function NotificationsPanel({ doc, onResend, resending }) {
+function NotificationsPanel({ doc, onResend, resending, onResendOne, resendingEmail }) {
   const notifs = doc.completionNotifications || []
+  const isCompleted = doc.status === 'COMPLETED'
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
       <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-100 dark:border-gray-700">
@@ -638,10 +659,10 @@ function NotificationsPanel({ doc, onResend, resending }) {
               : 'No notification record yet for this document.'}
           </p>
         </div>
-        {doc.status === 'COMPLETED' && (
+        {isCompleted && notifs.length > 0 && (
           <button
             onClick={onResend}
-            disabled={resending}
+            disabled={resending || !!resendingEmail}
             className="btn btn-accent shrink-0 text-sm px-3 py-2 disabled:opacity-60"
             title="Re-send the signed PDF to everyone below">
             {resending ? (
@@ -649,7 +670,16 @@ function NotificationsPanel({ doc, onResend, resending }) {
                 <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"/>
                 Resending…
               </span>
-            ) : 'Resend final copy'}
+            ) : 'Resend to all'}
+          </button>
+        )}
+        {isCompleted && notifs.length === 0 && (
+          <button
+            onClick={onResend}
+            disabled={resending}
+            className="btn btn-accent shrink-0 text-sm px-3 py-2 disabled:opacity-60"
+            title="Send the signed PDF to all recipients">
+            {resending ? 'Sending…' : 'Send final copy'}
           </button>
         )}
       </div>
@@ -676,6 +706,16 @@ function NotificationsPanel({ doc, onResend, resending }) {
                 ${n.status === 'SENT' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                 {n.status === 'SENT' ? 'Sent' : 'Failed'}
               </span>
+              {isCompleted && (
+                <button
+                  onClick={() => onResendOne(n.email)}
+                  disabled={resending || !!resendingEmail}
+                  className="shrink-0 text-xs font-semibold text-accent-600 hover:text-accent-700
+                             disabled:opacity-40 disabled:cursor-not-allowed px-2 py-1"
+                  title={`Resend to ${n.email}`}>
+                  {resendingEmail === n.email ? 'Resending…' : 'Resend'}
+                </button>
+              )}
             </div>
           ))}
         </div>
