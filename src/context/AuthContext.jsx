@@ -46,6 +46,16 @@ function extractFeatures(data) {
 const AuthCtx = createContext(null)
 
 const TOKEN_KEY = 'pdf-builder-token'
+/** Remembers the last signed-in identity (name + email only — never tokens) for the
+ *  "Welcome back" password-only sign-in after a session expires. */
+const LAST_USER_KEY = 'braify.lastUser'
+
+function readLastUser() {
+  try {
+    const raw = localStorage.getItem(LAST_USER_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch { return null }
+}
 
 /** Apply org theme CSS variables to :root so buttons/UI reflect brand colors */
 function applyTheme(primaryColor, accentColor) {
@@ -66,6 +76,7 @@ export function AuthProvider({ children }) {
   const [features,          setFeatures]          = useState([])
   const [featureRoleAccess, setFeatureRoleAccess] = useState(null)
   const [loading,           setLoading]           = useState(true)
+  const [lastUser,          setLastUser]          = useState(readLastUser)
 
   /* ── Restore session on mount ── */
   useEffect(() => {
@@ -123,7 +134,20 @@ export function AuthProvider({ children }) {
     setFeatures(extractFeatures({ ...data, role: data.role }))
     setFeatureRoleAccess(extractFeatureRoleAccess(data))
     applyTheme(data.primaryColor, data.accentColor)
+
+    // Remember this identity (name + email only) for the next "Welcome back" sign-in.
+    const displayName = [data.firstName, data.lastName].filter(Boolean).join(' ').trim() || data.email
+    const remembered = { name: displayName, email: data.email }
+    try { localStorage.setItem(LAST_USER_KEY, JSON.stringify(remembered)) } catch { /* ignore */ }
+    setLastUser(remembered)
+
     return data
+  }, [])
+
+  /** Forget the remembered identity (used by "Sign in as a different user"). */
+  const forgetLastUser = useCallback(() => {
+    try { localStorage.removeItem(LAST_USER_KEY) } catch { /* ignore */ }
+    setLastUser(null)
   }, [])
 
   /* ── Login ── */
@@ -156,6 +180,9 @@ export function AuthProvider({ children }) {
       setUser(null)
       setFeatures([])
       setFeatureRoleAccess(null)
+      // NOTE: the remembered identity is intentionally KEPT on logout so the next visit
+      // shows the "Welcome back" password-only prompt (Gmail-style quick re-login).
+      // "Sign in as a different user" on the login page clears it via forgetLastUser().
       // Reset CSS theme variables
       document.documentElement.style.removeProperty('--brand-primary')
       document.documentElement.style.removeProperty('--brand-accent')
@@ -202,6 +229,8 @@ export function AuthProvider({ children }) {
     setFeatureRoleAccess,  // expose so BrandingPage can refresh after saving access rules
     loading,
     isAuthenticated: !!user,
+    lastUser,
+    forgetLastUser,
     login,
     verifyMfa,
     logout,

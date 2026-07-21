@@ -6,7 +6,7 @@ import useDocumentTitle from '../hooks/useDocumentTitle'
 
 export default function LoginPage() {
   useDocumentTitle('Sign In')
-  const { login, verifyMfa } = useAuth()
+  const { login, verifyMfa, lastUser } = useAuth()
   const navigate  = useNavigate()
   const location  = useLocation()
 
@@ -22,15 +22,22 @@ export default function LoginPage() {
   const [mfaToken, setMfaToken] = useState(null)
   const [code,     setCode]     = useState('')
 
+  // "Welcome back" quick sign-in: when a previous user is remembered on this device,
+  // show a password-only prompt. "Sign in as a different user" reveals the full form.
+  const [differentUser, setDifferentUser] = useState(false)
+  const remembered = !!lastUser && !differentUser
+  const firstName  = lastUser?.name?.split(' ')[0] || ''
+
   const errMsg = (err) => err?.response?.data?.message || err?.message || 'Something went wrong.'
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!email || !password) { setError('Email and password are required.'); return }
+    const emailToUse = remembered ? lastUser.email : email
+    if (!emailToUse || !password) { setError('Email and password are required.'); return }
     setLoading(true)
     setError(null)
     try {
-      const res = await login(email.trim(), password)
+      const res = await login(emailToUse.trim(), password)
       if (res?.mfaRequired) {
         setMfaToken(res.mfaToken)     // switch to the verification-code step
         return
@@ -71,10 +78,14 @@ export default function LoginPage() {
         {/* Heading */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            {mfaToken ? 'Verify it’s you' : 'Welcome back'}
+            {mfaToken ? 'Verify it’s you'
+              : remembered ? `Welcome back, ${firstName}`
+              : 'Welcome back'}
           </h1>
           <p className="text-[15px] text-gray-500 dark:text-gray-400 mt-2">
-            {mfaToken ? 'Enter your authenticator code to continue.' : 'Sign in to your Braify workspace.'}
+            {mfaToken ? 'Enter your authenticator code to continue.'
+              : remembered ? 'Enter your password to sign in.'
+              : 'Sign in to your Braify workspace.'}
           </p>
         </div>
 
@@ -94,18 +105,31 @@ export default function LoginPage() {
 
           {!mfaToken && (
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email */}
-            <div>
-              <label className="form-label">Email address</label>
-              <input
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="form-input"
-              />
-            </div>
+            {/* Email — or the remembered-account chip */}
+            {remembered ? (
+              <div className="flex items-center gap-3 rounded-xl border border-gray-200 dark:border-gray-600
+                              bg-gray-50 dark:bg-gray-800 px-4 py-3">
+                <div className="w-9 h-9 rounded-full bg-gradient-accent text-white flex items-center justify-center font-bold shrink-0">
+                  {(firstName[0] || lastUser.email[0] || '?').toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{lastUser.name}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{lastUser.email}</p>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <label className="form-label">Email address</label>
+                <input
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="form-input"
+                />
+              </div>
+            )}
 
             {/* Password */}
             <div>
@@ -125,6 +149,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••"
+                  autoFocus={remembered}
                   className="form-input pr-10"
                 />
                 <button
@@ -176,7 +201,7 @@ export default function LoginPage() {
           )}
 
           {/* Social sign-in (disabled — no Google OAuth backend yet) */}
-          {!mfaToken && (
+          {!mfaToken && !remembered && (
             <>
               <div className="flex items-center gap-3 my-6">
                 <span className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
@@ -244,10 +269,29 @@ export default function LoginPage() {
           )}
         </div>
 
-        {!mfaToken && (
+        {!mfaToken && remembered && (
           <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-8">
-            Don’t have an account?{' '}
-            <Link to="/get-started" className="text-brand font-semibold hover:text-brand-hover">Get started</Link>
+            Not you?{' '}
+            <button type="button"
+              onClick={() => { setDifferentUser(true); setEmail(''); setPassword(''); setError(null) }}
+              className="text-brand font-semibold hover:text-brand-hover">
+              Sign in as a different user
+            </button>
+          </p>
+        )}
+        {!mfaToken && !remembered && (
+          <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-8">
+            {lastUser ? (
+              <button type="button"
+                onClick={() => { setDifferentUser(false); setPassword(''); setError(null) }}
+                className="text-brand font-semibold hover:text-brand-hover">
+                ← Back to {firstName}
+              </button>
+            ) : (
+              <>Don’t have an account?{' '}
+                <Link to="/get-started" className="text-brand font-semibold hover:text-brand-hover">Get started</Link>
+              </>
+            )}
           </p>
         )}
       </div>
