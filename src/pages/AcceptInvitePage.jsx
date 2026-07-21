@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import BrandLogo from '../components/ui/BrandLogo'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { validateInviteToken, acceptInvite } from '../services/api'
 
@@ -47,14 +48,7 @@ export default function AcceptInvitePage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex justify-center mb-8">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl"
-            style={{ background: 'linear-gradient(135deg,#2F5BF0,#6D52E8)' }}>
-            <svg className="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-              <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
-            </svg>
-          </div>
+          <BrandLogo size={56} />
         </div>
 
         <div className="card dark:bg-gray-800 p-8">

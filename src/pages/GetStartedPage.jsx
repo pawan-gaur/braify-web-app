@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import BrandLogo from '../components/ui/BrandLogo'
 import { useNavigate } from 'react-router-dom'
 import { submitOnboardingRequest } from '../services/api'
 
@@ -173,9 +174,7 @@ export default function GetStartedPage() {
             onClick={() => navigate('/')}
             className="flex items-center gap-2 font-semibold text-ink hover:opacity-70 transition-opacity"
           >
-            <div className="w-7 h-7 rounded-input bg-brand flex items-center justify-center">
-              <span className="text-white text-xs font-bold">B</span>
-            </div>
+            <BrandLogo size={28} />
             Braify
           </button>
           <button

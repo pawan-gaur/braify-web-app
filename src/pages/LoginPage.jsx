@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import BrandLogo from '../components/ui/BrandLogo'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import useDocumentTitle from '../hooks/useDocumentTitle'
@@ -66,13 +67,8 @@ export default function LoginPage() {
 
         {/* Logo / brand */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4
-                          bg-gradient-accent shadow-lg shadow-brand/30">
-            <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293
-                   l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-            </svg>
+          <div className="inline-flex mb-4">
+            <BrandLogo size={56} />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Braify</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Sign in to your workspace</p>

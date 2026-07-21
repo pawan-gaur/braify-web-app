@@ -1,26 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import BrandLogo from '../ui/BrandLogo'
 
-/* ─── Brand logo ────────────────────────────────────────────────────────── */
+/* ─── Brand logo ──────────────────────────────────────────────────────────
+ * Thin alias kept for existing imports; the mark lives in the single-source
+ * BrandLogo component so every logo across the app stays identical. */
 export function BraiLogo({ size = 28 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 40 40" fill="none">
-      <circle cx="20" cy="20" r="20" fill="url(#brai-pub)" />
-      <path d="M13 20c0-3.866 3.134-7 7-7s7 3.134 7 7-3.134 7-7 7"
-            stroke="white" strokeWidth="2.2" strokeLinecap="round" />
-      <circle cx="20" cy="20" r="2.5" fill="white" />
-      <path d="M20 13v-3M20 30v-3M13 20h-3M30 20h-3"
-            stroke="white" strokeWidth="2" strokeLinecap="round" />
-      <path d="M15.1 15.1l-2.1-2.1M24.9 24.9l2.1 2.1M24.9 15.1l2.1-2.1M15.1 24.9l-2.1 2.1"
-            stroke="white" strokeWidth="1.6" strokeLinecap="round" />
-      <defs>
-        <linearGradient id="brai-pub" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#2F5BF0" />
-          <stop offset="1" stopColor="#6D52E8" />
-        </linearGradient>
-      </defs>
-    </svg>
-  )
+  return <BrandLogo size={size} />
 }
 
 /* ─── Nav dropdown data ─────────────────────────────────────────────────── */
