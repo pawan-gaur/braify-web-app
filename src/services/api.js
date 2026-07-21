@@ -255,9 +255,14 @@ export const esignBulkCreate = (documents, sendImmediately = true, label, allowC
 
 export const esignCreateDocument  = (payload)              => http.post('/esign/documents', payload).then(r => r.data)
 export const esignSuggestContacts = ()                     => http.get('/esign/contacts').then(r => r.data)
-export const esignListDocuments   = ({ page = 0, size = 20, status } = {}) => {
+export const esignListDocuments   = ({ page = 0, size = 20, status, search, dateFrom, dateTo } = {}) => {
   const params = new URLSearchParams({ page, size })
-  if (status) params.set('status', status)
+  if (status)   params.set('status', status)
+  if (search)   params.set('search', search)
+  // Send the picked local day-boundaries as absolute UTC instants so the range matches
+  // what the user sees in the (local-time) grid — not UTC calendar days.
+  if (dateFrom) params.set('dateFrom', new Date(`${dateFrom}T00:00:00`).toISOString())
+  if (dateTo)   params.set('dateTo',   new Date(`${dateTo}T23:59:59.999`).toISOString())
   return http.get(`/esign/documents?${params}`).then(r => r.data)
 }
 export const esignGetDocument     = (id)                   => http.get(`/esign/documents/${id}`).then(r => r.data)

@@ -178,37 +178,47 @@ function DocumentsTab() {
   const [data, setData]             = useState(null)          // PageResponse
   const [loading, setLoading]       = useState(true)
   const [search, setSearch]         = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')  // sent to the backend
   const [statusFilter, setStatusFilter] = useState('')
+  const [dateFrom, setDateFrom]     = useState('')
+  const [dateTo, setDateTo]         = useState('')
   const [page, setPage]             = useState(0)
   const [size, setSize]             = useState(20)
   const [resending, setResending]   = useState(null)
   const navigate                    = useNavigate()
   const { showToast }               = useToast()
 
+  // Debounce the search box → backend query (also resets to page 0 on change).
+  useEffect(() => {
+    const t = setTimeout(() => { setDebouncedSearch(search.trim()); setPage(0) }, 350)
+    return () => clearTimeout(t)
+  }, [search])
+
   const fetchDocs = useCallback(() => {
     setLoading(true)
-    esignListDocuments({ page, size, status: statusFilter || undefined })
+    esignListDocuments({
+      page, size,
+      status:   statusFilter   || undefined,
+      search:   debouncedSearch || undefined,
+      dateFrom: dateFrom       || undefined,
+      dateTo:   dateTo         || undefined,
+    })
       .then(setData)
       .catch(e => showToast(e.message, 'error'))
       .finally(() => setLoading(false))
-  }, [page, size, statusFilter])
+  }, [page, size, statusFilter, debouncedSearch, dateFrom, dateTo])
 
   useEffect(() => { fetchDocs() }, [fetchDocs])
 
-  // Reset to page 0 when filter/size changes
+  // Reset to page 0 when a filter/size changes
   function applyStatusFilter(v) { setStatusFilter(v); setPage(0) }
   function applySize(v)         { setSize(v);          setPage(0) }
+  function applyDateFrom(v)     { setDateFrom(v);      setPage(0) }
+  function applyDateTo(v)       { setDateTo(v);        setPage(0) }
+  function clearFilters()       { setSearch(''); setStatusFilter(''); setDateFrom(''); setDateTo(''); setPage(0) }
 
   const docs = data?.content ?? []
-
-  // Client-side text search within the current page
-  const filtered = docs.filter(d => {
-    const q = search.toLowerCase()
-    return !q ||
-      d.title?.toLowerCase().includes(q) ||
-      d.clientEmail?.toLowerCase().includes(q) ||
-      d.clientName?.toLowerCase().includes(q)
-  })
+  const hasFilters = !!(search || statusFilter || dateFrom || dateTo)
 
   async function handleCancel(id, e) {
     e.stopPropagation()
@@ -248,7 +258,7 @@ function DocumentsTab() {
           </svg>
           <input
             type="text"
-            placeholder="Search by title, client name or email…"
+            placeholder="Search by title, client, email or ID…"
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700
@@ -273,9 +283,31 @@ function DocumentsTab() {
           <option value="EXPIRED">Expired</option>
           <option value="CANCELLED">Cancelled</option>
         </select>
-        {(search || statusFilter) && (
+        {/* Created-date range */}
+        <input
+          type="date"
+          value={dateFrom}
+          max={dateTo || undefined}
+          onChange={e => applyDateFrom(e.target.value)}
+          title="Created on/after"
+          className="px-3 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-700
+                     bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300
+                     focus:outline-none focus:ring-2 focus:ring-accent"
+        />
+        <span className="text-gray-400 text-sm">–</span>
+        <input
+          type="date"
+          value={dateTo}
+          min={dateFrom || undefined}
+          onChange={e => applyDateTo(e.target.value)}
+          title="Created on/before"
+          className="px-3 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-700
+                     bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300
+                     focus:outline-none focus:ring-2 focus:ring-accent"
+        />
+        {hasFilters && (
           <button
-            onClick={() => { setSearch(''); applyStatusFilter('') }}
+            onClick={clearFilters}
             className="text-sm text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1.5
                        px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
           >
@@ -288,30 +320,42 @@ function DocumentsTab() {
         <ViewToggle view={view} onChange={setView} />
       </div>
 
-      {loading ? <Spinner /> : filtered.length === 0 ? (
+      {loading ? <Spinner /> : docs.length === 0 ? (
         <div className="text-center py-20">
           <svg className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4"
             fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
           </svg>
-          <p className="text-gray-500 dark:text-gray-400 text-lg font-medium">No documents yet</p>
-          <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">
-            Create your first e-sign document to get started
+          <p className="text-gray-500 dark:text-gray-400 text-lg font-medium">
+            {hasFilters ? 'No documents match your filters' : 'No documents yet'}
           </p>
-          <button
-            onClick={() => navigate('/esign/new')}
-            className="mt-4 px-5 py-2.5 rounded-xl text-white text-sm font-semibold transition-all hover:opacity-90"
-            style={{ background: 'linear-gradient(135deg,#2F5BF0,#6D52E8)' }}
-          >
-            Create Document
-          </button>
+          <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">
+            {hasFilters ? 'Try adjusting your search, status or date range.' : 'Create your first e-sign document to get started'}
+          </p>
+          {hasFilters ? (
+            <button
+              onClick={clearFilters}
+              className="mt-4 px-5 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 dark:border-gray-700
+                         text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
+            >
+              Clear filters
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate('/esign/new')}
+              className="mt-4 px-5 py-2.5 rounded-xl text-white text-sm font-semibold transition-all hover:opacity-90"
+              style={{ background: 'linear-gradient(135deg,#2F5BF0,#6D52E8)' }}
+            >
+              Create Document
+            </button>
+          )}
         </div>
       ) : view === 'grid' ? (
         /* ── Card / Grid view ──────────────────────────────────────────── */
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 p-5">
-            {filtered.map(doc => {
+            {docs.map(doc => {
               const isTerminal = ['COMPLETED','CANCELLED','EXPIRED'].includes(doc.status)
               const href = isTerminal ? `/esign/${doc.id}/view` : `/esign/${doc.id}`
               return (
@@ -430,7 +474,7 @@ function DocumentsTab() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-              {filtered.map(doc => {
+              {docs.map(doc => {
                 const isTerminal = ['COMPLETED','CANCELLED','EXPIRED'].includes(doc.status)
                 const href = isTerminal ? `/esign/${doc.id}/view` : `/esign/${doc.id}`
                 return (
