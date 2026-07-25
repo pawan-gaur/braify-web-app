@@ -14,7 +14,7 @@
  *  5. After Apply Signature the overlay renders the actual drawn image / typed text
  *     instead of just "✓ Signed" text.
  */
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react'
 import BrandLogo from '../components/ui/BrandLogo'
 import { useParams } from 'react-router-dom'
 import { esignOpenDocument, esignSignField, esignSubmitDocument, esignUploadAttachment, esignDownloadSignSource } from '../services/api'
@@ -42,6 +42,63 @@ function getCanvasPoint(e, canvas) {
   }
 }
 
+/**
+ * Rendered content of a SIGNED field: the value on top and the "signer name +
+ * timestamp" caption below. The caption adapts to the field's height so it never
+ * overlaps the value: tall fields show name and timestamp on two lines; short
+ * fields collapse them to a single linear line ("Name · timestamp").
+ */
+function SignedFieldInner({ sigMethod, sigValue, signerName, dateStr, caption }) {
+  const ref = useRef(null)
+  const [compact, setCompact] = useState(false)
+  useLayoutEffect(() => {
+    const measure = () => {
+      const h = ref.current?.clientHeight || 0
+      setCompact(h < 54)   // not enough room for a two-line caption → go linear
+    }
+    measure()
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null
+    if (ro && ref.current) ro.observe(ref.current)
+    return () => ro?.disconnect()
+  }, [])
+
+  return (
+    <div ref={ref} style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, minHeight: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+        {sigMethod === 'TYPE' ? (
+          <span style={{ fontFamily: 'cursive', color: '#1e293b', fontSize: 13, padding: '2px 4px',
+                         overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>
+            {sigValue}
+          </span>
+        ) : sigValue ? (
+          <img src={sigValue} alt="signature"
+            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', padding: 2 }} />
+        ) : (
+          <span style={{ fontSize: 11, color: '#16a34a', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <IconCheck className="w-3 h-3" /> Signed
+          </span>
+        )}
+      </div>
+      {(signerName || dateStr) && (
+        <div title={caption}
+          style={{ color: '#2563eb', textAlign: 'center', padding: '1px 3px', lineHeight: 1.1,
+                   borderTop: '1px solid rgba(37,99,235,0.35)', flexShrink: 0 }}>
+          {compact ? (
+            <div style={{ fontSize: 6.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {signerName}{signerName && dateStr ? ' · ' : ''}{dateStr}
+            </div>
+          ) : (
+            <>
+              {signerName && <div style={{ fontSize: 7, fontWeight: 600, wordBreak: 'break-word' }}>{signerName}</div>}
+              {dateStr && <div style={{ fontSize: 6.5, wordBreak: 'break-word' }}>{dateStr}</div>}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Main page ───────────────────────────────────────────────────────────────
 
 export default function ESignSigningPage() {
@@ -60,12 +117,14 @@ export default function ESignSigningPage() {
   const [pdfPageCount,   setPdfPageCount]   = useState(1)
   const [pdfCurrentPage, setPdfCurrentPage] = useState(1)
   const [pdfRenderFailed, setPdfRenderFailed] = useState(false)  // fall back to iframe if pdfjs can't load
+  const [viewMode, setViewMode] = useState('PAGED')   // PAGED (page-by-page) | CONTINUOUS (whole document)
 
   /* modal state */
   const [activeField, setActiveField] = useState(null)
   const [modalTab,    setModalTab]    = useState('DRAW')   // DRAW | TYPE | UPLOAD
   const [typedText,   setTypedText]   = useState('')
   const [saving,      setSaving]      = useState(false)
+  const [applyToAll,  setApplyToAll]  = useState(false)    // duplicate this value to every matching field
 
   /* "adopt once, click to apply" — the signer's reusable value per field type
      (SIGNATURE / INITIALS / DATE). After the first time they fill one, clicking
@@ -179,15 +238,56 @@ export default function ESignSigningPage() {
     reader.readAsDataURL(file)
   }
 
-  /* ── Open modal ── */
+  /* ── Open modal (also used to EDIT an already-applied field before submit) ── */
   function openModal(field) {
     setActiveField(field)
-    setModalTab('DRAW')
-    // Pre-fill date with today
-    setTypedText(field.fieldType === 'DATE' ? new Date().toISOString().split('T')[0] : '')
-    hasDrawn.current = false
-    // Clear canvas on next tick (after it mounts)
-    setTimeout(() => clearCanvas(), 0)
+    setApplyToAll(false)
+
+    // If the field was already signed, pre-fill the editor with its current value
+    // so the signer can adjust rather than re-enter from scratch.
+    const existing       = field.signed ? (field._signedValue  || field.value)         : null
+    const existingMethod = field.signed ? (field._signedMethod || field.signingMethod) : null
+
+    if (field.fieldType === 'DATE') {
+      setModalTab('TYPE')
+      setTypedText(existing || new Date().toISOString().split('T')[0])
+      hasDrawn.current = false
+      setTimeout(() => clearCanvas(), 0)
+    } else if (field.fieldType === 'TEXT') {
+      setModalTab('TYPE')
+      setTypedText(existing || '')
+      hasDrawn.current = false
+      setTimeout(() => clearCanvas(), 0)
+    } else if (existing && existingMethod === 'TYPE') {
+      // Editing a typed signature/initials
+      setModalTab('TYPE')
+      setTypedText(existing)
+      hasDrawn.current = false
+      setTimeout(() => clearCanvas(), 0)
+    } else if (existing && (existingMethod === 'DRAW' || existingMethod === 'UPLOAD')) {
+      // Editing a drawn/uploaded signature → re-render the existing image onto the canvas
+      setModalTab(existingMethod)
+      setTypedText('')
+      hasDrawn.current = false
+      setTimeout(() => {
+        const canvas = canvasRef.current
+        if (!canvas) return
+        const ctx = canvas.getContext('2d')
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        const img = new Image()
+        img.onload = () => {
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+          hasDrawn.current = true
+        }
+        img.src = existing
+      }, 0)
+    } else {
+      // Fresh field
+      setModalTab('DRAW')
+      setTypedText('')
+      hasDrawn.current = false
+      setTimeout(() => clearCanvas(), 0)
+    }
   }
 
   /* Field types whose value can be reused ("adopted") across fields. TEXT is per-field. */
@@ -206,7 +306,9 @@ export default function ESignSigningPage() {
 
   /* ── Click a field: reuse the adopted value if we have one, else open the modal ── */
   function handleFieldClick(field) {
-    if (!isMine(field) || field.signed) return
+    if (!isMine(field)) return
+    // Already applied → re-open the editor so the signer can change it before submitting.
+    if (field.signed) { openModal(field); return }
     const a = adopted[field.fieldType]
     if (a) {
       setApplyingId(field.id)
@@ -215,6 +317,16 @@ export default function ESignSigningPage() {
         .finally(() => setApplyingId(null))
     } else {
       openModal(field)
+    }
+  }
+
+  /* ── Duplicate one value to every remaining field of the same type (all pages) ── */
+  async function applyValueToType(fieldType, value, method, excludeId) {
+    const targets = fields.filter(f =>
+      isMine(f) && !f.signed && f.fieldType === fieldType && f.id !== excludeId)
+    for (const f of targets) {
+      try { await signFieldWith(f, value, method) }
+      catch { /* keep going; failures stay unsigned */ }
     }
   }
 
@@ -267,6 +379,11 @@ export default function ESignSigningPage() {
       // Remember this value so the signer can click other same-type fields to auto-fill them.
       if (REUSABLE.includes(activeField.fieldType)) {
         setAdopted(a => ({ ...a, [activeField.fieldType]: { value, method } }))
+      }
+
+      // Duplicate to every remaining field of the same type across all pages.
+      if (applyToAll && REUSABLE.includes(activeField.fieldType)) {
+        await applyValueToType(activeField.fieldType, value, method, activeField.id)
       }
 
       setActiveField(null)
@@ -484,6 +601,28 @@ export default function ESignSigningPage() {
       pageWrapRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
   }
 
+  /* Segmented toggle: single-page (paged) vs. whole-document (continuous scroll). */
+  const renderViewToggle = () => {
+    if (pdfPageCount <= 1 || pdfRenderFailed) return null
+    const base = 'px-3 py-1.5 rounded-md text-sm font-medium transition-colors'
+    const on   = 'bg-accent text-white'
+    const off  = 'text-gray-600 hover:text-gray-900'
+    return (
+      <div className="flex justify-center mb-3">
+        <div className="inline-flex items-center gap-0.5 rounded-lg border border-gray-200 bg-white p-0.5 shadow-sm">
+          <button type="button" onClick={() => setViewMode('PAGED')}
+            className={`${base} ${viewMode === 'PAGED' ? on : off}`}>
+            Single page
+          </button>
+          <button type="button" onClick={() => setViewMode('CONTINUOUS')}
+            className={`${base} ${viewMode === 'CONTINUOUS' ? on : off}`}>
+            Whole document
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   /* Prev / Page X of Y / Next pager. On the last page, Next becomes Submit Document.
      Rendered both above and below the page canvas so the signer never scrolls back up. */
   const renderPager = (pos) => {
@@ -521,6 +660,12 @@ export default function ESignSigningPage() {
   const isDateOrText = activeField &&
     (activeField.fieldType === 'DATE' || activeField.fieldType === 'TEXT')
 
+  // How many OTHER unsigned fields of the same type the signer owns (for "apply to all").
+  const matchingUnsignedCount = activeField && REUSABLE.includes(activeField.fieldType)
+    ? myFields.filter(f => f.fieldType === activeField.fieldType && !f.signed && f.id !== activeField.id).length
+    : 0
+  const fieldTypeLabel = { SIGNATURE: 'signature', INITIALS: 'initials', DATE: 'date' }
+
   /* A single field overlay box — used by both the per-page canvas view and the iframe fallback. */
   const renderField = (f) => {
     const colors      = FIELD_COLORS[f.fieldType] || FIELD_COLORS.SIGNATURE
@@ -551,7 +696,7 @@ export default function ESignSigningPage() {
           border:     `2px dashed ${borderColor}`,
           background: bgColor,
           borderRadius: 4,
-          cursor:     (mine && !isSigned) ? 'pointer' : 'default',
+          cursor:     mine ? 'pointer' : 'default',
           boxSizing:  'border-box',
           overflow:   'hidden',
           display:    'flex',
@@ -559,37 +704,34 @@ export default function ESignSigningPage() {
           justifyContent: 'center',
         }}
         onClick={() => handleFieldClick(f)}
+        title={mine && isSigned ? 'Click to edit' : undefined}
       >
         {isSigned ? (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-              {sigMethod === 'TYPE' ? (
-                <span style={{ fontFamily: 'cursive', color: '#1e293b', fontSize: 13, padding: '2px 4px',
-                               overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>
-                  {sigValue}
-                </span>
-              ) : sigValue ? (
-                <img src={sigValue} alt="signature"
-                  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', padding: 2 }} />
-              ) : (
-                <span style={{ fontSize: 11, color: '#16a34a', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  <IconCheck className="w-3 h-3" /> Signed
-                </span>
-              )}
-            </div>
-            {(f.signerName || dateStr) && (
-              <div title={caption}
-                style={{ color: '#2563eb', textAlign: 'center', padding: '1px 3px', lineHeight: 1.15,
-                         borderTop: '1px solid rgba(37,99,235,0.35)' }}>
-                {f.signerName && (
-                  <div style={{ fontSize: 7, fontWeight: 600, wordBreak: 'break-word' }}>{f.signerName}</div>
-                )}
-                {dateStr && (
-                  <div style={{ fontSize: 6.5, wordBreak: 'break-word' }}>{dateStr}</div>
-                )}
-              </div>
+          <>
+            <SignedFieldInner
+              sigMethod={sigMethod}
+              sigValue={sigValue}
+              signerName={f.signerName}
+              dateStr={dateStr}
+              caption={caption}
+            />
+            {mine && !submitted && (
+              // Edit affordance — lets the signer change this entry before submitting.
+              <span
+                style={{
+                  position: 'absolute', top: 2, right: 2, zIndex: 2,
+                  width: 16, height: 16, borderRadius: 4,
+                  background: '#16a34a', color: '#fff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.25)', pointerEvents: 'none',
+                }}
+              >
+                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                </svg>
+              </span>
             )}
-          </div>
+          </>
         ) : mine ? (
           <span style={{ fontSize: 10, color: colors.border, fontWeight: 700, textAlign: 'center', padding: '0 4px', userSelect: 'none' }}>
             {applyingId === f.id
@@ -677,28 +819,56 @@ export default function ESignSigningPage() {
               </div>
             </div>
           ) : (
-            /* Page-by-page canvas render so multi-page documents are fully navigable. */
+            /* Canvas render — either page-by-page (PAGED) or the whole document (CONTINUOUS). */
             <div className="p-3">
-              {renderPager('top')}
+              {renderViewToggle()}
 
-              <div ref={pageWrapRef} className="relative w-full max-w-4xl mx-auto border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm scroll-mt-4">
-                <PdfPageCanvas
-                  source={pdfUrl}
-                  pageNumber={pdfCurrentPage}
-                  onPageCountChange={setPdfPageCount}
-                  onError={() => setPdfRenderFailed(true)}
-                />
-                <div className="absolute inset-0">
-                  {fields.filter(f => (f.page || 1) === pdfCurrentPage).map(renderField)}
+              {viewMode === 'CONTINUOUS' ? (
+                /* Whole document: every page stacked so the signer can scroll straight through. */
+                <div className="space-y-5">
+                  {Array.from({ length: pdfPageCount }, (_, i) => i + 1).map(pageNum => (
+                    <div key={pageNum}>
+                      {pdfPageCount > 1 && (
+                        <p className="text-center text-xs text-gray-400 mb-1">Page {pageNum} of {pdfPageCount}</p>
+                      )}
+                      <div className="relative w-full max-w-4xl mx-auto border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                        <PdfPageCanvas
+                          source={pdfUrl}
+                          pageNumber={pageNum}
+                          onPageCountChange={setPdfPageCount}
+                          onError={() => setPdfRenderFailed(true)}
+                        />
+                        <div className="absolute inset-0">
+                          {fields.filter(f => (f.page || 1) === pageNum).map(renderField)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              ) : (
+                <>
+                  {renderPager('top')}
 
-              {renderPager('bottom')}
+                  <div ref={pageWrapRef} className="relative w-full max-w-4xl mx-auto border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm scroll-mt-4">
+                    <PdfPageCanvas
+                      source={pdfUrl}
+                      pageNumber={pdfCurrentPage}
+                      onPageCountChange={setPdfPageCount}
+                      onError={() => setPdfRenderFailed(true)}
+                    />
+                    <div className="absolute inset-0">
+                      {fields.filter(f => (f.page || 1) === pdfCurrentPage).map(renderField)}
+                    </div>
+                  </div>
 
-              {pdfPageCount > 1 && (
-                <p className="text-center text-xs text-gray-400 mt-2">
-                  This document has {pdfPageCount} pages — use Prev / Next to review and sign every page.
-                </p>
+                  {renderPager('bottom')}
+
+                  {pdfPageCount > 1 && (
+                    <p className="text-center text-xs text-gray-400 mt-2">
+                      This document has {pdfPageCount} pages — use Prev / Next to review and sign every page.
+                    </p>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -716,6 +886,7 @@ export default function ESignSigningPage() {
                 <button
                   key={f.id}
                   onClick={() => { setPdfCurrentPage(f.page || 1); handleFieldClick(f) }}
+                  title={f.signed ? 'Click to edit' : undefined}
                   className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-left
                               border transition-colors
                               ${f.signed
@@ -748,6 +919,9 @@ export default function ESignSigningPage() {
           {myFields.length > 0 && allRequiredSigned && (
             <div className="mt-4 pt-4 border-t border-gray-100">
               <p className="text-xs text-green-600 font-semibold text-center inline-flex items-center justify-center gap-1 w-full">Your fields are signed <IconCheck className="w-3.5 h-3.5" /></p>
+              <p className="text-[11px] text-gray-400 text-center mt-1.5 leading-snug">
+                Review your entries, then submit. Click any signed field to edit it before submitting.
+              </p>
             </div>
           )}
 
@@ -792,7 +966,7 @@ export default function ESignSigningPage() {
             {/* Header */}
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-bold text-gray-900">
-                Sign: <span className="text-accent-700">{activeField.label}</span>
+                {activeField.signed ? 'Edit' : 'Sign'}: <span className="text-accent-700">{activeField.label}</span>
               </h2>
               <button
                 onClick={() => setActiveField(null)}
@@ -914,6 +1088,22 @@ export default function ESignSigningPage() {
               </div>
             )}
 
+            {/* Duplicate to every other field of the same type (all pages) */}
+            {matchingUnsignedCount > 0 && (
+              <label className="mt-4 flex items-start gap-2.5 p-3 rounded-xl border border-gray-200 bg-gray-50 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={applyToAll}
+                  onChange={e => setApplyToAll(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-accent shrink-0"
+                />
+                <span className="text-sm text-gray-700 leading-snug">
+                  Apply to <strong>all {matchingUnsignedCount} remaining {fieldTypeLabel[activeField.fieldType] || 'matching'} field{matchingUnsignedCount > 1 ? 's' : ''}</strong> in this document
+                  <span className="block text-xs text-gray-400 mt-0.5">Fills every page at once — no need to visit each one.</span>
+                </span>
+              </label>
+            )}
+
             {/* Footer buttons */}
             <div className="flex gap-3 mt-5">
               <button
@@ -930,7 +1120,11 @@ export default function ESignSigningPage() {
                            disabled:opacity-60 transition-all hover:opacity-90"
                 style={{ background: 'linear-gradient(135deg,#6D52E8,#5a3fd6)' }}
               >
-                {saving ? 'Saving…' : 'Apply Signature'}
+                {saving
+                  ? 'Saving…'
+                  : applyToAll && matchingUnsignedCount > 0
+                    ? `Apply to all ${matchingUnsignedCount + 1}`
+                    : (activeField.signed ? 'Update' : 'Apply Signature')}
               </button>
             </div>
           </div>

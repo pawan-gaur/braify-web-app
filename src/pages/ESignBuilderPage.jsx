@@ -508,6 +508,29 @@ export default function ESignBuilderPage({ initialDocStatus }) {
 
   function removeField(id) { setFields(prev => prev.filter(f => f.id !== id)) }
 
+  /* Copy one placed field onto every OTHER page, at the same position/size/type/owner.
+     Skips pages that already carry an identical field so it's safe to click twice. */
+  function copyFieldToAllPages(field) {
+    if (pdfPageCount <= 1) return
+    const same = (a, b) =>
+      a.fieldType === b.fieldType &&
+      a.signatoryId === b.signatoryId &&
+      Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) < 0.5 &&
+      Math.abs(a.width - b.width) < 0.5 && Math.abs(a.height - b.height) < 0.5
+    const additions = []
+    for (let p = 1; p <= pdfPageCount; p++) {
+      if (p === (field.page || 1)) continue
+      if (fields.some(f => (f.page || 1) === p && same(f, field))) continue
+      additions.push({ ...field, id: crypto.randomUUID(), page: p })
+    }
+    if (!additions.length) {
+      showToast('This field is already on every page', 'info')
+      return
+    }
+    setFields(prev => [...prev, ...additions])
+    showToast(`Field added to ${additions.length} more page${additions.length > 1 ? 's' : ''}`, 'success')
+  }
+
   function onDragStart(e, fid) {
     e.stopPropagation()
     const rect  = getOverlayRect()
@@ -1348,12 +1371,24 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                             {f.label}{owner ? ` · ${owner.name || owner.email}` : ''}
                           </span>
                         </span>
-                        <button onClick={() => removeField(f.id)}
-                          className="text-gray-300 hover:text-red-400 transition-colors p-0.5">
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
-                          </svg>
-                        </button>
+                        <span className="flex items-center gap-0.5 shrink-0">
+                          {pdfPageCount > 1 && (
+                            <button onClick={() => copyFieldToAllPages(f)}
+                              title="Copy this field to every page"
+                              className="text-gray-300 hover:text-accent-500 transition-colors p-0.5">
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                <rect x="9" y="9" width="11" height="11" rx="2"/>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 15V5a2 2 0 012-2h10"/>
+                              </svg>
+                            </button>
+                          )}
+                          <button onClick={() => removeField(f.id)}
+                            className="text-gray-300 hover:text-red-400 transition-colors p-0.5">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                          </button>
+                        </span>
                       </div>
                     )
                   })}
@@ -1433,6 +1468,22 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {f.label}
                             </span>
+                            {pdfPageCount > 1 && (
+                              <button
+                                title="Copy this field to every page"
+                                onMouseDown={e => e.stopPropagation()}
+                                onClick={e => { e.stopPropagation(); copyFieldToAllPages(f) }}
+                                style={{ position: 'absolute', top: -8, right: 14, width: 18, height: 18,
+                                         borderRadius: '50%', background: '#fff', color,
+                                         border: `1.5px solid ${color}`, cursor: 'pointer',
+                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                         boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                  <rect x="9" y="9" width="11" height="11" rx="2"/>
+                                  <path d="M5 15V5a2 2 0 012-2h10"/>
+                                </svg>
+                              </button>
+                            )}
                             <button
                               onMouseDown={e => e.stopPropagation()}
                               onClick={e => { e.stopPropagation(); removeField(f.id) }}
@@ -1456,7 +1507,8 @@ export default function ESignBuilderPage({ initialDocStatus }) {
 
                   {pdfPageCount > 1 && (
                     <p className="text-center text-xs text-gray-400 mt-2">
-                      Fields apply to the page shown. Switch pages to place fields on other pages.
+                      Fields apply to the page shown. Switch pages to place fields on other pages,
+                      or use the <span className="font-semibold text-gray-500">copy</span> icon on a field to place it on every page at once.
                     </p>
                   )}
                 </div>
