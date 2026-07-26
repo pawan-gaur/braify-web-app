@@ -72,7 +72,7 @@ export const EMAIL_EDITOR_CONFIG = (containerId) => ({
 
   blockManager: {
     appendTo: '#email-blocks-panel',
-    blocks: buildEmailBlocks(),
+    blocks: decorateEmailBlocks(buildEmailBlocks()),
   },
 
   layerManager: { appendTo: '#email-layers-panel' },
@@ -95,6 +95,26 @@ export const EMAIL_EDITOR_CONFIG = (containerId) => ({
 function svg(path) {
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
     stroke-linecap="round" stroke-linejoin="round" width="30" height="30">${path}</svg>`
+}
+
+/* Mnemonic chips at the right of each block row (parity with the PDF builder). */
+const EMAIL_BLOCK_KEYS = {
+  'email-wrapper': 'EW', 'email-header': 'HD', 'email-hero': 'HB', 'email-text': 'T',
+  'email-button': 'CTA', 'email-image': 'IM', 'email-two-col': '2C', 'email-img-text': 'IT',
+  'email-divider': 'HR', 'email-spacer': 'SP', 'email-dynamic': 'VAR', 'email-greeting': 'GR',
+  'email-footer': 'FT', 'email-social': 'SO', 'email-three-col': '3C', 'email-video': 'VID',
+  'email-html': '</>',
+}
+function decorateEmailBlocks(blocks) {
+  return blocks.map(b => {
+    const key  = EMAIL_BLOCK_KEYS[b.id]
+    const name = typeof b.label === 'string' ? b.label : b.id
+    return {
+      ...b,
+      label: `<span class="blk-name">${name}</span>` +
+             (key ? `<span class="blk-key">${key}</span>` : ''),
+    }
+  })
 }
 
 // ── Email blocks ─────────────────────────────────────────────────────────────
