@@ -92,8 +92,8 @@ export default function EmailBuilderPage() {
   if (loading) {
     return (
       <div className="flex flex-col">
-        <div className="flex items-center px-4 h-9 bg-sidebar border-b border-sidebar-border shrink-0">
-          <Breadcrumbs items={crumbs} dark />
+        <div className="flex items-center px-4 h-9 bg-white dark:bg-sidebar border-b border-surface-border dark:border-sidebar-border shrink-0">
+          <Breadcrumbs items={crumbs} />
         </div>
         <div className="flex items-center justify-center h-[calc(100vh-92px)] text-gray-400 gap-3">
           <svg className="animate-spin h-5 w-5 text-primary" viewBox="0 0 24 24" fill="none">
@@ -128,8 +128,8 @@ export default function EmailBuilderPage() {
 
   return (
     <div className="flex flex-col">
-      <div className="flex items-center px-4 h-9 bg-sidebar border-b border-sidebar-border shrink-0">
-        <Breadcrumbs items={crumbs} dark />
+      <div className="flex items-center px-4 h-9 bg-white dark:bg-sidebar border-b border-surface-border dark:border-sidebar-border shrink-0">
+        <Breadcrumbs items={crumbs} />
       </div>
       <EmailTemplateBuilder
         initialTemplate={template}

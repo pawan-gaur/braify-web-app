@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import grapesjs from 'grapesjs'
 import { EMAIL_EDITOR_CONFIG } from './email-grapes-config'
 import PreviewDataModal from '../ui/PreviewDataModal'
+import AiAssistBar from './AiAssistBar'
 import { useToast } from '../../context/ToastContext'
 import '../../styles/builder.css'
 
@@ -98,6 +99,27 @@ export default function EmailTemplateBuilder({
 
   /* ── Copy HTML feedback ── */
   const [copied, setCopied] = useState(false)
+
+  // Collapse From/Preview/Category/Tags to save space. A brand-new email starts
+  // expanded (so first-time users see the fields); after that we remember the
+  // user's last choice across sessions via localStorage.
+  const [showMeta, setShowMeta] = useState(() => {
+    try {
+      const stored = localStorage.getItem('emailBuilder.showMeta')
+      if (stored !== null) return stored === '1'
+    } catch { /* storage unavailable */ }
+    return !templateId   // new email → expanded first time; editing existing → collapsed
+  })
+  useEffect(() => {
+    try { localStorage.setItem('emailBuilder.showMeta', showMeta ? '1' : '0') } catch { /* ignore */ }
+  }, [showMeta])
+
+  const [bannerDismissed, setBannerDismissed] = useState(false)   // slim warning banner dismiss
+  const [varsCollapsed,   setVarsCollapsed]   = useState(false)   // collapse the variables strip
+
+  // Re-surface the warning if the set of broken images changes after a dismiss.
+  const brokenSig = brokenImages.join('|')
+  useEffect(() => { setBannerDismissed(false) }, [brokenSig])
 
   /* ── Template meta — seed from library template if provided ── */
   const seedMeta = libraryTemplate
@@ -338,7 +360,7 @@ ${html}
      RENDER
   ───────────────────────────────────────────────────────────────────────── */
   return (
-    <div className="builder-shell">
+    <div className="builder-shell builder-email">
 
       {/* ── Top bar ──────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between bg-sidebar text-white px-4 gap-3 shrink-0
@@ -367,7 +389,21 @@ ${html}
                 placeholder="Email subject line…"
               />
             </div>
+            <button
+              type="button"
+              onClick={() => setShowMeta(v => !v)}
+              className="shrink-0 flex items-center gap-1 text-[11px] px-2 py-1.5 rounded-lg border
+                         border-sidebar-border text-sidebar-muted hover:text-white hover:border-primary transition-colors"
+              title={showMeta ? 'Hide details' : 'Sender, preview text, category & tags'}
+            >
+              Details
+              <svg className={`w-3 h-3 transition-transform ${showMeta ? 'rotate-180' : ''}`}
+                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7"/>
+              </svg>
+            </button>
           </div>
+          {showMeta && (<>
           {/* Row 2: from + preview text */}
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5">
@@ -420,6 +456,7 @@ ${html}
               />
             </div>
           </div>
+          </>)}
         </div>
 
         {/* Center — device switcher */}
@@ -538,47 +575,50 @@ ${html}
         </div>
       </div>
 
-      {/* ── Broken-image warning banner ──────────────────────────────────────── */}
-      {brokenImages.length > 0 && (
-        <div className="flex items-start gap-2.5 bg-amber-50 dark:bg-amber-900/20 border-b
-                        border-amber-300 dark:border-amber-700 px-4 py-2 shrink-0">
-          <svg className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5"
+      {/* ── Broken-image warning (slim, single line, dismissible) ────────────── */}
+      {brokenImages.length > 0 && !bannerDismissed && (
+        <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 border-b
+                        border-amber-300 dark:border-amber-700 px-4 py-1.5 shrink-0 text-xs">
+          <svg className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0"
             fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
           </svg>
-          <div className="flex-1 min-w-0">
-            <span className="text-xs font-semibold text-amber-800 dark:text-amber-300">
-              {brokenImages.length} image{brokenImages.length > 1 ? 's' : ''} will appear broken in emails.&nbsp;
-            </span>
-            <span className="text-xs text-amber-700 dark:text-amber-400">
-              Images must use absolute <code className="font-mono bg-amber-100 dark:bg-amber-900/40 px-1 rounded">https://</code> URLs.
-              Click the image in the canvas → Properties → change&nbsp;<strong>src</strong> to a public HTTPS link.
-            </span>
-            <div className="flex flex-wrap gap-1.5 mt-1">
-              {brokenImages.slice(0, 3).map((src, i) => (
-                <code key={i} className="text-[10px] font-mono bg-amber-100 dark:bg-amber-900/30
-                                         text-amber-800 dark:text-amber-300 px-1.5 py-0.5 rounded
-                                         max-w-[260px] truncate block">
-                  {src}
-                </code>
-              ))}
-              {brokenImages.length > 3 && (
-                <span className="text-[10px] text-amber-600 dark:text-amber-500 self-center">
-                  +{brokenImages.length - 3} more
-                </span>
-              )}
-            </div>
-          </div>
+          <span className="min-w-0 truncate text-amber-800 dark:text-amber-300">
+            <strong>{brokenImages.length} image{brokenImages.length > 1 ? 's' : ''}</strong>
+            <span className="text-amber-700 dark:text-amber-400"> will break in email — use absolute <code className="font-mono">https://</code> URLs (select the image → Properties → src).</span>
+          </span>
+          <button
+            onClick={() => setBannerDismissed(true)}
+            title="Dismiss"
+            className="ml-auto shrink-0 w-6 h-6 rounded-md flex items-center justify-center
+                       text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
         </div>
       )}
 
-      {/* ── Placeholder strip ──────────────────────────────────────────────── */}
+      {/* ── Variables strip (collapsible) ──────────────────────────────────── */}
       {placeholders.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap bg-sidebar-hover px-4 py-1.5 shrink-0
-                        border-b border-sidebar-border">
-          <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">Variables:</span>
-          {placeholders.map(p => (
+        <div className="flex items-center gap-2 flex-wrap bg-ink-9 dark:bg-sidebar-hover px-4 py-1
+                        shrink-0 border-b border-surface-border dark:border-sidebar-border">
+          <button
+            onClick={() => setVarsCollapsed(v => !v)}
+            className="flex items-center gap-1 text-xs font-semibold text-ink-4 dark:text-slate-500
+                       hover:text-ink dark:hover:text-white transition-colors shrink-0"
+            title={varsCollapsed ? 'Show variables' : 'Hide variables'}
+          >
+            <svg className={`w-3 h-3 transition-transform ${varsCollapsed ? '-rotate-90' : ''}`}
+                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7"/>
+            </svg>
+            Variables
+            <span className="text-ink-5 dark:text-slate-600 font-normal">({placeholders.length})</span>
+          </button>
+          {!varsCollapsed && placeholders.map(p => (
             <button
               key={p}
               onClick={() => insertVariable(p)}
@@ -663,6 +703,18 @@ ${html}
         {/* ── Canvas ── */}
         <div className="builder-canvas-wrap">
           <div id="email-gjs-canvas" />
+          <AiAssistBar
+            context="EMAIL"
+            getHtml={() => editorRef.current?.getHtml() || ''}
+            onApply={(html, mode) => {
+              const editor = editorRef.current
+              if (!editor || !html) return
+              if (mode === 'INSERT') editor.addComponents(html)
+              else                   editor.setComponents(html)
+              refreshPlaceholders(editor.getHtml())
+            }}
+            suggestions={['Add a friendly intro', 'Add a call-to-action button', 'Add a footer with contact info', 'Make the tone warmer']}
+          />
         </div>
 
         {/* ── Right panel ── */}

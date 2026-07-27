@@ -333,6 +333,10 @@ export const getUsageHistory   = (orgId)          => http.get(`/organizations/${
 /** PLATFORM_ADMIN: current-month usage for every organisation. */
 export const getAllOrgUsage    = ()               => http.get('/admin/usage').then(r => r.data)
 
+// ── AI Assist (PDF & email templates) ───────────────────────
+export const getAiStatus       = ()        => http.get('/ai/status').then(r => r.data)
+export const aiTemplateAssist  = (payload) => http.post('/ai/template-assist', payload).then(r => r.data)
+
 // ── Org Branding ────────────────────────────────────────────
 export const getBranding    = (orgId)           => http.get(`/organizations/${orgId}/branding`).then(r => r.data)
 export const updateBranding = (orgId, payload)  => http.put(`/organizations/${orgId}/branding`, payload).then(r => r.data)

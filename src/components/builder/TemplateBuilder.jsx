@@ -1,9 +1,21 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import grapesjs from 'grapesjs'
 import { EDITOR_CONFIG } from './grapes-config'
 import PreviewDataModal from '../ui/PreviewDataModal'
+import AiAssistBar from './AiAssistBar'
 import { IconCheck } from '../ui/icons'
 import '../../styles/builder.css'
+
+/* Compact relative-time label for the "saved …" status in the top bar. */
+function savedAgo(ts, now) {
+  if (!ts) return null
+  const secs = Math.max(0, Math.round((now - ts) / 1000))
+  if (secs < 45) return 'just now'
+  const mins = Math.round(secs / 60)
+  if (mins < 60) return `${mins}m ago`
+  return `${Math.round(mins / 60)}h ago`
+}
 
 /* ── Constants ────────────────────────────────────────────────────────────── */
 const DEVICES = [
@@ -89,8 +101,16 @@ const PDF_PRESET_VARS = [
 
 /* ── Main component ───────────────────────────────────────────────────────── */
 export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
+  const navigate   = useNavigate()
   const editorRef  = useRef(null)
   const mountedRef = useRef(false)
+
+  const [lastSaved, setLastSaved] = useState(null)          // timestamp of last save
+  const [now,       setNow]       = useState(() => Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30000)  // keep "saved 2m ago" fresh
+    return () => clearInterval(t)
+  }, [])
 
   const [activePanel,      setActivePanel]      = useState('blocks')
   const [activeRight,      setActiveRight]       = useState('styles')
@@ -132,6 +152,28 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
   const refreshPlaceholders = useCallback((html) => {
     const unique = [...new Set([...html.matchAll(/\{\{([^}]+)\}\}/g)].map(m => m[1].trim()))]
     setPlaceholders(unique)
+  }, [])
+
+  // GrapesJS caches the canvas offset used to place its on-canvas tools (selection
+  // toolbar + resize handles). When the canvas area changes height — e.g. the
+  // "Placeholders:" strip appears/disappears, the window resizes, or a panel
+  // toggles — that cache goes stale and the tools drift out of alignment with the
+  // selected element. A ResizeObserver on the canvas area refreshes it on any change.
+  useEffect(() => {
+    const el = document.querySelector('.builder-canvas-wrap')
+    if (!el || typeof ResizeObserver === 'undefined') return
+    let raf
+    const ro = new ResizeObserver(() => {
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => {
+        const ed = editorRef.current
+        if (!ed) return
+        try { ed.refresh?.() } catch { /* older API */ }
+        try { ed.Canvas?.refresh?.() } catch { /* no-op */ }
+      })
+    })
+    ro.observe(el)
+    return () => { ro.disconnect(); cancelAnimationFrame(raf) }
   }, [])
 
   /* ── Init GrapesJS ──────────────────────────────────────────────────────── */
@@ -410,7 +452,18 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
     const css     = editor.getCss()
     const gjsData = JSON.stringify(editor.getProjectData())
     refreshPlaceholders(html)
-    onSave({ ...settings, htmlContent: html, cssContent: css, gjsData })
+    Promise.resolve(onSave({ ...settings, htmlContent: html, cssContent: css, gjsData }))
+      .then(() => setLastSaved(Date.now()))
+      .catch(() => {})
+  }
+
+  /* ── Apply an AI edit to the canvas (Undo-able) ── */
+  const handleAiApply = (html, mode) => {
+    const editor = editorRef.current
+    if (!editor || !html) return
+    if (mode === 'INSERT') editor.addComponents(html)       // append new block(s)
+    else                   editor.setComponents(html)        // replace whole template
+    refreshPlaceholders(editor.getHtml())
   }
 
   /* ── Export / Copy ───────────────────────────────────────────────────────── */
@@ -452,7 +505,7 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
     )
 
     return (
-      <div className="flex flex-col h-full overflow-hidden">
+      <div className="builder-vars flex flex-col h-full overflow-hidden">
         {/* Sub-tabs */}
         <div className="flex border-b border-sidebar-border shrink-0">
           {VAR_SUBTABS.map(tab => (
@@ -747,123 +800,115 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
     <div className="builder-shell">
 
       {/* ── Top bar ── */}
-      <div className="flex items-center justify-between bg-sidebar text-white px-3 h-[52px] gap-2 shrink-0 border-b border-sidebar-border">
+      <div className="flex items-center bg-white dark:bg-sidebar text-ink dark:text-white px-4 h-[56px] gap-4 shrink-0 border-b border-surface-border dark:border-sidebar-border">
 
-        {/* Left: name + settings */}
-        <div className="flex items-center gap-2 flex-1 min-w-0">
+        {/* Left: PDF/Email toggle + title + status */}
+        <div className="flex items-center gap-3 min-w-0">
+          {/* Segmented PDF / Email */}
+          <div className="flex bg-ink-8 dark:bg-sidebar-hover border border-surface-border dark:border-sidebar-border rounded-lg p-0.5 shrink-0">
+            <button
+              className="px-3.5 py-1 rounded-md text-[13px] font-semibold bg-white dark:bg-sidebar text-ink dark:text-white shadow-sm"
+            >
+              PDF
+            </button>
+            <button
+              className="px-3.5 py-1 rounded-md text-[13px] font-semibold text-ink-4 dark:text-sidebar-muted hover:text-ink dark:hover:text-white transition-colors"
+              onClick={() => navigate('/email-builder')}
+              title="Switch to the email builder"
+            >
+              Email
+            </button>
+          </div>
+
+          {/* Title */}
           <input
-            className="bg-transparent border border-sidebar-border text-white text-sm px-3 py-1.5 rounded-lg w-44 outline-none focus:border-primary transition-colors placeholder-sidebar-muted"
+            className="bg-white dark:bg-transparent border border-surface-border dark:border-sidebar-border text-ink dark:text-white text-sm font-semibold px-3 py-1.5 rounded-lg w-56 outline-none focus:border-accent transition-colors placeholder-ink-5 dark:placeholder-sidebar-muted"
             value={settings.name}
             onChange={e => set('name', e.target.value)}
             placeholder="Template name…"
           />
-          <button
-            className="text-xs px-2.5 py-1.5 rounded-lg border border-sidebar-border text-sidebar-muted hover:border-primary hover:text-white transition-all whitespace-nowrap"
-            onClick={() => setShowSettings(true)}
-          >
-            ⚙ Settings
-          </button>
-        </div>
 
-        {/* Center: device + zoom */}
-        <div className="flex items-center gap-2 shrink-0">
-          {/* Page size dropdown */}
-          <select
-            value={activeDevice}
-            onChange={e => handleDeviceChange(e.target.value)}
-            className="bg-sidebar-hover border border-sidebar-border text-white text-xs rounded-lg px-2.5 py-1.5 outline-none focus:border-primary cursor-pointer"
-          >
-            {DEVICES.map(d => (
-              <option key={d.value} value={d.value}>{d.label}</option>
-            ))}
-          </select>
-
-          {/* Zoom controls */}
-          <div className="flex items-center gap-1 bg-sidebar-hover border border-sidebar-border rounded-lg px-1.5 py-1">
-            <button
-              className="text-sidebar-muted hover:text-white transition-colors w-5 h-5 flex items-center justify-center text-sm font-bold"
-              onClick={() => handleZoom(zoom - 10)}
-              title="Zoom out"
-            >−</button>
+          {/* Status: device · zoom · saved (device + zoom are interactive) */}
+          <div className="hidden lg:flex items-center gap-1.5 text-xs text-ink-4 dark:text-sidebar-muted whitespace-nowrap">
             <select
-              value={zoom}
-              onChange={e => handleZoom(Number(e.target.value))}
-              className="bg-transparent text-white text-xs outline-none cursor-pointer w-14 text-center"
+              value={activeDevice}
+              onChange={e => handleDeviceChange(e.target.value)}
+              className="bg-transparent text-ink-3 dark:text-sidebar-muted text-xs outline-none cursor-pointer hover:text-ink dark:hover:text-white -ml-1"
+              title="Page size"
             >
-              {ZOOM_LEVELS.map(z => <option key={z} value={z}>{z}%</option>)}
-              {!ZOOM_LEVELS.includes(zoom) && <option value={zoom}>{zoom}%</option>}
+              {DEVICES.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
             </select>
-            <button
-              className="text-sidebar-muted hover:text-white transition-colors w-5 h-5 flex items-center justify-center text-sm font-bold"
-              onClick={() => handleZoom(zoom + 10)}
-              title="Zoom in"
-            >+</button>
+            <span className="text-ink-6 dark:text-sidebar-border">·</span>
+            <button onClick={() => handleZoom(zoom - 10)} className="hover:text-ink dark:hover:text-white w-4 leading-none" title="Zoom out">−</button>
+            <span className="tabular-nums w-9 text-center">{zoom}%</span>
+            <button onClick={() => handleZoom(zoom + 10)} className="hover:text-ink dark:hover:text-white w-4 leading-none" title="Zoom in">+</button>
+            <span className="text-ink-6 dark:text-sidebar-border">·</span>
+            <span className="tabular-nums">
+              {isSaving ? 'saving…' : (savedAgo(lastSaved, now) ? `saved ${savedAgo(lastSaved, now)}` : 'not saved yet')}
+            </span>
           </div>
         </div>
 
+        {/* Spacer */}
+        <div className="flex-1" />
+
         {/* Right: actions */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
+          {/* Undo / redo */}
           <button
-            className="text-xs px-2.5 py-1.5 rounded-lg bg-sidebar-hover border border-sidebar-border text-sidebar-muted hover:text-white transition-colors"
-            onClick={() => editorRef.current?.runCommand('core:undo')}
-            title="Undo (Ctrl+Z)"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-ink-4 dark:text-sidebar-muted hover:bg-ink-8 dark:hover:bg-sidebar-hover hover:text-ink dark:hover:text-white transition-colors"
+            onClick={() => editorRef.current?.runCommand('core:undo')} title="Undo (Ctrl+Z)"
           >
-            Undo
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h11a4 4 0 010 8h-1M3 10l4-4M3 10l4 4"/></svg>
           </button>
           <button
-            className="text-xs px-2.5 py-1.5 rounded-lg bg-sidebar-hover border border-sidebar-border text-sidebar-muted hover:text-white transition-colors"
-            onClick={() => editorRef.current?.runCommand('core:redo')}
-            title="Redo (Ctrl+Y)"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-ink-4 dark:text-sidebar-muted hover:bg-ink-8 dark:hover:bg-sidebar-hover hover:text-ink dark:hover:text-white transition-colors"
+            onClick={() => editorRef.current?.runCommand('core:redo')} title="Redo (Ctrl+Y)"
           >
-            Redo
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10H10a4 4 0 000 8h1M21 10l-4-4M21 10l-4 4"/></svg>
+          </button>
+          <button
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-ink-4 dark:text-sidebar-muted hover:bg-ink-8 dark:hover:bg-sidebar-hover hover:text-ink dark:hover:text-white transition-colors"
+            onClick={() => setShowSettings(true)} title="Page settings"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
           </button>
 
-          {/* Separator */}
-          <div className="w-px h-5 bg-sidebar-border" />
+          <div className="w-px h-5 bg-surface-border dark:bg-sidebar-border mx-1.5" />
 
           <button
-            className="text-xs px-2.5 py-1.5 rounded-lg bg-sidebar-hover border border-sidebar-border text-sidebar-muted hover:text-white transition-colors flex items-center gap-1.5"
-            onClick={() => setShowPreviewData(true)}
-            title="Preview with dynamic data"
+            className="text-[13.5px] px-3 py-1.5 rounded-lg text-ink-2 dark:text-sidebar-muted hover:bg-ink-8 dark:hover:bg-sidebar-hover hover:text-ink dark:hover:text-white transition-colors"
+            onClick={() => setShowPreviewData(true)} title="Preview with dynamic data"
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-            </svg>
             Preview
           </button>
           <button
-            className="text-xs px-2.5 py-1.5 rounded-lg bg-sidebar-hover border border-sidebar-border text-sidebar-muted hover:text-white transition-colors"
-            onClick={handleExportHtml}
-            title="Export as HTML file"
+            className="text-[13.5px] px-3 py-1.5 rounded-lg text-ink-2 dark:text-sidebar-muted hover:bg-ink-8 dark:hover:bg-sidebar-hover hover:text-ink dark:hover:text-white transition-colors"
+            onClick={handleExportHtml} title="Export as HTML file"
           >
             Export
           </button>
           <button
-            className="text-xs px-2.5 py-1.5 rounded-lg bg-sidebar-hover border border-sidebar-border text-sidebar-muted hover:text-white transition-colors inline-flex items-center gap-1.5"
-            onClick={handleCopyHtml}
-            title="Copy HTML to clipboard"
+            className="text-[13.5px] px-3 py-1.5 rounded-lg text-ink-2 dark:text-sidebar-muted hover:bg-ink-8 dark:hover:bg-sidebar-hover hover:text-ink dark:hover:text-white transition-colors inline-flex items-center gap-1.5"
+            onClick={handleCopyHtml} title="Copy HTML to clipboard"
           >
-            {copied ? <><IconCheck className="w-3.5 h-3.5" />Copied</> : 'Copy HTML'}
+            {copied ? <><IconCheck className="w-3.5 h-3.5" />Copied</> : 'Copy'}
           </button>
 
-          {/* Separator */}
-          <div className="w-px h-5 bg-sidebar-border" />
-
           <button
-            className="btn btn-primary btn-sm"
+            className="text-[13.5px] font-semibold px-5 py-1.5 rounded-lg bg-accent hover:bg-accent-600 text-white transition-colors disabled:opacity-60 ml-1"
             onClick={handleSave}
             disabled={isSaving}
           >
-            {isSaving ? 'Saving…' : 'Save Template'}
+            {isSaving ? 'Saving…' : 'Save'}
           </button>
         </div>
       </div>
 
       {/* ── Placeholder strip ── */}
       {placeholders.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap bg-sidebar-hover px-4 py-1.5 shrink-0 border-b border-sidebar-border">
-          <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">Placeholders:</span>
+        <div className="flex items-center gap-2 flex-wrap bg-ink-9 dark:bg-sidebar-hover px-4 py-1.5 shrink-0 border-b border-surface-border dark:border-sidebar-border">
+          <span className="text-xs font-semibold text-ink-4 dark:text-slate-500 whitespace-nowrap">Placeholders:</span>
           {placeholders.map(p => (
             <span key={p} className="ph-chip font-mono">{`{{${p}}}`}</span>
           ))}
@@ -874,17 +919,17 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
       <div className="builder-main">
 
         {/* Left panel */}
-        <div className="builder-panel-left w-[230px] bg-sidebar shrink-0 border-r border-sidebar-border flex flex-col">
+        <div className="builder-panel-left w-[236px] bg-white dark:bg-sidebar shrink-0 border-r border-surface-border dark:border-sidebar-border flex flex-col">
           {/* Tabs */}
-          <div className="flex border-b border-sidebar-border shrink-0">
+          <div className="flex gap-5 px-4 pt-3.5 border-b border-surface-border dark:border-sidebar-border shrink-0">
             {[['blocks', 'Blocks'], ['layers', 'Layers'], ['variables', 'Variables']].map(([key, label]) => (
               <button
                 key={key}
                 onClick={() => setActivePanel(key)}
-                className={`flex-1 py-2.5 text-[9px] font-bold uppercase tracking-widest transition-colors ${
+                className={`relative pb-3 text-[13.5px] transition-colors ${
                   activePanel === key
-                    ? 'text-primary border-b-2 border-primary'
-                    : 'text-sidebar-muted hover:text-white'
+                    ? 'text-ink dark:text-white font-semibold after:content-[""] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-0.5 after:bg-accent after:rounded-full'
+                    : 'text-ink-4 dark:text-sidebar-muted font-medium hover:text-ink dark:hover:text-white'
                 }`}
               >
                 {label}
@@ -894,9 +939,10 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
 
           {/* Block search */}
           {activePanel === 'blocks' && (
-            <div className="px-2.5 py-2 shrink-0 border-b border-sidebar-border">
+            <div className="px-3.5 pt-3.5 pb-1 shrink-0 relative">
+              <svg className="w-3.5 h-3.5 text-ink-4 dark:text-sidebar-muted absolute left-6 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" strokeWidth={2}/><path strokeWidth={2} strokeLinecap="round" d="M21 21l-4-4"/></svg>
               <input
-                className="w-full bg-sidebar-hover border border-sidebar-border rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-sidebar-muted outline-none focus:border-primary transition-colors"
+                className="w-full bg-ink-8 dark:bg-sidebar-hover border border-surface-border dark:border-sidebar-border rounded-lg pl-8 pr-3 py-2 text-[13px] text-ink dark:text-white placeholder-ink-4 dark:placeholder-sidebar-muted outline-none focus:border-accent transition-colors"
                 placeholder="Search blocks…"
                 value={blockSearch}
                 onChange={e => setBlockSearch(e.target.value)}
@@ -920,19 +966,25 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
         {/* Canvas */}
         <div className="builder-canvas-wrap">
           <div id="gjs-canvas" />
+          <AiAssistBar
+            context="PDF"
+            getHtml={() => editorRef.current?.getHtml() || ''}
+            onApply={handleAiApply}
+            suggestions={['Add a payment terms clause', 'Add a signature block', 'Add a totals summary', 'Tighten to one page']}
+          />
         </div>
 
         {/* Right panel */}
-        <div className="builder-panel-right w-[260px] bg-sidebar shrink-0 border-l border-sidebar-border flex flex-col">
-          <div className="flex border-b border-sidebar-border shrink-0">
+        <div className="builder-panel-right w-[288px] bg-white dark:bg-sidebar shrink-0 border-l border-surface-border dark:border-sidebar-border flex flex-col">
+          <div className="flex gap-5 px-4 pt-3.5 border-b border-surface-border dark:border-sidebar-border shrink-0">
             {[['styles', 'Styles'], ['traits', 'Properties']].map(([key, label]) => (
               <button
                 key={key}
                 onClick={() => setActiveRight(key)}
-                className={`flex-1 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                className={`relative pb-3 text-[13.5px] transition-colors ${
                   activeRight === key
-                    ? 'text-primary border-b-2 border-primary'
-                    : 'text-sidebar-muted hover:text-white'
+                    ? 'text-ink dark:text-white font-semibold after:content-[""] after:absolute after:left-0 after:right-0 after:-bottom-px after:h-0.5 after:bg-accent after:rounded-full'
+                    : 'text-ink-4 dark:text-sidebar-muted font-medium hover:text-ink dark:hover:text-white'
                 }`}
               >
                 {label}
@@ -1050,11 +1102,14 @@ function enableResize(component) {
   }
 
   if (tag === 'img') {
-    // Ensure images always have:
-    //  • position:absolute so they can be dragged anywhere
-    //  • explicit CSS width/height in px so the PDF renderer uses the right size
-    //    (falls back to HTML width/height attributes for templates saved before this change)
-    component.set('draggable', true)
+    // A top-level image (dropped straight onto the page) is free-placed via
+    // position:absolute. An image nested inside another block — e.g. the
+    // "Image + Text" / letterhead / invoice-header blocks — must instead stay
+    // in its parent's flow, or it detaches and floats to the page corner.
+    const parent   = component.parent()
+    const topLevel = !parent || parent.get('type') === 'wrapper'
+
+    component.set('draggable', topLevel)
     const style = component.getStyle()
     const attrs = component.getAttributes()
     const attrW = attrs.width  && !isNaN(Number(attrs.width))  ? Number(attrs.width)  + 'px' : null
@@ -1062,15 +1117,23 @@ function enableResize(component) {
     // Resolve final width/height: CSS style > HTML attribute > default
     const resolvedW = style.width  || attrW  || '200px'
     const resolvedH = style.height || attrH  || 'auto'
-    const newStyle = {
-      position: 'absolute',
-      top:      '20px',
-      left:     '20px',
-      ...style,          // existing style wins (preserves saved top/left/etc.)
-      width:    resolvedW,
-      height:   resolvedH,
+
+    if (topLevel) {
+      component.setStyle({
+        position: 'absolute',
+        top:      '20px',
+        left:     '20px',
+        ...style,          // existing style wins (preserves saved top/left/etc.)
+        width:    resolvedW,
+        height:   resolvedH,
+      })
+    } else {
+      // Nested image: strip any inherited absolute positioning so it renders
+      // in flow inside its block, and keep an explicit size for the renderer.
+      const s = { ...style, width: resolvedW, height: resolvedH }
+      delete s.position; delete s.top; delete s.left
+      component.setStyle(s)
     }
-    component.setStyle(newStyle)
     // Resize config is set as a model default in addType — only set if missing
     if (!component.get('resizable')) component.set('resizable', RESIZE_CONFIG)
   } else if (!component.get('resizable')) {

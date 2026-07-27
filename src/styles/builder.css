@@ -1,327 +1,451 @@
 /* ─────────────────────────────────────────────────────────
-   Builder shell layout  (height-critical, not Tailwind)
+   Builder theme tokens — ported from the approved redesign
+   preview. Light by default; `.dark` on <html> flips them for
+   the GrapesJS-injected DOM (which can't take Tailwind `dark:`).
+   ───────────────────────────────────────────────────────── */
+.builder-shell {
+  --bd-bg:            #ffffff;
+  --bd-canvas:        #eceaf3;
+  --bd-ink:           #14141c;
+  --bd-ink-2:         #55555f;
+  --bd-muted:         #9a9aa3;
+  --bd-faint:         #b9b9c2;
+  --bd-line:          #ecebf0;
+  --bd-line-2:        #e3e2ea;
+  --bd-field:         #f6f6fa;
+  --bd-accent:        #6d52e8;
+  --bd-accent-strong: #5b41dd;
+  --bd-accent-soft:   #f1eefe;
+  --bd-accent-ink:    #5b41dd;
+  --bd-shadow:        0 10px 30px rgba(20,20,28,.14);
+}
+.dark .builder-shell {
+  --bd-bg:            #1c1c1f;
+  --bd-canvas:        #202024;
+  --bd-ink:           #f2f2f5;
+  --bd-ink-2:         #c2c2cb;
+  --bd-muted:         #8a8a94;
+  --bd-faint:         #5c5c65;
+  --bd-line:          #2d2d33;
+  --bd-line-2:        #3a3a42;
+  --bd-field:         #26262b;
+  --bd-accent:        #8b6df7;
+  --bd-accent-strong: #7a5bf0;
+  --bd-accent-soft:   rgba(139,109,247,.16);
+  --bd-accent-ink:    #b9a8fb;
+  --bd-shadow:        0 10px 30px rgba(0,0,0,.5);
+}
+
+/* ─────────────────────────────────────────────────────────
+   Shell layout (height-critical, not Tailwind)
    ───────────────────────────────────────────────────────── */
 .builder-shell {
   display: flex;
   flex-direction: column;
-  /* 56px = top navbar  |  36px = breadcrumb bar above the builder */
-  height: calc(100vh - 56px - 36px);
+  height: calc(100vh - 56px - 36px);   /* 56 navbar | 36 breadcrumb */
   overflow: hidden;
 }
-
-.builder-main {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-  min-height: 0;
-}
-
-.builder-canvas-wrap {
-  flex: 1;
-  background: #888;
-  overflow: auto;
-  position: relative;
-}
-
-#gjs-canvas,
-#email-gjs-canvas {
-  height: 100%;
-  width: 100%;
-}
-
-.builder-panel-left,
-.builder-panel-right {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.panel-section {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-}
+.builder-main { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+.builder-canvas-wrap { flex: 1; background: var(--bd-canvas); overflow: auto; position: relative; }
+#gjs-canvas, #email-gjs-canvas { height: 100%; width: 100%; }
+.builder-panel-left, .builder-panel-right { display: flex; flex-direction: column; overflow: hidden; }
+.panel-section { flex: 1; overflow-y: auto; min-height: 0; }
 
 /* ─────────────────────────────────────────────────────────
-   GrapesJS — block panel overrides
+   Neutralise GrapesJS's default dark theme backgrounds.
+   GrapesJS paints panels/categories/sectors with .gjs-one-bg
+   (a dark fill); let our white panel show through instead so
+   only the fields/tiles carry an explicit surface colour.
+   ───────────────────────────────────────────────────────── */
+.builder-shell .gjs-one-bg { background-color: transparent !important; }
+.builder-shell .gjs-two-color,
+.builder-shell .gjs-four-color-h { color: var(--bd-ink) !important; }
+.gjs-block-categories,
+.gjs-blocks-c,
+.gjs-sm-sectors, .gjs-sm-sector, .gjs-sm-properties, .gjs-sm-property, .gjs-sm-composite,
+.gjs-trt-traits, .gjs-trt-trait,
+.gjs-clm-tags,
+.gjs-layer-manager, .gjs-layers { background: transparent !important; }
+
+/* ─────────────────────────────────────────────────────────
+   Block panel — full-width tiled rows with mnemonic chips
    ───────────────────────────────────────────────────────── */
 .gjs-block-categories { background: transparent !important; }
+.gjs-block-category { border: none !important; }
 
 .gjs-block-category .gjs-title {
-  background: #14142a !important;
-  color: #7070a0 !important;
+  background: transparent !important;
+  color: var(--bd-muted) !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace !important;
   font-size: 10px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.15em !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.16em !important;
   text-transform: uppercase !important;
-  padding: 8px 10px !important;
+  padding: 16px 6px 7px !important;
+  border: none !important;
+}
+.gjs-block-category .gjs-caret-icon { color: var(--bd-faint) !important; font-size: 9px !important; }
+
+#blocks-panel { padding: 2px 10px 16px; }
+
+.gjs-blocks-c {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  padding: 0 !important;
 }
 
 .gjs-block {
-  background: #14142a !important;
-  border: 1px solid #1c1c35 !important;
-  color: #a0a0c0 !important;
-  font-size: 11px !important;
-  border-radius: 6px !important;
-  transition: border-color 0.15s, background 0.15s !important;
-  padding: 8px 4px !important;
+  width: 100% !important;
+  min-height: 0 !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 11px !important;
+  margin: 0 !important;
+  padding: 7px 8px !important;
+  background: var(--bd-bg) !important;
+  border: 1px solid transparent !important;
+  border-radius: 10px !important;
+  color: var(--bd-ink) !important;
+  box-shadow: none !important;
+  transition: background .12s, border-color .12s !important;
 }
+.gjs-block:hover { background: var(--bd-field) !important; border-color: var(--bd-line-2) !important; }
 
-.gjs-block:hover {
-  background: #1e1e40 !important;
-  border-color: #6366f1 !important;
-  color: #fff !important;
-}
-
-#blocks-panel { padding: 6px; }
-#layers-panel,
-#traits-panel { padding: 8px; color: #a0a0c0; font-size: 13px; }
-
-/* ── Block icon (media) area ── */
 .gjs-block__media {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  height: 38px !important;
-  margin-bottom: 5px !important;
+  width: 30px !important; height: 30px !important;
+  flex: 0 0 30px !important;
+  margin: 0 !important;
+  background: var(--bd-field) !important;
+  border: 1px solid var(--bd-line) !important;
+  border-radius: 8px !important;
+  transition: background .12s, border-color .12s !important;
 }
-
 .gjs-block__media svg {
-  width: 28px !important;
-  height: 28px !important;
-  stroke: #7070a0 !important;
-  transition: stroke 0.15s !important;
+  width: 16px !important; height: 16px !important;
+  fill: none !important;                       /* neutralise filled shape icons */
+  stroke: var(--bd-muted) !important;
+  stroke-width: 1.7 !important;
+  transition: stroke .12s !important;
 }
-
-.gjs-block:hover .gjs-block__media svg {
-  stroke: #a78bfa !important;
-}
+.gjs-block:hover .gjs-block__media { background: var(--bd-accent-soft) !important; border-color: var(--bd-accent) !important; }
+.gjs-block:hover .gjs-block__media svg { stroke: var(--bd-accent) !important; }
 
 .gjs-block-label {
-  font-size: 10px !important;
-  font-weight: 600 !important;
-  color: #7070a0 !important;
-  text-align: center !important;
-  letter-spacing: 0.02em !important;
-  line-height: 1.3 !important;
+  flex: 1 !important; min-width: 0 !important;
+  display: flex !important; align-items: center !important; justify-content: space-between !important;
+  gap: 8px !important; text-align: left !important; line-height: 1.3 !important;
 }
-
-.gjs-block:hover .gjs-block-label {
-  color: #c4b5fd !important;
+.blk-name {
+  font-size: 13px; font-weight: 500; letter-spacing: -0.01em; color: var(--bd-ink);
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
 }
+.blk-key {
+  flex: 0 0 auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9.5px; font-weight: 600; letter-spacing: 0.02em;
+  color: var(--bd-faint); background: var(--bd-field);
+  border: 1px solid var(--bd-line); border-radius: 5px;
+  padding: 2px 6px; min-width: 20px; text-align: center;
+}
+.gjs-block:hover .blk-key { color: var(--bd-accent); border-color: var(--bd-accent); }
 
 /* ─────────────────────────────────────────────────────────
-   GrapesJS — Style / Layer / Trait manager overrides
+   Variables panel — the JSX still uses dark utility classes;
+   scope-override them to the theme tokens so it reads correctly
+   in light mode (and stays right in dark).
    ───────────────────────────────────────────────────────── */
-.gjs-sm-sector-title,
-.gjs-clm-title,
-.gjs-trt-header {
-  background: #14142a !important;
-  color: #7070a0 !important;
-  font-size: 10px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.12em !important;
-  text-transform: uppercase !important;
+.builder-vars { color: var(--bd-ink); }
+.builder-vars input, .builder-vars select, .builder-vars textarea {
+  background: var(--bd-field) !important; color: var(--bd-ink) !important; border-color: var(--bd-line) !important;
 }
-
-.gjs-sm-property label,
-.gjs-trt-trait label {
-  color: #737373 !important;
-  font-size: 11px !important;
-}
-
-.gjs-sm-property input,
-.gjs-sm-property select,
-.gjs-trt-trait input,
-.gjs-trt-trait select {
-  background: #14142a !important;
-  color: #e0e0ff !important;
-  border-color: #1c1c35 !important;
-  border-radius: 6px !important;
-}
-
-.gjs-field { background: #14142a !important; border-color: #1c1c35 !important; }
-.gjs-field input { color: #e0e0ff !important; }
-
-.gjs-layer-name { color: #a0a0c0 !important; }
-.gjs-layer { background: #14142a !important; border-color: #1c1c35 !important; }
-.gjs-layer:hover { background: #1e1e40 !important; }
-.gjs-layer.gjs-selected { background: linear-gradient(135deg, #4f46e5, #7c3aed) !important; }
+.builder-vars input::placeholder { color: var(--bd-muted) !important; }
+.builder-vars .text-white { color: var(--bd-ink) !important; }
+.builder-vars .text-sidebar-muted { color: var(--bd-muted) !important; }
+.builder-vars .text-primary { color: var(--bd-accent) !important; }
+.builder-vars .border-primary { border-color: var(--bd-accent) !important; }
+.builder-vars .border-sidebar-border { border-color: var(--bd-line) !important; }
+.builder-vars .border-b-2.border-primary { border-color: var(--bd-accent) !important; }
+.builder-vars .bg-sidebar-hover { background: var(--bd-field) !important; }
+.builder-vars .bg-primary { background: var(--bd-accent) !important; color: #fff !important; }
+.builder-vars .hover\:text-white:hover { color: var(--bd-ink) !important; }
+.builder-vars .hover\:border-primary:hover { border-color: var(--bd-accent) !important; }
+.builder-vars .group:hover .group-hover\:text-primary { color: var(--bd-accent) !important; }
 
 /* ─────────────────────────────────────────────────────────
-   GrapesJS — RTE toolbar
+   Email builder chrome — its JSX still uses the dark utility
+   classes; remap them to the theme tokens so it matches the
+   PDF builder and flips correctly for dark mode.
+   ───────────────────────────────────────────────────────── */
+.builder-email .bg-sidebar { background-color: var(--bd-bg) !important; }
+.builder-email .bg-sidebar-hover { background-color: var(--bd-field) !important; }
+.builder-email .border-sidebar-border { border-color: var(--bd-line) !important; }
+.builder-email .text-sidebar-muted { color: var(--bd-muted) !important; }
+.builder-email .text-sidebar-label { color: var(--bd-muted) !important; }
+.builder-email .text-primary { color: var(--bd-accent) !important; }
+.builder-email .border-primary { border-color: var(--bd-accent) !important; }
+.builder-email .bg-primary { background-color: var(--bd-accent) !important; }
+
+/* Default chrome text → ink, but keep white on any coloured fill. */
+.builder-email .text-white { color: var(--bd-ink) !important; }
+.builder-email [class*="bg-primary"].text-white,
+.builder-email [class*="bg-accent"].text-white,
+.builder-email [class*="bg-blue"].text-white,
+.builder-email [class*="bg-emerald"].text-white,
+.builder-email [class*="bg-green"].text-white,
+.builder-email [class*="bg-red"].text-white,
+.builder-email [class*="bg-amber"].text-white,
+.builder-email .bg-primary .text-white { color: #fff !important; }
+
+/* Inputs + placeholders. */
+.builder-email input, .builder-email textarea, .builder-email select { color: var(--bd-ink) !important; }
+.builder-email input::placeholder,
+.builder-email textarea::placeholder,
+.builder-email .placeholder-sidebar-muted::placeholder { color: var(--bd-muted) !important; opacity: 1 !important; }
+
+/* Pseudo-state utilities. */
+.builder-email .hover\:text-white:hover { color: var(--bd-ink) !important; }
+.builder-email .hover\:border-primary:hover { border-color: var(--bd-accent) !important; }
+.builder-email .focus\:text-white:focus { color: var(--bd-ink) !important; }
+.builder-email .focus\:border-primary:focus { border-color: var(--bd-accent) !important; }
+
+/* ─────────────────────────────────────────────────────────
+   Style / Layer / Trait managers (right inspector)
+   ───────────────────────────────────────────────────────── */
+#layers-panel, #traits-panel { padding: 8px; color: var(--bd-ink); font-size: 13px; }
+#style-manager-container { color: var(--bd-ink); }
+
+.gjs-sm-sector-title, .gjs-clm-title, .gjs-trt-header {
+  background: transparent !important;
+  color: var(--bd-muted) !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace !important;
+  font-size: 10px !important; font-weight: 600 !important;
+  letter-spacing: 0.13em !important; text-transform: uppercase !important;
+  border: none !important; padding: 16px 12px 8px !important;
+}
+.gjs-sm-sector { border: none !important; }
+.gjs-sm-sector:not(:first-child) .gjs-sm-sector-title { border-top: 1px solid var(--bd-line) !important; }
+.gjs-sm-properties { padding: 2px 12px 12px !important; }
+.gjs-sm-property { margin-bottom: 10px !important; }
+#traits-panel .gjs-trt-trait { padding: 6px 4px !important; }
+
+.gjs-sm-property label, .gjs-trt-trait label, .gjs-sm-label {
+  color: var(--bd-muted) !important; font-size: 11px !important;
+  font-weight: 500 !important; margin-bottom: 4px !important;
+}
+/* Field wrappers read as active inputs — firm border, hover + focus states. */
+.gjs-sm-property input, .gjs-sm-property select,
+.gjs-trt-trait input, .gjs-trt-trait select,
+.gjs-clm-select, .gjs-field {
+  background: var(--bd-field) !important;
+  color: var(--bd-ink) !important;
+  border: 1px solid var(--bd-line-2) !important;
+  border-radius: 8px !important;
+  min-height: 34px !important;
+  font-size: 12.5px !important;
+}
+.gjs-field:hover,
+.gjs-sm-property input:hover, .gjs-sm-property select:hover,
+.gjs-trt-trait input:hover, .gjs-trt-trait select:hover { border-color: var(--bd-muted) !important; }
+.gjs-field:focus-within,
+.gjs-sm-property input:focus, .gjs-sm-property select:focus,
+.gjs-trt-trait input:focus, .gjs-trt-trait select:focus { border-color: var(--bd-accent) !important; }
+
+/* Actual values dark; unset-property placeholders visible (not ghosted). */
+.gjs-field input, .gjs-field select { color: var(--bd-ink) !important; background: transparent !important; }
+.gjs-field input::placeholder,
+.gjs-sm-property input::placeholder { color: var(--bd-muted) !important; opacity: 1 !important; }
+
+/* px unit + number steppers — visible, not washed out. */
+.gjs-field-units, .gjs-field-unit, .gjs-input-unit { color: var(--bd-ink-2) !important; opacity: 1 !important; }
+.gjs-field-arrows { opacity: 1 !important; }
+.gjs-field-arrow-u { border-bottom-color: var(--bd-ink-2) !important; }
+.gjs-field-arrow-d { border-top-color: var(--bd-ink-2) !important; }
+
+/* Text-align / radio segmented control — the selected item fills fully purple. */
+.gjs-field-radio { border: none !important; background: transparent !important; display: flex !important; gap: 5px !important; }
+.gjs-radio-item {
+  display: flex !important; align-items: stretch !important;
+  border: 1px solid var(--bd-line-2) !important; border-radius: 7px !important;
+  background: var(--bd-field) !important; overflow: hidden !important; position: relative !important;
+}
+.gjs-radio-item:hover { border-color: var(--bd-muted) !important; }
+.gjs-radio-item input {
+  position: absolute !important; opacity: 0 !important; pointer-events: none !important;
+  width: 1px !important; height: 1px !important; margin: 0 !important;
+}
+.gjs-radio-item-label {
+  flex: 1 1 auto !important;
+  display: flex !important; align-items: center !important; justify-content: center !important;
+  margin: 0 !important; padding: 7px 6px !important; border-radius: 0 !important;
+  color: var(--bd-ink-2) !important; text-align: center !important;
+}
+.gjs-radio-item input:checked + .gjs-radio-item-label,
+.gjs-radio-item input:checked ~ .gjs-radio-item-label { background: var(--bd-accent) !important; color: #fff !important; }
+.gjs-radio-item:has(input:checked) { border-color: var(--bd-accent) !important; background: var(--bd-accent) !important; }
+.gjs-sm-property .gjs-sm-icon { color: var(--bd-ink-2) !important; }
+
+/* Color field: value text dark, swatch keeps its colour. */
+.gjs-field-color input { color: var(--bd-ink) !important; }
+.gjs-field-colorp { border-left: 1px solid var(--bd-line-2) !important; }
+
+/* Kill the "disabled" look on UNSET style fields. GrapesJS dims default/unset
+   properties via reduced opacity + -webkit-text-fill-color (which beats `color`),
+   so the whole inspector reads as greyed-out. Force full visibility. */
+.gjs-sm-property, .gjs-sm-property .gjs-field, .gjs-sm-property .gjs-sm-field,
+.gjs-trt-trait, .gjs-trt-trait .gjs-field { opacity: 1 !important; }
+.gjs-sm-property input, .gjs-sm-property select, .gjs-sm-property .gjs-field input,
+.gjs-trt-trait input, .gjs-trt-trait select {
+  color: var(--bd-ink) !important;
+  -webkit-text-fill-color: var(--bd-ink) !important;
+  opacity: 1 !important;
+}
+.gjs-sm-property input::placeholder, .gjs-sm-property .gjs-field input::placeholder,
+.gjs-trt-trait input::placeholder {
+  color: var(--bd-muted) !important;
+  -webkit-text-fill-color: var(--bd-muted) !important;
+  opacity: 1 !important;
+}
+.gjs-field-units, .gjs-field-unit, .gjs-input-unit,
+.gjs-field-arrows, .gjs-field-arrow-u, .gjs-field-arrow-d { opacity: 1 !important; }
+
+/* Compose number/unit/select/color fields into ONE clean rounded box.
+   GrapesJS gives the inner input-holder, unit select and steppers their own
+   borders/backgrounds/absolute positioning, so the "px" + arrows spill past the
+   field's rounded corner and sit misaligned. Lay them out as a single flex row
+   with the border on the wrapper and everything else transparent + clipped. */
+.gjs-sm-property .gjs-field,
+.gjs-trt-trait .gjs-field {
+  display: flex !important;
+  align-items: stretch !important;
+  overflow: hidden !important;
+  position: relative !important;
+  padding: 0 !important;
+}
+.gjs-sm-property .gjs-field .gjs-input-holder,
+.gjs-trt-trait .gjs-field .gjs-input-holder {
+  flex: 1 1 auto !important; min-width: 0 !important; display: flex !important;
+}
+.gjs-sm-property .gjs-field input,
+.gjs-sm-property .gjs-field select,
+.gjs-trt-trait .gjs-field input,
+.gjs-trt-trait .gjs-field select {
+  flex: 1 1 0 !important; min-width: 0 !important; width: 100% !important;
+  border: none !important; background: transparent !important;
+  min-height: 32px !important; height: auto !important; margin: 0 !important;
+  padding: 0 6px !important;
+}
+.gjs-sm-property .gjs-field .gjs-input-holder input { text-align: left !important; }
+/* Unit ("px") — a slim segment divided by a hairline, with a dropdown caret
+   (it's a select: px / em / % / rem) matching the Font family / weight selects.
+   Kept compact so the value input keeps most of the width. */
+.gjs-field-units {
+  display: flex !important; align-items: center !important; flex: 0 0 auto !important;
+  border: none !important; border-left: 1px solid var(--bd-line) !important;
+  background: transparent !important; padding: 0 9px 0 0 !important;
+  position: relative !important;
+}
+.gjs-field-units select, .gjs-field-unit {
+  border: none !important; background: transparent !important;
+  appearance: none !important; -webkit-appearance: none !important; -moz-appearance: none !important;
+  min-height: 0 !important; height: auto !important; width: auto !important; min-width: 0 !important;
+  padding: 0 0 0 4px !important; font-size: 10px !important; color: var(--bd-ink-2) !important;
+  cursor: pointer !important; text-align: center !important;
+}
+.gjs-field-units::after {
+  content: ""; position: absolute; right: 3px; top: 50%; transform: translateY(-50%);
+  width: 0; height: 0; pointer-events: none;
+  border-left: 2.5px solid transparent; border-right: 2.5px solid transparent;
+  border-top: 3.5px solid var(--bd-muted);
+}
+/* Number steppers — a narrow column, vertically centred in the field. */
+.gjs-field-arrows {
+  position: static !important; flex: 0 0 auto !important; align-self: center !important;
+  display: flex !important; flex-direction: column !important; justify-content: center !important;
+  width: 9px !important; margin: 0 3px 0 0 !important; top: auto !important; right: auto !important;
+}
+.gjs-field-arrow-u, .gjs-field-arrow-d { position: static !important; margin: 1px auto !important; float: none !important; }
+
+/* Custom select caret stays inside the box. */
+.gjs-field-select .gjs-sel-arrow { position: absolute !important; right: 8px !important; top: 50% !important; transform: translateY(-50%) !important; }
+.gjs-field-color { align-items: stretch !important; }
+.gjs-field-color .gjs-field-colorp { flex: 0 0 auto !important; display: flex !important; align-items: center !important; }
+
+.gjs-layer-name { color: var(--bd-ink) !important; }
+.gjs-layer-title { border-color: var(--bd-line) !important; }
+.gjs-layer { background: transparent !important; border-color: var(--bd-line) !important; }
+.gjs-layer:hover { background: var(--bd-field) !important; }
+.gjs-layer.gjs-selected { background: var(--bd-accent-soft) !important; color: var(--bd-accent-ink) !important; }
+.gjs-layer-count, .gjs-layer-caret, .gjs-layer-vis { color: var(--bd-muted) !important; }
+
+/* ─────────────────────────────────────────────────────────
+   RTE toolbar (floating text formatting)
    ───────────────────────────────────────────────────────── */
 .gjs-rte-toolbar {
-  background: #0d0d1a !important;
-  border: 1px solid #1c1c35 !important;
-  border-radius: 8px !important;
+  background: var(--bd-bg) !important;
+  border: 1px solid var(--bd-line-2) !important;
+  border-radius: 10px !important;
   padding: 4px 8px !important;
-  display: flex !important;
-  align-items: center !important;
-  flex-wrap: wrap !important;
-  gap: 2px !important;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
+  display: flex !important; align-items: center !important; flex-wrap: wrap !important; gap: 2px !important;
+  box-shadow: var(--bd-shadow) !important;
 }
-
 .gjs-rte-actionbar .gjs-rte-action {
-  color: #94a3b8 !important;
-  border: none !important;
-  background: transparent !important;
-  border-radius: 5px !important;
-  padding: 4px 8px !important;
-  min-width: 28px !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  font-size: 13px !important;
-  transition: background 0.15s, color 0.15s !important;
+  color: var(--bd-muted) !important; border: none !important; background: transparent !important;
+  border-radius: 6px !important; padding: 4px 8px !important; min-width: 28px !important;
+  display: inline-flex !important; align-items: center !important; justify-content: center !important;
+  font-size: 13px !important; transition: background .12s, color .12s !important;
 }
-
-.gjs-rte-actionbar .gjs-rte-action:hover {
-  background: #0f3460 !important;
-  color: #fff !important;
-}
-
-.gjs-rte-actionbar .gjs-rte-action.active {
-  background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
-  color: #fff !important;
-}
-
+.gjs-rte-actionbar .gjs-rte-action:hover { background: var(--bd-field) !important; color: var(--bd-ink) !important; }
+.gjs-rte-actionbar .gjs-rte-action.active { background: var(--bd-accent) !important; color: #fff !important; }
 .rte-sep-btn { pointer-events: none !important; }
-.rte-sep { color: #1e1e1e !important; padding: 0 2px !important; user-select: none !important; font-size: 16px !important; }
+.rte-sep { color: var(--bd-line-2) !important; padding: 0 2px !important; user-select: none !important; font-size: 16px !important; }
 
-/* ─────────────────────────────────────────────────────────
-   RTE extras (font-size select + color pickers)
-   ───────────────────────────────────────────────────────── */
-.rte-extras {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: 4px;
-  padding-left: 6px;
-  border-left: 1px solid #2d2d4e;
-}
-
+.rte-extras { display: flex; align-items: center; gap: 4px; margin-left: 4px; padding-left: 6px; border-left: 1px solid var(--bd-line-2); }
 .rte-size-select {
-  background: #14142a;
-  color: #a0a0c0;
-  border: 1px solid #1c1c35;
-  border-radius: 5px;
-  padding: 3px 6px;
-  font-size: 11px;
-  cursor: pointer;
-  outline: none;
-  height: 26px;
+  background: var(--bd-field); color: var(--bd-ink); border: 1px solid var(--bd-line);
+  border-radius: 6px; padding: 3px 6px; font-size: 11px; cursor: pointer; outline: none; height: 26px;
 }
-
-.rte-size-select:hover { border-color: #6366f1; color: #fff; }
-
+.rte-size-select:hover { border-color: var(--bd-accent); }
 .rte-color-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 26px;
-  border-radius: 5px;
-  cursor: pointer;
-  position: relative;
-  background: #14142a;
-  border: 1px solid #1c1c35;
-  transition: border-color 0.15s;
+  display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 26px;
+  border-radius: 6px; cursor: pointer; position: relative; background: var(--bd-field);
+  border: 1px solid var(--bd-line); transition: border-color .12s;
 }
-
-.rte-color-btn:hover { border-color: #6366f1; }
-
-.rte-color-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: #cbd5e1;
-  line-height: 1;
-  pointer-events: none;
-  border-bottom: 3px solid #000;
-  padding-bottom: 1px;
-}
-
-.rte-bg-label { border-bottom-color: #ffff00; }
-
-.rte-color-input {
-  position: absolute;
-  width: 0; height: 0;
-  opacity: 0;
-  pointer-events: none;
-}
+.rte-color-btn:hover { border-color: var(--bd-accent); }
+.rte-color-label { font-size: 12px; font-weight: 700; color: var(--bd-ink); line-height: 1; pointer-events: none; border-bottom: 3px solid var(--bd-ink); padding-bottom: 1px; }
+.rte-bg-label { border-bottom-color: #f5c518; }
+.rte-color-input { position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none; }
 
 /* ─────────────────────────────────────────────────────────
-   GrapesJS — misc
+   Canvas + on-canvas tools
    ───────────────────────────────────────────────────────── */
-.gjs-cv-canvas { background: #e8eaf5 !important; }
+.builder-canvas-wrap, #gjs-canvas, #gjs-canvas .gjs-editor, .gjs-cv-canvas { background: var(--bd-canvas) !important; }
 
-/* ── Scrollable PDF canvas ──────────────────────────────────────────────────
-   PDF pages use fixed-height devices (A4 = 1123px). GrapesJS's canvas is
-   overflow:hidden and centers the page frame, so a page taller than the
-   viewport gets clipped top & bottom with no way to reach it. Scoped to
-   #gjs-canvas (the PDF builder; the email canvas is #email-gjs-canvas and is
-   left untouched), this lets the canvas scroll to the full page height. The
-   page frame moves into normal flow so the canvas gets a real scroll height;
-   GrapesJS repositions its tools/resize-handles on scroll, so they stay
-   aligned (verified). */
-#gjs-canvas .gjs-cv-canvas        { overflow: auto !important; }
+/* Scrollable PDF canvas (page taller than viewport must be reachable). */
+#gjs-canvas .gjs-cv-canvas         { overflow: auto !important; }
 #gjs-canvas .gjs-cv-canvas__frames { position: relative !important; height: auto !important; min-height: 100% !important; }
-#gjs-canvas .gjs-frame-wrapper     { position: relative !important; margin: 20px auto !important; }
+#gjs-canvas .gjs-frame-wrapper     { position: relative !important; margin: 24px auto !important; }
+#gjs-canvas .gjs-frame { box-shadow: 0 1px 2px rgba(20,20,28,.06), 0 18px 50px rgba(20,20,28,.10) !important; border-radius: 12px !important; }
 
-/* Toolbar (component action bar) */
-.gjs-toolbar {
-  background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
-  border-radius: 8px !important;
-  padding: 2px !important;
-  gap: 2px !important;
-}
+.gjs-toolbar { background: var(--bd-accent) !important; border-radius: 8px !important; padding: 2px !important; gap: 2px !important; }
 .gjs-toolbar-item { color: #fff !important; border-radius: 5px !important; }
-.gjs-toolbar-item:hover { background: rgba(255,255,255,0.15) !important; }
+.gjs-toolbar-item:hover { background: rgba(255,255,255,.18) !important; }
 
-/* Selection outline */
-.gjs-selected { outline: 2px solid #6366f1 !important; outline-offset: 2px !important; }
+.gjs-selected { outline: 2px solid var(--bd-accent) !important; outline-offset: 2px !important; }
+.gjs-placeholder { border-color: var(--bd-accent) !important; background: rgba(109,82,232,.08) !important; }
+.gjs-badge { background: var(--bd-accent) !important; border-radius: 4px !important; }
 
-/* Drop placeholder */
-.gjs-placeholder { border-color: #6366f1 !important; background: rgba(99,102,241,0.08) !important; }
-.gjs-badge { background: linear-gradient(135deg, #6366f1, #8b5cf6) !important; border-radius: 4px !important; }
-
-/* ── Resize handles ── */
 .gjs-resizer-h {
-  background: #ffffff !important;
-  border: 2px solid #6366f1 !important;
-  border-radius: 3px !important;
-  width: 10px !important;
-  height: 10px !important;
-  margin: -5px !important;
-  box-shadow: 0 0 0 1px rgba(99,102,241,0.3), 0 2px 6px rgba(99,102,241,0.25) !important;
-  transition: background 0.15s, transform 0.15s, border-color 0.15s !important;
-  z-index: 10 !important;
+  background: #fff !important; border: 2px solid var(--bd-accent) !important; border-radius: 3px !important;
+  width: 10px !important; height: 10px !important; margin: -5px !important;
+  box-shadow: 0 0 0 1px rgba(109,82,232,.3), 0 2px 6px rgba(109,82,232,.25) !important;
+  transition: background .15s, transform .15s, border-color .15s !important; z-index: 10 !important;
 }
-
-.gjs-resizer-h:hover {
-  background: #6366f1 !important;
-  border-color: #4f46e5 !important;
-  transform: scale(1.35) !important;
-  box-shadow: 0 0 0 2px rgba(99,102,241,0.4), 0 4px 10px rgba(99,102,241,0.35) !important;
-}
-
-/* Corner handles slightly larger for easier grabbing */
-.gjs-resizer-h-tl,
-.gjs-resizer-h-tr,
-.gjs-resizer-h-bl,
-.gjs-resizer-h-br {
-  width: 12px !important;
-  height: 12px !important;
-  margin: -6px !important;
-  border-radius: 4px !important;
-}
-
-/* Size tooltip shown during resize */
-.gjs-resizer-h + .gjs-resizer-h-c {
-  background: #4f46e5 !important;
-  color: #fff !important;
-  border-radius: 4px !important;
-  font-size: 10px !important;
-  padding: 2px 6px !important;
-}
+.gjs-resizer-h:hover { background: var(--bd-accent) !important; transform: scale(1.35) !important; box-shadow: 0 0 0 2px rgba(109,82,232,.4), 0 4px 10px rgba(109,82,232,.35) !important; }
+.gjs-resizer-h-tl, .gjs-resizer-h-tr, .gjs-resizer-h-bl, .gjs-resizer-h-br { width: 12px !important; height: 12px !important; margin: -6px !important; border-radius: 4px !important; }
+.gjs-resizer-h + .gjs-resizer-h-c { background: var(--bd-accent) !important; color: #fff !important; border-radius: 4px !important; font-size: 10px !important; padding: 2px 6px !important; }

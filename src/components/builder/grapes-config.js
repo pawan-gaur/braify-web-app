@@ -205,7 +205,7 @@ export const EDITOR_CONFIG = (containerId) => ({
 
   blockManager: {
     appendTo: '#blocks-panel',
-    blocks: buildBlocks(),
+    blocks: decorateBlocks(buildBlocks()),
   },
 
   layerManager:  { appendTo: '#layers-panel'  },
@@ -216,6 +216,35 @@ export const EDITOR_CONFIG = (containerId) => ({
 function svg(path, extra = '') {
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
     stroke-linecap="round" stroke-linejoin="round" width="30" height="30" ${extra}>${path}</svg>`
+}
+
+/* Short mnemonic chips shown at the right of a block row (redesign parity).
+   Only mapped blocks get a chip, so the common set reads clean and the long
+   tail of specialised blocks stays uncluttered. */
+const BLOCK_KEYS = {
+  text: 'T', heading: 'H', paragraph: 'P', subheading: 'S', 'label-value': 'LV',
+  divider: 'HR', spacer: 'SP', 'two-columns': '2C', 'three-columns': '3C',
+  'four-columns': '4C', 'sidebar-layout': 'SB',
+  image: 'IM', logo: 'LG', 'img-text': 'IT',
+  'shape-rect': 'RC', 'shape-circle': 'CI', 'shape-line': 'LN',
+  'table-simple': 'TB', 'table-invoice': 'IN', 'table-loop': 'EA',
+  'signature-placeholder': 'SIG', 'date-stamp': 'DT', 'dynamic-field': 'VAR',
+  'if-block': 'IF', 'each-block': 'EA',
+}
+
+/* Wrap each block label as "name + optional key chip" so the panel matches the
+   two-column row design (label left, mnemonic right). GrapesJS renders the
+   label as HTML, so these spans are styled by builder.css (.blk-name/.blk-key). */
+function decorateBlocks(blocks) {
+  return blocks.map(b => {
+    const key  = BLOCK_KEYS[b.id]
+    const name = typeof b.label === 'string' ? b.label : b.id
+    return {
+      ...b,
+      label: `<span class="blk-name">${name}</span>` +
+             (key ? `<span class="blk-key">${key}</span>` : ''),
+    }
+  })
 }
 
 /* ── All blocks ───────────────────────────────────────────────────────────── */
