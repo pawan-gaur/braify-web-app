@@ -174,7 +174,7 @@ function PaginationBar({ page, totalPages, totalElements, size, onPage, onSize, 
 // ── Documents tab ──────────────────────────────────────────────────────────────
 
 function DocumentsTab() {
-  const [view, setView]             = useView('braify-view-esign', 'grid')
+  const [view, setView]             = useView('braify-view-esign', 'table')
   const [data, setData]             = useState(null)          // PageResponse
   const [loading, setLoading]       = useState(true)
   const [search, setSearch]         = useState('')

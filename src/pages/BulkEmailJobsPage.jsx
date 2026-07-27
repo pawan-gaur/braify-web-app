@@ -193,7 +193,7 @@ export default function BulkEmailJobsPage() {
   const navigate      = useNavigate()
   const toast         = useToast()
 
-  const [view, setView]         = useView('braify-view-bulk-email', 'grid')
+  const [view, setView]         = useView('braify-view-bulk-email', 'table')
   const [jobs, setJobs]         = useState([])
   const [loading, setLoading]   = useState(true)
   const [search, setSearch]     = useState('')
