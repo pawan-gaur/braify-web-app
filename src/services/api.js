@@ -270,6 +270,7 @@ export const esignSaveFields      = (id, fields)           => http.put(`/esign/d
 export const esignSendDocument    = (id, days = 7)         => http.post(`/esign/documents/${id}/send?tokenValidDays=${days}`).then(r => r.data)
 export const esignCancelDocument  = (id)                   => http.post(`/esign/documents/${id}/cancel`).then(r => r.data)
 export const esignResendDocument  = (id, days = 7)         => http.post(`/esign/documents/${id}/resend?tokenValidDays=${days}`).then(r => r.data)
+export const esignReactivateDocument = (id, days = 7)      => http.post(`/esign/documents/${id}/reactivate?tokenValidDays=${days}`).then(r => r.data)
 export const esignResendSignatory = (id, signatoryId, days = 7) => http.post(`/esign/documents/${id}/signatories/${signatoryId}/resend?tokenValidDays=${days}`).then(r => r.data)
 export const esignResendCopy      = (id)                   => http.post(`/esign/documents/${id}/resend-copy`).then(r => r.data)
 export const esignResendCopyTo    = (id, email)            => http.post(`/esign/documents/${id}/resend-copy/recipient?email=${encodeURIComponent(email)}`).then(r => r.data)
