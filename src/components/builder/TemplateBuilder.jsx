@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import grapesjs from 'grapesjs'
 import { EDITOR_CONFIG } from './grapes-config'
 import PreviewDataModal from '../ui/PreviewDataModal'
+import AiAssistBar from './AiAssistBar'
 import { IconCheck } from '../ui/icons'
 import '../../styles/builder.css'
 
@@ -454,6 +455,15 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
     Promise.resolve(onSave({ ...settings, htmlContent: html, cssContent: css, gjsData }))
       .then(() => setLastSaved(Date.now()))
       .catch(() => {})
+  }
+
+  /* ── Apply an AI edit to the canvas (Undo-able) ── */
+  const handleAiApply = (html, mode) => {
+    const editor = editorRef.current
+    if (!editor || !html) return
+    if (mode === 'INSERT') editor.addComponents(html)       // append new block(s)
+    else                   editor.setComponents(html)        // replace whole template
+    refreshPlaceholders(editor.getHtml())
   }
 
   /* ── Export / Copy ───────────────────────────────────────────────────────── */
@@ -956,6 +966,12 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
         {/* Canvas */}
         <div className="builder-canvas-wrap">
           <div id="gjs-canvas" />
+          <AiAssistBar
+            context="PDF"
+            getHtml={() => editorRef.current?.getHtml() || ''}
+            onApply={handleAiApply}
+            suggestions={['Add a payment terms clause', 'Add a signature block', 'Add a totals summary', 'Tighten to one page']}
+          />
         </div>
 
         {/* Right panel */}

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import grapesjs from 'grapesjs'
 import { EMAIL_EDITOR_CONFIG } from './email-grapes-config'
 import PreviewDataModal from '../ui/PreviewDataModal'
+import AiAssistBar from './AiAssistBar'
 import { useToast } from '../../context/ToastContext'
 import '../../styles/builder.css'
 
@@ -702,6 +703,18 @@ ${html}
         {/* ── Canvas ── */}
         <div className="builder-canvas-wrap">
           <div id="email-gjs-canvas" />
+          <AiAssistBar
+            context="EMAIL"
+            getHtml={() => editorRef.current?.getHtml() || ''}
+            onApply={(html, mode) => {
+              const editor = editorRef.current
+              if (!editor || !html) return
+              if (mode === 'INSERT') editor.addComponents(html)
+              else                   editor.setComponents(html)
+              refreshPlaceholders(editor.getHtml())
+            }}
+            suggestions={['Add a friendly intro', 'Add a call-to-action button', 'Add a footer with contact info', 'Make the tone warmer']}
+          />
         </div>
 
         {/* ── Right panel ── */}
