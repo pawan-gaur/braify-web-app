@@ -22,6 +22,7 @@ const FIELD_TYPES = [
   { type: 'INITIALS',  label: 'Initials',   color: '#2563eb', bg: '#dbeafe' },
   { type: 'DATE',      label: 'Date',        color: '#059669', bg: '#d1fae5' },
   { type: 'TEXT',      label: 'Text',        color: '#d97706', bg: '#fef3c7' },
+  { type: 'STAMP',     label: 'Stamp',       color: '#0891b2', bg: '#cffafe' },
 ]
 
 const SOURCE_META = {
@@ -155,9 +156,22 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                      hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
           <IconArrowLeft className="w-4 h-4" />
         </button>
-        <span className="text-sm font-medium text-gray-600 dark:text-gray-300 px-2 py-1 rounded-lg bg-gray-50 dark:bg-gray-800">
-          Page {pdfCurrentPage} of {pdfPageCount}
-        </span>
+        {/* Jump directly to a page (no scrolling through large documents) */}
+        <div className="flex items-center gap-1.5 text-sm font-medium text-gray-600 dark:text-gray-300">
+          <span>Page</span>
+          <select
+            value={pdfCurrentPage}
+            onChange={e => changePdfPage(Number(e.target.value))}
+            className="px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800
+                       text-gray-700 dark:text-gray-200 outline-none focus:border-accent-500 cursor-pointer tabular-nums"
+            title="Jump to page"
+          >
+            {Array.from({ length: pdfPageCount }, (_, i) => i + 1).map(p => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+          <span>of {pdfPageCount}</span>
+        </div>
         <button type="button" onClick={() => changePdfPage(pdfCurrentPage + 1)} disabled={pdfCurrentPage >= pdfPageCount}
           className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800
                      hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
@@ -179,6 +193,8 @@ export default function ESignBuilderPage({ initialDocStatus }) {
   const [doc,     setDoc]     = useState(null)
   const [sending, setSending] = useState(false)
   const [saving,  setSaving]  = useState(false)
+  const [savingDraft, setSavingDraft] = useState(false)
+  const [lastSavedAt, setLastSavedAt] = useState(null)
 
   /* ── derived ──────────────────────────────────────────────────────────── */
   const activeSources = sourcePriority.filter(s => enabledSources[s])
@@ -568,6 +584,32 @@ export default function ESignBuilderPage({ initialDocStatus }) {
     e.stopPropagation()
     const field = fields.find(f => f.id === fid)
     setResizing({ id: fid, startX: e.clientX, startY: e.clientY, startW: field.width, startH: field.height })
+  }
+
+  /** Field-placement payload sent to the backend. */
+  function fieldsPayload() {
+    return fields.map(f => ({
+      page: f.page, x: f.x, y: f.y,
+      width: f.width, height: f.height,
+      fieldType: f.fieldType, label: f.label,
+      required: f.required ?? true,
+      signatoryId: f.signatoryId,
+    }))
+  }
+
+  /** Persist field placement WITHOUT advancing to Send — lets you leave and resume later. */
+  async function handleSaveDraft() {
+    if (!docId) { showToast('Document not ready — complete Step 1 first', 'error'); return }
+    setSavingDraft(true)
+    try {
+      await esignSaveFields(docId, fieldsPayload())
+      setLastSavedAt(Date.now())
+      showToast('Draft saved — resume anytime from the documents list', 'success')
+    } catch (e) {
+      showToast(e.message || 'Failed to save draft', 'error')
+    } finally {
+      setSavingDraft(false)
+    }
   }
 
   async function handleSaveFields() {
@@ -1396,7 +1438,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
 
                 <button
                   onClick={handleSaveFields}
-                  disabled={saving || !docId || fields.length === 0}
+                  disabled={saving || savingDraft || !docId || fields.length === 0}
                   className="btn btn-accent btn-sm w-full mt-4"
                   title={!docId ? 'Complete Step 1 first' : fields.length === 0 ? 'Place at least one field' : ''}
                 >
@@ -1406,6 +1448,21 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                     </span>
                   )}
                 </button>
+
+                {/* Save draft — persists placement without sending, so you can resume later */}
+                <button
+                  onClick={handleSaveDraft}
+                  disabled={saving || savingDraft || !docId || fields.length === 0}
+                  className="w-full mt-2 py-2 rounded-xl text-sm font-semibold border border-gray-200
+                             dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50
+                             dark:hover:bg-gray-700 transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-1.5"
+                  title="Save your field placement and continue later"
+                >
+                  {savingDraft ? 'Saving draft…' : 'Save draft'}
+                </button>
+                {lastSavedAt && (
+                  <p className="text-[11px] text-center text-gray-400 mt-1.5">Draft saved</p>
+                )}
 
                 <button
                   onClick={() => setStep(0)}

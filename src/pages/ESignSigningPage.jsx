@@ -26,6 +26,7 @@ const FIELD_COLORS = {
   INITIALS:  { border: '#2563eb', bg: 'rgba(37,99,235,0.12)'  },
   DATE:      { border: '#059669', bg: 'rgba(5,150,105,0.12)'  },
   TEXT:      { border: '#d97706', bg: 'rgba(217,119,6,0.12)'  },
+  STAMP:     { border: '#0891b2', bg: 'rgba(8,145,178,0.12)'  },
 }
 
 // ─── Canvas helpers ──────────────────────────────────────────────────────────
@@ -66,7 +67,7 @@ function SignedFieldInner({ sigMethod, sigValue, signerName, dateStr, caption })
     <div ref={ref} style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 1, minHeight: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
         {sigMethod === 'TYPE' ? (
-          <span style={{ fontFamily: 'cursive', color: '#1e293b', fontSize: 13, padding: '2px 4px',
+          <span style={{ fontFamily: 'Arial, Helvetica, sans-serif', color: '#1e293b', fontSize: 13, padding: '2px 4px',
                          overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>
             {sigValue}
           </span>
@@ -230,7 +231,11 @@ export default function ESignSigningPage() {
         const canvas = canvasRef.current
         const ctx    = canvas.getContext('2d')
         ctx.clearRect(0, 0, canvas.width, canvas.height)
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+        // Draw the image preserving its aspect ratio (contained + centred), so an
+        // uploaded signature/stamp is never stretched to the canvas shape.
+        const scale = Math.min(canvas.width / img.width, canvas.height / img.height)
+        const w = img.width * scale, h = img.height * scale
+        ctx.drawImage(img, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h)
         hasDrawn.current = true
       }
       img.src = ev.target.result
@@ -248,7 +253,25 @@ export default function ESignSigningPage() {
     const existing       = field.signed ? (field._signedValue  || field.value)         : null
     const existingMethod = field.signed ? (field._signedMethod || field.signingMethod) : null
 
-    if (field.fieldType === 'DATE') {
+    if (field.fieldType === 'STAMP') {
+      // Stamp = image upload only.
+      setModalTab('UPLOAD')
+      setTypedText('')
+      hasDrawn.current = false
+      setTimeout(() => {
+        const canvas = canvasRef.current
+        if (!canvas) return
+        const ctx = canvas.getContext('2d')
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        if (existing) {
+          const img = new Image()
+          img.onload = () => { ctx.drawImage(img, 0, 0, canvas.width, canvas.height); hasDrawn.current = true }
+          img.src = existing
+        } else {
+          hasDrawn.current = false
+        }
+      }, 0)
+    } else if (field.fieldType === 'DATE') {
       setModalTab('TYPE')
       setTypedText(existing || new Date().toISOString().split('T')[0])
       hasDrawn.current = false
@@ -635,9 +658,21 @@ export default function ESignSigningPage() {
                      hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
           ‹ Prev
         </button>
-        <span className="text-sm font-medium text-gray-600 px-2 py-1 rounded-lg bg-white border border-gray-200">
-          Page {pdfCurrentPage} of {pdfPageCount}
-        </span>
+        <div className="flex items-center gap-1.5 text-sm font-medium text-gray-600">
+          <span>Page</span>
+          <select
+            value={pdfCurrentPage}
+            onChange={e => changePage(Number(e.target.value))}
+            className="px-2 py-1 rounded-lg border border-gray-200 bg-white text-gray-700 outline-none
+                       focus:border-accent cursor-pointer tabular-nums"
+            title="Jump to page"
+          >
+            {Array.from({ length: pdfPageCount }, (_, i) => i + 1).map(p => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+          <span>of {pdfPageCount}</span>
+        </div>
         {isLast ? (
           <button type="button" onClick={handleSubmit} disabled={submitting || !allRequiredSigned}
             className="px-4 py-1.5 rounded-lg bg-green-600 text-white text-sm font-semibold
@@ -659,6 +694,7 @@ export default function ESignSigningPage() {
     (activeField.fieldType === 'SIGNATURE' || activeField.fieldType === 'INITIALS')
   const isDateOrText = activeField &&
     (activeField.fieldType === 'DATE' || activeField.fieldType === 'TEXT')
+  const isStamp = activeField && activeField.fieldType === 'STAMP'
 
   // How many OTHER unsigned fields of the same type the signer owns (for "apply to all").
   const matchingUnsignedCount = activeField && REUSABLE.includes(activeField.fieldType)
@@ -711,9 +747,9 @@ export default function ESignSigningPage() {
             <SignedFieldInner
               sigMethod={sigMethod}
               sigValue={sigValue}
-              signerName={f.signerName}
-              dateStr={dateStr}
-              caption={caption}
+              signerName={f.fieldType === 'STAMP' ? undefined : f.signerName}
+              dateStr={f.fieldType === 'STAMP' ? undefined : dateStr}
+              caption={f.fieldType === 'STAMP' ? undefined : caption}
             />
             {mine && !submitted && (
               // Edit affordance — lets the signer change this entry before submitting.
@@ -1063,7 +1099,7 @@ export default function ESignSigningPage() {
                       autoFocus
                       className="w-full px-4 py-3 rounded-xl border-2 border-gray-200
                                  focus:border-accent outline-none text-2xl text-gray-800"
-                      style={{ fontFamily: 'cursive' }}
+                      style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}
                     />
                     <p className="text-xs text-gray-400 mt-2">This typed text will be used as your signature</p>
                   </div>
@@ -1085,6 +1121,31 @@ export default function ESignSigningPage() {
                   className="w-full px-4 py-3 rounded-xl border-2 border-gray-200
                              focus:border-accent outline-none text-lg"
                 />
+              </div>
+            )}
+
+            {/* ── STAMP: image upload only (aspect-preserved) ── */}
+            {isStamp && (
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  Upload stamp image
+                </label>
+                <canvas
+                  ref={canvasRef}
+                  width={600}
+                  height={200}
+                  className="border-2 border-dashed border-gray-300 rounded-xl w-full"
+                  style={{ background: '#f8fafc' }}
+                />
+                <label className="mt-3 flex items-center gap-2 cursor-pointer text-sm text-accent hover:text-accent-700">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                  </svg>
+                  Choose stamp image (PNG or JPG)
+                  <input type="file" accept="image/*" className="hidden" onChange={handleUpload}/>
+                </label>
+                <p className="text-xs text-gray-400 mt-2">The stamp is placed with its aspect ratio preserved — it won't be stretched.</p>
               </div>
             )}
 
