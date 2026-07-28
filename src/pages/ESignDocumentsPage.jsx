@@ -4,12 +4,14 @@ import {
   esignListDocuments,
   esignCancelDocument,
   esignResendDocument,
+  esignReactivateDocument,
   esignListBatches,
   esignGetBatchDocuments,
 } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import ViewToggle, { useView } from '../components/ui/ViewToggle'
+import ReactivateModal from '../components/esign/ReactivateModal'
 import { fmtDateTimeGB as fmtDate } from '../utils/date'
 import { IconChevronsLeft, IconChevronsRight, IconChevronLeft, IconChevronRight } from '../components/ui/icons'
 
@@ -185,6 +187,7 @@ function DocumentsTab() {
   const [page, setPage]             = useState(0)
   const [size, setSize]             = useState(20)
   const [resending, setResending]   = useState(null)
+  const [reactivateId, setReactivateId] = useState(null)   // doc awaiting the reactivate modal
   const navigate                    = useNavigate()
   const { showToast }               = useToast()
 
@@ -234,13 +237,33 @@ function DocumentsTab() {
 
   async function handleResend(id, e) {
     e.stopPropagation()
-    if (!confirm('Resend the signing invitation email to the client?')) return
     setResending(id)
     try {
       await esignResendDocument(id)
       showToast('Signing invitation resent successfully', 'success')
     } catch (err) {
       showToast(err.message, 'error')
+    } finally {
+      setResending(null)
+    }
+  }
+
+  function handleReactivate(id, e) {
+    e.stopPropagation()
+    setReactivateId(id)          // open the modal for this document
+  }
+
+  async function doReactivate(days) {
+    const id = reactivateId
+    if (!id) return
+    setResending(id)
+    try {
+      await esignReactivateDocument(id, days)
+      showToast(`Document reactivated — new signing link valid ${days} day${days > 1 ? 's' : ''}`, 'success')
+      setReactivateId(null)
+      fetchDocs()   // status changes EXPIRED → PENDING/PARTIALLY_SIGNED
+    } catch (err) {
+      showToast(err?.response?.data?.message || err.message, 'error')
     } finally {
       setResending(null)
     }
@@ -436,6 +459,21 @@ function DocumentsTab() {
                               </svg>}
                         </button>
                       )}
+                      {doc.status === 'EXPIRED' && (
+                        <button
+                          onClick={e => handleReactivate(doc.id, e)}
+                          disabled={resending === doc.id}
+                          className="p-1.5 rounded-lg hover:bg-accent-50 dark:hover:bg-accent-900/30 text-gray-400 hover:text-accent transition-colors disabled:opacity-50"
+                          title="Reactivate — send a fresh signing link"
+                        >
+                          {resending === doc.id
+                            ? <div className="w-3.5 h-3.5 border-2 border-accent border-t-transparent rounded-full animate-spin"/>
+                            : <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                              </svg>}
+                        </button>
+                      )}
                       {!isTerminal && (
                         <button
                           onClick={e => handleCancel(doc.id, e)}
@@ -526,6 +564,18 @@ function DocumentsTab() {
                                 </svg>}
                           </button>
                         )}
+                        {doc.status === 'EXPIRED' && (
+                          <button onClick={e => handleReactivate(doc.id, e)} disabled={resending === doc.id}
+                            className="p-1.5 rounded-lg hover:bg-accent-50 dark:hover:bg-accent-900/30 text-gray-400 hover:text-accent transition-colors disabled:opacity-50"
+                            title="Reactivate — send a fresh signing link">
+                            {resending === doc.id
+                              ? <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin"/>
+                              : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                </svg>}
+                          </button>
+                        )}
                         {!isTerminal && (
                           <button onClick={e => handleCancel(doc.id, e)}
                             className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500 transition-colors"
@@ -548,6 +598,14 @@ function DocumentsTab() {
           />
         </div>
       )}
+
+      <ReactivateModal
+        open={!!reactivateId}
+        title={docs.find(d => d.id === reactivateId)?.title}
+        busy={resending === reactivateId}
+        onClose={() => setReactivateId(null)}
+        onConfirm={doReactivate}
+      />
     </>
   )
 }
@@ -565,6 +623,7 @@ function BatchDocumentsView({ batch, onBack }) {
   const [size, setSize]       = useState(20)
   const [search, setSearch]   = useState('')
   const [resending, setResending] = useState(null)   // docId currently being resent
+  const [reactivateId, setReactivateId] = useState(null)
   const navigate              = useNavigate()
   const { showToast }         = useToast()
 
@@ -582,13 +641,33 @@ function BatchDocumentsView({ batch, onBack }) {
 
   async function handleResend(id, e) {
     e.stopPropagation()
-    if (!confirm('Resend the signing invitation email to this client?')) return
     setResending(id)
     try {
       await esignResendDocument(id)
       showToast('Signing invitation resent successfully', 'success')
     } catch (err) {
       showToast(err.message, 'error')
+    } finally {
+      setResending(null)
+    }
+  }
+
+  function handleReactivate(id, e) {
+    e.stopPropagation()
+    setReactivateId(id)
+  }
+
+  async function doReactivate(days) {
+    const id = reactivateId
+    if (!id) return
+    setResending(id)
+    try {
+      await esignReactivateDocument(id, days)
+      showToast(`Document reactivated — new signing link valid ${days} day${days > 1 ? 's' : ''}`, 'success')
+      setReactivateId(null)
+      fetchDocs()
+    } catch (err) {
+      showToast(err?.response?.data?.message || err.message, 'error')
     } finally {
       setResending(null)
     }
@@ -731,6 +810,22 @@ function BatchDocumentsView({ batch, onBack }) {
                             </button>
                           )}
 
+                          {/* Reactivate — revive an expired document */}
+                          {doc.status === 'EXPIRED' && (
+                            <button
+                              onClick={e => handleReactivate(doc.id, e)}
+                              disabled={resending === doc.id}
+                              className="p-1.5 rounded-lg hover:bg-accent-50 dark:hover:bg-accent-900/30 text-gray-400 hover:text-accent transition-colors disabled:opacity-50"
+                              title="Reactivate — send a fresh signing link">
+                              {resending === doc.id
+                                ? <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin"/>
+                                : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                  </svg>}
+                            </button>
+                          )}
+
                           {/* Cancel — available for any non-terminal document */}
                           {!isTerminal && (
                             <button
@@ -756,6 +851,14 @@ function BatchDocumentsView({ batch, onBack }) {
           />
         </div>
       )}
+
+      <ReactivateModal
+        open={!!reactivateId}
+        title={docs.find(d => d.id === reactivateId)?.title}
+        busy={resending === reactivateId}
+        onClose={() => setReactivateId(null)}
+        onConfirm={doReactivate}
+      />
     </div>
   )
 }

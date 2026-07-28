@@ -7,10 +7,11 @@
  */
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { esignGetDocument, esignGetAudit, esignDownloadSigned, esignListAttachments, esignDownloadAttachment, esignResendSignatory, esignResendCopy, esignResendCopyTo } from '../services/api'
+import { esignGetDocument, esignGetAudit, esignDownloadSigned, esignListAttachments, esignDownloadAttachment, esignResendSignatory, esignResendCopy, esignResendCopyTo, esignResendDocument, esignReactivateDocument } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import { IconCheck } from '../components/ui/icons'
+import ReactivateModal from '../components/esign/ReactivateModal'
 
 const STATUS_COLORS = {
   DRAFT:     'bg-gray-100 text-gray-600',
@@ -57,6 +58,8 @@ export default function ESignDetailPage() {
   const [resendingSig, setResendingSig] = useState(null)     // signatoryId currently being resent
   const [resendingCopy, setResendingCopy] = useState(false)  // resending the final signed copy (all)
   const [resendingEmail, setResendingEmail] = useState(null) // recipient email currently being resent
+  const [docBusy, setDocBusy] = useState(false)              // document-level resend / reactivate in flight
+  const [reactivateOpen, setReactivateOpen] = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -111,6 +114,33 @@ export default function ESignDetailPage() {
       URL.revokeObjectURL(url)
     } catch (e) {
       showToast(e.message, 'error')
+    }
+  }
+
+  async function handleResendDoc() {
+    setDocBusy(true)
+    try {
+      const updated = await esignResendDocument(id)
+      setDoc(prev => ({ ...prev, ...updated }))
+      showToast('Signing invitation resent', 'success')
+    } catch (e) {
+      showToast(e?.response?.data?.message || e.message || 'Failed to resend', 'error')
+    } finally {
+      setDocBusy(false)
+    }
+  }
+
+  async function doReactivate(days) {
+    setDocBusy(true)
+    try {
+      const updated = await esignReactivateDocument(id, days)
+      setDoc(prev => ({ ...prev, ...updated }))
+      showToast(`Document reactivated — new signing link valid ${days} day${days > 1 ? 's' : ''}`, 'success')
+      setReactivateOpen(false)
+    } catch (e) {
+      showToast(e?.response?.data?.message || e.message || 'Failed to reactivate', 'error')
+    } finally {
+      setDocBusy(false)
     }
   }
 
@@ -239,6 +269,42 @@ export default function ESignDetailPage() {
 
           {/* Actions */}
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Resend — while awaiting signatures */}
+            {['PENDING', 'IN_REVIEW', 'PARTIALLY_SIGNED'].includes(doc.status) && (
+              <button
+                onClick={handleResendDoc}
+                disabled={docBusy}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold
+                           border border-yellow-300 text-yellow-700 bg-yellow-50 dark:bg-yellow-900/20
+                           hover:bg-yellow-100 transition-colors disabled:opacity-50"
+              >
+                {docBusy
+                  ? <div className="w-4 h-4 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin"/>
+                  : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    </svg>}
+                Resend
+              </button>
+            )}
+            {/* Reactivate — revive an expired document */}
+            {doc.status === 'EXPIRED' && (
+              <button
+                onClick={() => setReactivateOpen(true)}
+                disabled={docBusy}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold
+                           border border-accent-300 text-accent bg-accent-50 dark:bg-accent-900/20
+                           hover:bg-accent-100 transition-colors disabled:opacity-50"
+              >
+                {docBusy
+                  ? <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin"/>
+                  : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>}
+                Reactivate
+              </button>
+            )}
             {/* Edit — only while the client hasn't signed yet (DRAFT / PENDING / IN_REVIEW) */}
             {['DRAFT', 'PENDING', 'IN_REVIEW'].includes(doc.status) && (
               <button
@@ -633,6 +699,14 @@ export default function ESignDetailPage() {
         </div>
         </div>
       )}
+
+      <ReactivateModal
+        open={reactivateOpen}
+        title={doc.title}
+        busy={docBusy}
+        onClose={() => setReactivateOpen(false)}
+        onConfirm={doReactivate}
+      />
     </div>
   )
 }
