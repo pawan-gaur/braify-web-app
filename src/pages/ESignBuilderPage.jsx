@@ -14,6 +14,7 @@ import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import { IconX, IconCheck, IconArrowRight, IconArrowLeft } from '../components/ui/icons'
 import PdfPageCanvas from '../components/esign/PdfPageCanvas'
+import SignatureCaptureModal from '../components/esign/SignatureCaptureModal'
 import EmailAutocomplete from '../components/ui/EmailAutocomplete'
 import useEmailContacts, { addLocalContacts } from '../hooks/useEmailContacts'
 
@@ -22,6 +23,7 @@ const FIELD_TYPES = [
   { type: 'INITIALS',  label: 'Initials',   color: '#2563eb', bg: '#dbeafe' },
   { type: 'DATE',      label: 'Date',        color: '#059669', bg: '#d1fae5' },
   { type: 'TEXT',      label: 'Text',        color: '#d97706', bg: '#fef3c7' },
+  { type: 'CHECKBOX',  label: 'Checkbox',    color: '#4f46e5', bg: '#e0e7ff' },
   { type: 'STAMP',     label: 'Stamp',       color: '#0891b2', bg: '#cffafe' },
 ]
 
@@ -37,6 +39,19 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 // Distinct colours used to tell signatories apart when placing per-signatory fields.
 const SIGNATORY_COLORS = ['#7c3aed', '#2563eb', '#059669', '#d97706', '#db2777', '#0891b2', '#ca8a04', '#dc2626']
+
+// Creator (pre-fill) fields render in a neutral slate to distinguish them from signer fields.
+const CREATOR_COLOR = '#475569'
+// Field types a creator can pre-fill: typed data, a checkbox, the sender's own signature/initials, and a stamp.
+const CREATOR_TYPES = ['TEXT', 'DATE', 'CHECKBOX', 'SIGNATURE', 'INITIALS', 'STAMP']
+const SIGNATURE_TYPES = ['SIGNATURE', 'INITIALS']
+// Types whose value is an image the creator captures/uploads (stamp is upload-only).
+const IMAGE_TYPES = ['SIGNATURE', 'INITIALS', 'STAMP']
+const TEXTUAL_TYPES = ['TEXT', 'DATE']
+const isChecked = v => v === 'true' || v === true
+// Font size (points) for TEXT/DATE values — the creator picks per field; drives the PDF too.
+const DEFAULT_FONT_PT = 12
+const FONT_SIZES = [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32]
 const signatoryColor = idx => SIGNATORY_COLORS[idx % SIGNATORY_COLORS.length]
 
 /* ─────────────────────────────── utilities ─────────────────────────────── */
@@ -98,6 +113,9 @@ export default function ESignBuilderPage({ initialDocStatus }) {
   // Org address book for recipient autocomplete (fetched once per session, filtered locally).
   const emailContacts = useEmailContacts()
   const [activeSignatoryIdx, setActiveSignatoryIdx] = useState(0)         // whose field is being placed
+  const [fillMode, setFillMode] = useState('SIGNER')                      // 'SIGNER' | 'CREATOR' (pre-fill)
+  const [signingField, setSigningField] = useState(null)                 // creator SIGNATURE/INITIALS field being captured
+  const [pdfScale, setPdfScale] = useState(1)                            // rendered px per PDF point (for WYSIWYG font sizing)
 
   /* ── PDF source selection ─────────────────────────────────────────────── */
   const [enabledSources, setEnabledSources] = useState({ single: true, template: false, api: false })
@@ -200,17 +218,35 @@ export default function ESignBuilderPage({ initialDocStatus }) {
   const activeSources = sourcePriority.filter(s => enabledSources[s])
   const multiSig      = signatories.length > 1
 
+  /** True for creator pre-fill fields (author supplies the value now, no signer involved). */
+  const isCreatorField = f => f.filledBy === 'CREATOR'
+
   /** Index of a field's owning signatory (defaults to the first signatory). */
   function fieldSignatoryIdx(f) {
     if (!f.signatoryId) return 0
     const i = signatories.findIndex(s => s.id === f.signatoryId)
     return i >= 0 ? i : 0
   }
-  /** A field's display colour — by signatory when multi-party, else by field type. */
+  /** A field's display colour — slate for creator pre-fills, by signatory when multi-party, else by type. */
   function fieldColor(f) {
+    if (isCreatorField(f)) return CREATOR_COLOR
     return multiSig
       ? signatoryColor(fieldSignatoryIdx(f))
       : (FIELD_TYPES.find(t => t.type === f.fieldType)?.color || '#7c3aed')
+  }
+
+  /** Update the pre-fill value of a creator field. */
+  function updateFieldValue(id, value) {
+    setFields(prev => prev.map(f => (f.id === id ? { ...f, value } : f)))
+  }
+
+  /** Merge a partial patch into a field (e.g. { fontSize }). */
+  function patchField(id, patch) {
+    setFields(prev => prev.map(f => (f.id === id ? { ...f, ...patch } : f)))
+  }
+  /** On-screen px for a field's text so it matches the final PDF (points × render scale). */
+  function fieldFontPx(f) {
+    return Math.max(6, (f.fontSize || DEFAULT_FONT_PT) * pdfScale)
   }
 
   /* ── signatory editing ────────────────────────────────────────────────── */
@@ -508,6 +544,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
     const rect = getOverlayRect()
     const x    = toPercent(e.clientX - rect.left, rect.width)
     const y    = toPercent(e.clientY - rect.top,  rect.height)
+    const isCreator = fillMode === 'CREATOR'
     const typeDef = FIELD_TYPES.find(t => t.type === selectedType)
     setFields(prev => [...prev, {
       id: crypto.randomUUID(), page: pdfCurrentPage,
@@ -518,7 +555,9 @@ export default function ESignBuilderPage({ initialDocStatus }) {
       fieldType: selectedType,
       label: typeDef?.label || selectedType,
       required: true,
-      signatoryId: signatories[activeSignatoryIdx]?.id,
+      filledBy: isCreator ? 'CREATOR' : 'SIGNER',
+      signatoryId: isCreator ? null : signatories[activeSignatoryIdx]?.id,
+      value: isCreator ? (selectedType === 'CHECKBOX' ? 'false' : '') : undefined,
     }])
   }
 
@@ -593,7 +632,11 @@ export default function ESignBuilderPage({ initialDocStatus }) {
       width: f.width, height: f.height,
       fieldType: f.fieldType, label: f.label,
       required: f.required ?? true,
-      signatoryId: f.signatoryId,
+      filledBy: f.filledBy || 'SIGNER',
+      signatoryId: isCreatorField(f) ? null : f.signatoryId,
+      value: isCreatorField(f) ? (f.value || '') : undefined,
+      signingMethod: isCreatorField(f) ? (f.signingMethod || 'TYPE') : undefined,
+      fontSize: TEXTUAL_TYPES.includes(f.fieldType) ? (f.fontSize || DEFAULT_FONT_PT) : undefined,
     }))
   }
 
@@ -616,14 +659,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
     if (!docId) { showToast('Document not ready — complete Step 1 first', 'error'); return }
     setSaving(true)
     try {
-      const payload = fields.map(f => ({
-        page: f.page, x: f.x, y: f.y,
-        width: f.width, height: f.height,
-        fieldType: f.fieldType, label: f.label,
-        required: f.required ?? true,
-        signatoryId: f.signatoryId,
-      }))
-      await esignSaveFields(docId, payload)
+      await esignSaveFields(docId, fieldsPayload())
       const alreadySent = ['PENDING', 'IN_REVIEW'].includes(initialDocStatus)
                        || ['PENDING', 'IN_REVIEW'].includes(doc?.status)
       if (alreadySent) {
@@ -1346,8 +1382,36 @@ export default function ESignBuilderPage({ initialDocStatus }) {
             <div className="w-56 shrink-0">
               <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200
                               dark:border-gray-700 p-4 shadow-sm sticky top-6">
-                {/* Signatory selector — choose whose field you're placing */}
-                {multiSig && (
+                {/* Fill mode — who supplies each field's value */}
+                <div className="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+                  <h3 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-1">Who fills the field</h3>
+                  <p className="text-xs text-gray-400 mb-2">Pre-fill data yourself, or leave it for a signer.</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button onClick={() => setFillMode('SIGNER')}
+                      className={`px-2.5 py-2 rounded-xl text-xs font-semibold border-2 transition-all
+                        ${fillMode === 'SIGNER'
+                          ? 'border-accent-500 bg-accent-50 dark:bg-accent-700/30 text-accent-700 dark:text-accent-300'
+                          : 'border-transparent bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                      Signer fills
+                    </button>
+                    <button onClick={() => { setFillMode('CREATOR'); if (!CREATOR_TYPES.includes(selectedType)) setSelectedType('TEXT') }}
+                      className={`px-2.5 py-2 rounded-xl text-xs font-semibold border-2 transition-all
+                        ${fillMode === 'CREATOR'
+                          ? 'border-accent-500 bg-accent-50 dark:bg-accent-700/30 text-accent-700 dark:text-accent-300'
+                          : 'border-transparent bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                      I'll pre-fill
+                    </button>
+                  </div>
+                  {fillMode === 'CREATOR' && (
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 flex items-start gap-1.5">
+                      <span className="w-2 h-2 rounded-sm mt-0.5 shrink-0" style={{ background: CREATOR_COLOR }}/>
+                      Pre-filled fields are baked into the document and shown read-only to signers.
+                    </p>
+                  )}
+                </div>
+
+                {/* Signatory selector — choose whose field you're placing (signer mode only) */}
+                {fillMode === 'SIGNER' && multiSig && (
                   <div className="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
                     <h3 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-1">Placing fields for</h3>
                     <p className="text-xs text-gray-400 mb-2">Fields you place are assigned to this signatory.</p>
@@ -1377,9 +1441,13 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                 )}
 
                 <h3 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3">Field Types</h3>
-                <p className="text-xs text-gray-400 mb-3">Select a type, then click on the PDF to place</p>
+                <p className="text-xs text-gray-400 mb-3">
+                  {fillMode === 'CREATOR'
+                    ? 'Select a type, click the PDF to place, then type the value.'
+                    : 'Select a type, then click on the PDF to place'}
+                </p>
                 <div className="space-y-2">
-                  {FIELD_TYPES.map(t => (
+                  {(fillMode === 'CREATOR' ? FIELD_TYPES.filter(t => CREATOR_TYPES.includes(t.type)) : FIELD_TYPES).map(t => (
                     <button key={t.type} onClick={() => setSelectedType(t.type)}
                       className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold
                                   border-2 transition-all
@@ -1404,33 +1472,76 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                     Placed: {fields.length} field{fields.length !== 1 ? 's' : ''}
                   </p>
                   {fields.map(f => {
-                    const owner = multiSig ? signatories[fieldSignatoryIdx(f)] : null
+                    const creator = isCreatorField(f)
+                    const owner = (!creator && multiSig) ? signatories[fieldSignatoryIdx(f)] : null
                     return (
-                      <div key={f.id} className="flex items-center justify-between py-1">
-                        <span className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 min-w-0">
-                          <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: fieldColor(f) }}/>
-                          <span className="truncate">
-                            {f.label}{owner ? ` · ${owner.name || owner.email}` : ''}
+                      <div key={f.id} className="py-1">
+                        <div className="flex items-center justify-between">
+                          <span className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 min-w-0">
+                            <span className="w-2 h-2 rounded-sm shrink-0" style={{ background: fieldColor(f) }}/>
+                            <span className="truncate">
+                              {f.label}{creator ? ' · You (pre-fill)' : owner ? ` · ${owner.name || owner.email}` : ''}
+                            </span>
                           </span>
-                        </span>
-                        <span className="flex items-center gap-0.5 shrink-0">
-                          {pdfPageCount > 1 && (
-                            <button onClick={() => copyFieldToAllPages(f)}
-                              title="Copy this field to every page"
-                              className="text-gray-300 hover:text-accent-500 transition-colors p-0.5">
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                                <rect x="9" y="9" width="11" height="11" rx="2"/>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 15V5a2 2 0 012-2h10"/>
+                          <span className="flex items-center gap-0.5 shrink-0">
+                            {pdfPageCount > 1 && (
+                              <button onClick={() => copyFieldToAllPages(f)}
+                                title="Copy this field to every page"
+                                className="text-gray-300 hover:text-accent-500 transition-colors p-0.5">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                  <rect x="9" y="9" width="11" height="11" rx="2"/>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 15V5a2 2 0 012-2h10"/>
+                                </svg>
+                              </button>
+                            )}
+                            <button onClick={() => removeField(f.id)}
+                              className="text-gray-300 hover:text-red-400 transition-colors p-0.5">
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
                               </svg>
                             </button>
-                          )}
-                          <button onClick={() => removeField(f.id)}
-                            className="text-gray-300 hover:text-red-400 transition-colors p-0.5">
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
-                            </svg>
+                          </span>
+                        </div>
+                        {creator && (f.fieldType === 'TEXT' || f.fieldType === 'DATE') && (
+                          <input
+                            type={f.fieldType === 'DATE' ? 'date' : 'text'}
+                            value={f.value || ''}
+                            onChange={e => updateFieldValue(f.id, e.target.value)}
+                            placeholder={f.fieldType === 'DATE' ? '' : 'Enter value…'}
+                            className="mt-1 w-full px-2 py-1 text-xs rounded-lg border border-gray-200 dark:border-gray-600
+                                       bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200
+                                       focus:outline-none focus:ring-2 focus:ring-accent-400"
+                          />
+                        )}
+                        {creator && f.fieldType === 'CHECKBOX' && (
+                          <label className="mt-1 flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
+                            <input type="checkbox" checked={isChecked(f.value)}
+                              onChange={e => updateFieldValue(f.id, e.target.checked ? 'true' : 'false')} />
+                            Checked by default
+                          </label>
+                        )}
+                        {creator && IMAGE_TYPES.includes(f.fieldType) && (
+                          <button onClick={() => setSigningField(f)}
+                            className="mt-1 w-full px-2 py-1 text-xs font-semibold rounded-lg border transition-colors
+                                       border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300
+                                       hover:border-accent-400 hover:text-accent-600">
+                            {f.fieldType === 'STAMP'
+                              ? (f.value ? '✓ Stamp added · Replace' : 'Upload stamp')
+                              : (f.value ? '✓ Signed · Re-sign'
+                                         : `Add ${f.fieldType === 'INITIALS' ? 'initials' : 'signature'}`)}
                           </button>
-                        </span>
+                        )}
+                        {TEXTUAL_TYPES.includes(f.fieldType) && (
+                          <div className="mt-1 flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400">
+                            <span>Font size</span>
+                            <select value={f.fontSize || DEFAULT_FONT_PT}
+                              onChange={e => patchField(f.id, { fontSize: Number(e.target.value) })}
+                              className="px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600
+                                         bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200">
+                              {FONT_SIZES.map(s => <option key={s} value={s}>{s} pt</option>)}
+                            </select>
+                          </div>
+                        )}
                       </div>
                     )
                   })}
@@ -1499,6 +1610,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                       source={pdfBase64ForPreview}
                       pageNumber={pdfCurrentPage}
                       onPageCountChange={setPdfPageCount}
+                      onViewport={vp => setPdfScale(vp.scale || 1)}
                     />
                     <div className="absolute inset-0"
                          style={{ cursor: 'crosshair' }}
@@ -1520,11 +1632,41 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                             }}
                             onMouseDown={e => onDragStart(e, f.id)}
                             onClick={e => e.stopPropagation()}>
-                            <span style={{ fontSize: 10, fontWeight: 700, color,
-                                           padding: '1px 4px', userSelect: 'none', display: 'block',
-                                           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {f.label}
-                            </span>
+                            {isCreatorField(f) && f.fieldType === 'CHECKBOX' ? (
+                              <span style={{ fontSize: 14, fontWeight: 700, color, display: 'flex',
+                                             alignItems: 'center', justifyContent: 'center', height: '100%',
+                                             userSelect: 'none' }}>
+                                {isChecked(f.value) ? '☑' : '☐'}
+                              </span>
+                            ) : isCreatorField(f) && IMAGE_TYPES.includes(f.fieldType) && f.value ? (
+                              f.signingMethod === 'TYPE' ? (
+                                <span style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontSize: 13, color: '#111827',
+                                               display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                               height: '100%', whiteSpace: 'nowrap', overflow: 'hidden',
+                                               textOverflow: 'ellipsis', padding: '0 4px' }}>
+                                  {f.value}
+                                </span>
+                              ) : (
+                                <img src={f.value} alt="signature"
+                                  style={{ position: 'absolute', inset: 2, width: 'calc(100% - 4px)',
+                                           height: 'calc(100% - 4px)', objectFit: 'contain' }} />
+                              )
+                            ) : isCreatorField(f) && (f.fieldType === 'TEXT' || f.fieldType === 'DATE') && f.value ? (
+                              // Pre-filled data — render at the chosen size (px = pt × render scale) so the
+                              // on-screen preview matches the final stamped PDF exactly.
+                              <span style={{ fontSize: fieldFontPx(f), lineHeight: 1.1, color: '#1e293b',
+                                             display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
+                                             height: '100%', padding: '0 3px', userSelect: 'none',
+                                             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {f.value}
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: 10, fontWeight: 700, color,
+                                             padding: '1px 4px', userSelect: 'none', display: 'block',
+                                             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {isCreatorField(f) ? (f.value || f.label) : f.label}
+                              </span>
+                            )}
                             {pdfPageCount > 1 && (
                               <button
                                 title="Copy this field to every page"
@@ -1661,6 +1803,21 @@ export default function ESignBuilderPage({ initialDocStatus }) {
           </button>
         </div>
       )}
+
+      {/* Sender signature capture (creator SIGNATURE/INITIALS pre-fill) */}
+      <SignatureCaptureModal
+        open={!!signingField}
+        kind={signingField?.fieldType}
+        uploadOnly={signingField?.fieldType === 'STAMP'}
+        initialValue={signingField?.value}
+        initialMethod={signingField?.signingMethod}
+        onClose={() => setSigningField(null)}
+        onApply={({ value, method }) => {
+          setFields(prev => prev.map(f =>
+            f.id === signingField.id ? { ...f, value, signingMethod: method } : f))
+          setSigningField(null)
+        }}
+      />
     </div>
   )
 }

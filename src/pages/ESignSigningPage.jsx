@@ -26,8 +26,14 @@ const FIELD_COLORS = {
   INITIALS:  { border: '#2563eb', bg: 'rgba(37,99,235,0.12)'  },
   DATE:      { border: '#059669', bg: 'rgba(5,150,105,0.12)'  },
   TEXT:      { border: '#d97706', bg: 'rgba(217,119,6,0.12)'  },
+  CHECKBOX:  { border: '#4f46e5', bg: 'rgba(79,70,229,0.12)'  },
   STAMP:     { border: '#0891b2', bg: 'rgba(8,145,178,0.12)'  },
 }
+
+/** A checkbox value is "checked" when truthy. */
+const isChecked = v => v === 'true' || v === true
+
+const TEXTUAL_TYPES = ['TEXT', 'DATE']
 
 // ─── Canvas helpers ──────────────────────────────────────────────────────────
 
@@ -49,7 +55,7 @@ function getCanvasPoint(e, canvas) {
  * overlaps the value: tall fields show name and timestamp on two lines; short
  * fields collapse them to a single linear line ("Name · timestamp").
  */
-function SignedFieldInner({ sigMethod, sigValue, signerName, dateStr, caption }) {
+function SignedFieldInner({ sigMethod, sigValue, signerName, dateStr, caption, fontSizePx }) {
   const ref = useRef(null)
   const [compact, setCompact] = useState(false)
   useLayoutEffect(() => {
@@ -67,8 +73,8 @@ function SignedFieldInner({ sigMethod, sigValue, signerName, dateStr, caption })
     <div ref={ref} style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
       <div style={{ flex: 1, minHeight: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
         {sigMethod === 'TYPE' ? (
-          <span style={{ fontFamily: 'Arial, Helvetica, sans-serif', color: '#1e293b', fontSize: 13, padding: '2px 4px',
-                         overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>
+          <span style={{ fontFamily: 'Arial, Helvetica, sans-serif', color: '#1e293b', fontSize: fontSizePx || 13, lineHeight: 1.1,
+                         padding: '2px 4px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>
             {sigValue}
           </span>
         ) : sigValue ? (
@@ -124,8 +130,10 @@ export default function ESignSigningPage() {
   const [activeField, setActiveField] = useState(null)
   const [modalTab,    setModalTab]    = useState('DRAW')   // DRAW | TYPE | UPLOAD
   const [typedText,   setTypedText]   = useState('')
+  const [typedFontSize, setTypedFontSize] = useState(12)   // signer's font-size choice for TEXT/DATE
   const [saving,      setSaving]      = useState(false)
   const [applyToAll,  setApplyToAll]  = useState(false)    // duplicate this value to every matching field
+  const [pdfScale,    setPdfScale]    = useState(1)        // rendered px per PDF point (WYSIWYG font sizing)
 
   /* "adopt once, click to apply" — the signer's reusable value per field type
      (SIGNATURE / INITIALS / DATE). After the first time they fill one, clicking
@@ -154,8 +162,12 @@ export default function ESignSigningPage() {
   const mySignatoryId  = doc?.currentSignatoryId || null
   const coSignatories  = doc?.signatories || []
   const firstSigId     = coSignatories[0]?.id
-  const isMine         = f => !mySignatoryId || (f.signatoryId || firstSigId) === mySignatoryId
+  /** Fields the sender pre-filled — read-only to every signer, never their responsibility. */
+  const isPrefilled    = f => f.filledBy === 'CREATOR'
+  const isMine         = f => !isPrefilled(f) && (!mySignatoryId || (f.signatoryId || firstSigId) === mySignatoryId)
   const myFields       = fields.filter(isMine)
+  /** On-screen px for a field's text so it matches the final PDF (points × render scale). */
+  const fieldFontPx    = f => Math.max(6, (f.fontSize || 12) * pdfScale)
   const mySignatory    = coSignatories.find(s => s.id === mySignatoryId)
   const isMultiParty   = coSignatories.length > 1
 
@@ -247,6 +259,7 @@ export default function ESignSigningPage() {
   function openModal(field) {
     setActiveField(field)
     setApplyToAll(false)
+    setTypedFontSize(field.fontSize || 12)   // seed size picker from the field's current size
 
     // If the field was already signed, pre-fill the editor with its current value
     // so the signer can adjust rather than re-enter from scratch.
@@ -317,9 +330,9 @@ export default function ESignSigningPage() {
   const REUSABLE = ['SIGNATURE', 'INITIALS', 'DATE']
 
   /* ── Core: persist a value onto a field and update local state ── */
-  async function signFieldWith(field, value, method) {
+  async function signFieldWith(field, value, method, extra = {}) {
     const timeZone = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone } catch { return undefined } })()
-    const updated = await esignSignField(token, field.id, { signingMethod: method, value, timeZone })
+    const updated = await esignSignField(token, field.id, { signingMethod: method, value, timeZone, ...extra })
     setFields(prev => prev.map(f =>
       f.id === field.id
         ? { ...f, ...updated, signed: true, _signedValue: value, _signedMethod: method }
@@ -330,6 +343,15 @@ export default function ESignSigningPage() {
   /* ── Click a field: reuse the adopted value if we have one, else open the modal ── */
   function handleFieldClick(field) {
     if (!isMine(field)) return
+    // Checkboxes toggle in place — no modal.
+    if (field.fieldType === 'CHECKBOX') {
+      const checked = isChecked(field._signedValue ?? field.value)
+      setApplyingId(field.id)
+      signFieldWith(field, checked ? 'false' : 'true', 'TYPE')
+        .catch(e => alert(e.message))
+        .finally(() => setApplyingId(null))
+      return
+    }
     // Already applied → re-open the editor so the signer can change it before submitting.
     if (field.signed) { openModal(field); return }
     const a = adopted[field.fieldType]
@@ -397,7 +419,9 @@ export default function ESignSigningPage() {
         method = modalTab   // 'DRAW' or 'UPLOAD'
       }
 
-      await signFieldWith(activeField, value, method)
+      // Carry the signer's font-size choice for text/date fields (WYSIWYG into the PDF).
+      const extra = TEXTUAL_TYPES.includes(activeField.fieldType) ? { fontSize: typedFontSize } : {}
+      await signFieldWith(activeField, value, method, extra)
 
       // Remember this value so the signer can click other same-type fields to auto-fill them.
       if (REUSABLE.includes(activeField.fieldType)) {
@@ -704,6 +728,62 @@ export default function ESignSigningPage() {
 
   /* A single field overlay box — used by both the per-page canvas view and the iframe fallback. */
   const renderField = (f) => {
+    // Sender pre-filled fields: read-only, show the value, no signer caption / no interaction.
+    if (isPrefilled(f)) {
+      const sig = f.fieldType === 'SIGNATURE' || f.fieldType === 'INITIALS' || f.fieldType === 'STAMP'
+      return (
+        <div
+          key={f.id}
+          title="Pre-filled by sender"
+          style={{
+            position: 'absolute',
+            left: `${f.x}%`, top: `${f.y}%`, width: `${f.width}%`, height: `${f.height}%`,
+            border: '1px solid #cbd5e1', background: 'rgba(100,116,139,0.06)',
+            borderRadius: 4, boxSizing: 'border-box', overflow: 'hidden',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px',
+          }}
+        >
+          {f.fieldType === 'CHECKBOX' ? (
+            <span style={{ fontSize: 16, color: '#334155' }}>{isChecked(f.value) ? '☑' : '☐'}</span>
+          ) : sig && f.value ? (
+            <SignedFieldInner sigMethod={f.signingMethod} sigValue={f.value} />
+          ) : (
+            <span style={{ fontSize: f.value ? fieldFontPx(f) : 13, lineHeight: 1.1, color: '#1e293b', fontWeight: 500, textAlign: 'center',
+                           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', userSelect: 'none' }}>
+              {f.value || f.label}
+            </span>
+          )}
+        </div>
+      )
+    }
+
+    // Checkbox (signer-owned): click toggles in place — no modal, no image.
+    if (f.fieldType === 'CHECKBOX') {
+      const mine    = isMine(f)
+      const checked = isChecked(f._signedValue ?? f.value)
+      const colors  = FIELD_COLORS.CHECKBOX
+      return (
+        <div
+          key={f.id}
+          onClick={() => mine && !submitted && handleFieldClick(f)}
+          title={mine ? 'Click to toggle' : undefined}
+          style={{
+            position: 'absolute',
+            left: `${f.x}%`, top: `${f.y}%`, width: `${f.width}%`, height: `${f.height}%`,
+            border: `2px dashed ${mine ? colors.border : '#cbd5e1'}`,
+            background: checked ? 'rgba(22,163,74,0.08)' : (mine ? colors.bg : 'rgba(148,163,184,0.10)'),
+            borderRadius: 4, boxSizing: 'border-box',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: mine && !submitted ? 'pointer' : 'default',
+          }}
+        >
+          <span style={{ fontSize: 16, fontWeight: 700,
+                         color: checked ? '#16a34a' : (mine ? colors.border : '#94a3b8') }}>
+            {applyingId === f.id ? '…' : (checked ? '☑' : '☐')}
+          </span>
+        </div>
+      )
+    }
     const colors      = FIELD_COLORS[f.fieldType] || FIELD_COLORS.SIGNATURE
     const isSigned    = !!f.signed
     const mine        = isMine(f)
@@ -750,6 +830,7 @@ export default function ESignSigningPage() {
               signerName={f.fieldType === 'STAMP' ? undefined : f.signerName}
               dateStr={f.fieldType === 'STAMP' ? undefined : dateStr}
               caption={f.fieldType === 'STAMP' ? undefined : caption}
+              fontSizePx={TEXTUAL_TYPES.includes(f.fieldType) ? fieldFontPx(f) : undefined}
             />
             {mine && !submitted && (
               // Edit affordance — lets the signer change this entry before submitting.
@@ -872,6 +953,7 @@ export default function ESignSigningPage() {
                           source={pdfUrl}
                           pageNumber={pageNum}
                           onPageCountChange={setPdfPageCount}
+                          onViewport={vp => setPdfScale(vp.scale || 1)}
                           onError={() => setPdfRenderFailed(true)}
                         />
                         <div className="absolute inset-0">
@@ -890,6 +972,7 @@ export default function ESignSigningPage() {
                       source={pdfUrl}
                       pageNumber={pdfCurrentPage}
                       onPageCountChange={setPdfPageCount}
+                      onViewport={vp => setPdfScale(vp.scale || 1)}
                       onError={() => setPdfRenderFailed(true)}
                     />
                     <div className="absolute inset-0">
@@ -1121,6 +1204,15 @@ export default function ESignSigningPage() {
                   className="w-full px-4 py-3 rounded-xl border-2 border-gray-200
                              focus:border-accent outline-none text-lg"
                 />
+                <label className="mt-3 flex items-center gap-2 text-xs text-gray-500">
+                  Font size
+                  <select value={typedFontSize} onChange={e => setTypedFontSize(Number(e.target.value))}
+                    className="px-2 py-1 rounded-lg border border-gray-200 text-sm">
+                    {[8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32].map(s => (
+                      <option key={s} value={s}>{s} pt</option>
+                    ))}
+                  </select>
+                </label>
               </div>
             )}
 
