@@ -15,7 +15,9 @@ import {
   bulkEmailGetJob,
   bulkEmailGetStatus,
   bulkEmailGetAudit,
+  bulkEmailGetAnalytics,
   bulkEmailResend,
+  bulkEmailResendSegment,
   bulkEmailRetryPending,
   bulkEmailCancelJob,
 } from '../services/api'
@@ -25,6 +27,7 @@ import { fmtDateTimeGB as fmtDate } from '../utils/date'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const STATUS_COLORS = {
+  SCHEDULED:  'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
   PENDING:    'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
   PROCESSING: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
   COMPLETED:  'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
@@ -48,6 +51,10 @@ const AUDIT_ICONS = {
   JOB_FAILED:           { path: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z',                                color: 'text-red-500'    },
   JOB_CANCELLED:        { path: 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636',        color: 'text-gray-400'   },
   RESEND_CREATED:       { path: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15', color: 'text-brand-500' },
+  RESEND_SEGMENT:       { path: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15', color: 'text-sky-500' },
+  RETRY_PENDING:        { path: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15', color: 'text-blue-500' },
+  JOB_SCHEDULED:        { path: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',                                                       color: 'text-purple-500' },
+  RESUMED:              { path: 'M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z M21 12a9 9 0 11-18 0 9 9 0 0118 0z', color: 'text-blue-500' },
 }
 
 const POLL_MS = 3000
@@ -67,9 +74,12 @@ export default function BulkEmailDetailPage() {
   const [job,          setJob]          = useState(null)
   const [audit,        setAudit]        = useState([])
   const [auditLoaded,  setAuditLoaded]  = useState(false)
+  const [analytics,    setAnalytics]    = useState(null)
+  const [analyticsLoaded, setAnalyticsLoaded] = useState(false)
   const [loading,      setLoading]      = useState(true)
   const [tab,          setTab]          = useState('overview')
   const [recipPage,    setRecipPage]    = useState(0)   // recipients tab pagination
+  const [recipFilter,  setRecipFilter]  = useState('all') // all | opened | clicked | unopened | unsubscribed
   const pollRef = useRef(null)
 
   const TERMINAL = ['COMPLETED', 'PARTIAL', 'FAILED', 'CANCELLED']
@@ -144,6 +154,18 @@ export default function BulkEmailDetailPage() {
       .catch(() => {})
   }, [tab, auditLoaded, id])
 
+  // ── Lazy analytics load — fetch when Analytics tab is first opened ─────
+  useEffect(() => {
+    if (tab !== 'analytics' || analyticsLoaded) return
+    loadAnalytics()
+  }, [tab, analyticsLoaded, id])
+
+  function loadAnalytics() {
+    return bulkEmailGetAnalytics(id)
+      .then(a => { setAnalytics(a); setAnalyticsLoaded(true) })
+      .catch(() => setAnalyticsLoaded(true))
+  }
+
   // ── Actions ───────────────────────────────────────────────────────────────
   async function handleResend() {
     try {
@@ -184,6 +206,20 @@ export default function BulkEmailDetailPage() {
     } catch (e) { toast.error(e.message) }
   }
 
+  const [segmentBusy, setSegmentBusy] = useState('')
+  async function doResendSegment(segment) {
+    setSegmentBusy(segment)
+    try {
+      const created = await bulkEmailResendSegment(id, segment)
+      toast.success(`Follow-up campaign started — ${created.totalCount} recipient(s)`)
+      navigate(`/bulk-email/${created.id}`)
+    } catch (e) {
+      toast.error(e.message)
+    } finally {
+      setSegmentBusy('')
+    }
+  }
+
   // ── Derived ───────────────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -194,17 +230,25 @@ export default function BulkEmailDetailPage() {
   }
   if (!job) return null
 
+  const isScheduled = job.status === 'SCHEDULED'
   const isActive   = job.status === 'PENDING' || job.status === 'PROCESSING'
+  const canCancel  = isActive || isScheduled
+  const isFinished = job.status === 'COMPLETED' || job.status === 'PARTIAL'
   const isTerminal = ['COMPLETED', 'PARTIAL', 'FAILED', 'CANCELLED'].includes(job.status)
   const pct        = job.totalCount > 0 ? Math.round((job.sentCount / job.totalCount) * 100) : 0
   const att        = ATT_LABELS[job.attachmentType] || ATT_LABELS.NONE
 
   const TABS = [
     { key: 'overview',    label: 'Overview'                        },
+    { key: 'analytics',   label: 'Analytics'                        },
     { key: 'recipients',  label: `Recipients (${job.totalCount})`   },
     { key: 'attachment',  label: 'Attachment'                       },
     { key: 'audit',       label: `Audit Log (${audit.length})`       },
   ]
+
+  // Engagement rates for the header chips (recipient-distinct; clicks are the reliable signal)
+  const openedPct  = job.sentCount > 0 ? Math.round((job.openedCount  / job.sentCount) * 100) : 0
+  const clickedPct = job.sentCount > 0 ? Math.round((job.clickedCount / job.sentCount) * 100) : 0
 
   return (
     <div className="p-6 max-w-screen-xl mx-auto">
@@ -235,6 +279,12 @@ export default function BulkEmailDetailPage() {
               )}
             </p>
             <p className="text-xs text-gray-400 mt-1">Created {fmtDate(job.createdAt)}</p>
+            {isScheduled && job.scheduledAt && (
+              <p className="text-xs font-semibold text-purple-600 dark:text-purple-400 mt-1 flex items-center gap-1">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Scheduled to send {fmtDate(job.scheduledAt)}
+              </p>
+            )}
           </div>
 
           {/* Right: counters + actions */}
@@ -286,7 +336,7 @@ export default function BulkEmailDetailPage() {
                   Retry {(job.pendingCount ?? 0).toLocaleString()} Pending
                 </button>
               )}
-              {isActive && (
+              {canCancel && (
                 <button
                   onClick={handleCancel}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold border border-red-300 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
@@ -294,7 +344,7 @@ export default function BulkEmailDetailPage() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
                   </svg>
-                  Cancel Job
+                  {isScheduled ? 'Cancel Schedule' : 'Cancel Job'}
                 </button>
               )}
               <button
@@ -310,8 +360,8 @@ export default function BulkEmailDetailPage() {
           </div>
         </div>
 
-        {/* Progress bar */}
-        <div className="mt-5">
+        {/* Progress bar (hidden for not-yet-started scheduled jobs) */}
+        <div className={`mt-5 ${isScheduled ? 'hidden' : ''}`}>
           <div className="flex justify-between text-xs text-gray-500 mb-1.5">
             <span>{isActive ? 'Sending…' : `${pct}% complete`}</span>
             <span>{job.sentCount} / {job.totalCount}</span>
@@ -327,6 +377,36 @@ export default function BulkEmailDetailPage() {
             />
           </div>
         </div>
+
+        {/* Engagement + filtering chips */}
+        {(job.sentCount > 0 || job.suppressedCount > 0 || job.invalidSkippedCount > 0 || job.duplicateSkippedCount > 0) && (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {job.sentCount > 0 && <>
+              <EngagementChip label="Opened"  value={`${openedPct}%`}  sub={`${job.openedCount}/${job.sentCount}`} tone="sky" />
+              <EngagementChip label="Clicked" value={`${clickedPct}%`} sub={`${job.clickedCount}/${job.sentCount}`} tone="violet" />
+            </>}
+            {job.unsubscribedCount > 0 && (
+              <EngagementChip label="Unsubscribed" value={String(job.unsubscribedCount)} tone="rose" />
+            )}
+            {job.suppressedCount > 0 && (
+              <EngagementChip label="Skipped (opted out)" value={String(job.suppressedCount)} tone="gray" />
+            )}
+            {job.invalidSkippedCount > 0 && (
+              <EngagementChip label="Skipped (invalid)" value={String(job.invalidSkippedCount)} tone="gray" />
+            )}
+            {job.duplicateSkippedCount > 0 && (
+              <EngagementChip label="Skipped (duplicate)" value={String(job.duplicateSkippedCount)} tone="gray" />
+            )}
+            {job.sentCount > 0 && (
+              <button
+                onClick={() => setTab('analytics')}
+                className="ml-auto text-xs font-semibold text-accent-600 hover:text-accent-700 dark:text-accent-400"
+              >
+                View analytics →
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── Tab bar ──────────────────────────────────────────────────────── */}
@@ -402,10 +482,184 @@ export default function BulkEmailDetailPage() {
         </div>
       )}
 
+      {/* ── ANALYTICS ── */}
+      {tab === 'analytics' && (
+        <div className="space-y-6">
+          {!analyticsLoaded && !analytics ? (
+            <div className="flex justify-center py-16"><Spinner /></div>
+          ) : job.sentCount === 0 ? (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-12 text-center text-gray-400">
+              <p className="text-sm">Engagement data appears once emails have been sent.</p>
+            </div>
+          ) : (
+            <>
+              {/* Rate tiles */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <RateTile
+                  label="Open rate" tone="sky"
+                  pct={pctOf(analytics?.openRate)}
+                  detail={`${analytics?.openedRecipients ?? 0} of ${analytics?.sentCount ?? job.sentCount} recipients`}
+                />
+                <RateTile
+                  label="Click rate" tone="violet"
+                  pct={pctOf(analytics?.clickRate)}
+                  detail={`${analytics?.clickedRecipients ?? 0} of ${analytics?.sentCount ?? job.sentCount} recipients`}
+                />
+                <RateTile
+                  label="Click-to-open" tone="emerald"
+                  pct={pctOf(analytics?.clickToOpenRate)}
+                  detail="of openers who clicked"
+                />
+                <RateTile
+                  label="Unsubscribed" tone="rose"
+                  value={String(analytics?.unsubscribedCount ?? 0)}
+                  detail={(analytics?.suppressedCount ?? 0) > 0
+                    ? `${analytics.suppressedCount} skipped at send`
+                    : 'this campaign'}
+                />
+              </div>
+
+              {/* Re-engagement — follow-up campaigns to non-openers / non-clickers */}
+              {isFinished && (
+                <div className="flex flex-wrap items-center gap-2 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm px-5 py-4">
+                  <div className="mr-auto">
+                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Re-engage recipients</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Start a new follow-up campaign to those who didn't engage.</p>
+                  </div>
+                  {(() => {
+                    const sent = analytics?.sentCount ?? job.sentCount
+                    const nonOpeners = Math.max(0, sent - (analytics?.openedRecipients ?? job.openedCount ?? 0))
+                    const nonClickers = Math.max(0, sent - (analytics?.clickedRecipients ?? job.clickedCount ?? 0))
+                    return (
+                      <>
+                        <button
+                          onClick={() => doResendSegment('UNOPENED')}
+                          disabled={!!segmentBusy || nonOpeners === 0}
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold border border-sky-300 text-sky-700 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {segmentBusy === 'UNOPENED'
+                            ? <span className="w-4 h-4 border-2 border-sky-400 border-t-transparent rounded-full animate-spin"/>
+                            : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>}
+                          Email non-openers ({nonOpeners})
+                        </button>
+                        <button
+                          onClick={() => doResendSegment('UNCLICKED')}
+                          disabled={!!segmentBusy || nonClickers === 0}
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold border border-violet-300 text-violet-700 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {segmentBusy === 'UNCLICKED'
+                            ? <span className="w-4 h-4 border-2 border-violet-400 border-t-transparent rounded-full animate-spin"/>
+                            : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5"/></svg>}
+                          Email non-clickers ({nonClickers})
+                        </button>
+                      </>
+                    )
+                  })()}
+                </div>
+              )}
+
+              {/* Reliability note */}
+              <div className="flex items-start gap-2 text-xs text-gray-500 dark:text-gray-400 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-xl px-4 py-3">
+                <svg className="w-4 h-4 shrink-0 mt-0.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>
+                  Opens are approximate — some mail apps (e.g. Apple Mail Privacy Protection) pre-load
+                  the tracking pixel, inflating opens, while image-blocking clients undercount them.
+                  <strong className="font-semibold"> Clicks are the reliable engagement signal.</strong>
+                  {' '}Raw hits: {(analytics?.totalOpens ?? 0).toLocaleString()} opens · {(analytics?.totalClicks ?? 0).toLocaleString()} clicks.
+                </span>
+              </div>
+
+              {/* Timeline */}
+              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-sm font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">Opens &amp; clicks over time</h2>
+                  <div className="flex items-center gap-4 text-xs">
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-sky-400"/>Opens</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-violet-500"/>Clicks</span>
+                  </div>
+                </div>
+                <TimelineChart points={analytics?.timeline || []} />
+              </div>
+
+              {/* Top links */}
+              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
+                <h2 className="text-sm font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-4">Most-clicked links</h2>
+                {(analytics?.topLinks || []).length === 0 ? (
+                  <p className="text-sm text-gray-400 py-4 text-center">No link clicks recorded yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {analytics.topLinks.map((l, i) => {
+                      const max = analytics.topLinks[0]?.clicks || 1
+                      return (
+                        <div key={i} className="flex items-center gap-3">
+                          <div className="flex-1 min-w-0">
+                            <a href={l.url} target="_blank" rel="noopener noreferrer"
+                               className="text-xs font-medium text-accent-600 dark:text-accent-400 hover:underline truncate block">
+                              {l.url}
+                            </a>
+                            <div className="h-1.5 mt-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                              <div className="h-full bg-violet-500 rounded-full" style={{ width: `${Math.round((l.clicks / max) * 100)}%` }} />
+                            </div>
+                          </div>
+                          <span className="text-sm font-bold text-gray-700 dark:text-gray-200 tabular-nums shrink-0">{l.clicks.toLocaleString()}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       {/* ── RECIPIENTS ── */}
-      {tab === 'recipients' && (
+      {tab === 'recipients' && (() => {
+        const rows = job.rows || []
+        const counts = {
+          all:          rows.length,
+          opened:       rows.filter(r => r.openCount  > 0).length,
+          clicked:      rows.filter(r => r.clickCount > 0).length,
+          unopened:     rows.filter(r => r.status === 'SENT' && !(r.openCount > 0)).length,
+          unsubscribed: rows.filter(r => r.unsubscribed).length,
+        }
+        const FILTERS = [
+          { key: 'all',          label: 'All'          },
+          { key: 'opened',       label: 'Opened'       },
+          { key: 'clicked',      label: 'Clicked'      },
+          { key: 'unopened',     label: 'Not opened'   },
+          { key: 'unsubscribed', label: 'Unsubscribed' },
+        ]
+        const filtered = rows.filter(r =>
+          recipFilter === 'opened'       ? r.openCount  > 0 :
+          recipFilter === 'clicked'      ? r.clickCount > 0 :
+          recipFilter === 'unopened'     ? (r.status === 'SENT' && !(r.openCount > 0)) :
+          recipFilter === 'unsubscribed' ? r.unsubscribed :
+          true)
+        const pageRows = filtered.slice(recipPage * RECIP_PAGE_SIZE, (recipPage + 1) * RECIP_PAGE_SIZE)
+        return (
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-          {!job.rows || job.rows.length === 0 ? (
+          {/* Engagement filter toolbar */}
+          {rows.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 px-5 py-3 border-b border-gray-100 dark:border-gray-700">
+              {FILTERS.map(f => (
+                <button
+                  key={f.key}
+                  onClick={() => { setRecipFilter(f.key); setRecipPage(0) }}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                    recipFilter === f.key
+                      ? 'bg-accent-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}
+                >
+                  {f.label} <span className="opacity-70">{(counts[f.key] ?? 0).toLocaleString()}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {rows.length === 0 ? (
             <div className="p-12 text-center text-gray-400">
               <div className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600">
                 <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -423,15 +677,16 @@ export default function BulkEmailDetailPage() {
                     <th className="px-5 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Email</th>
                     <th className="px-5 py-3 text-left font-semibold text-gray-600 dark:text-gray-300 hidden sm:table-cell">Name</th>
                     <th className="px-5 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Status</th>
-                    <th className="px-5 py-3 text-left font-semibold text-gray-600 dark:text-gray-300 hidden md:table-cell">Info</th>
+                    <th className="px-5 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Opened</th>
+                    <th className="px-5 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Clicked</th>
                     <th className="px-5 py-3 text-left font-semibold text-gray-600 dark:text-gray-300 hidden lg:table-cell">Sent At</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                  {job.rows.slice(recipPage * RECIP_PAGE_SIZE, (recipPage + 1) * RECIP_PAGE_SIZE).map(r => (
+                  {pageRows.map(r => (
                     <tr key={r.rowIndex} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                       <td className="px-5 py-3 text-gray-500">{r.rowIndex + 1}</td>
-                      <td className="px-5 py-3 text-gray-800 dark:text-gray-200 font-medium max-w-[200px] truncate">
+                      <td className="px-5 py-3 text-gray-800 dark:text-gray-200 font-medium max-w-[200px] truncate" title={r.error || ''}>
                         {r.recipientEmail}
                       </td>
                       <td className="px-5 py-3 text-gray-600 dark:text-gray-400 hidden sm:table-cell max-w-[160px] truncate">
@@ -442,7 +697,7 @@ export default function BulkEmailDetailPage() {
                           r.status === 'SENT'    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
                           : r.status === 'FAILED' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
                           : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
-                        }`}>
+                        }`} title={r.error || ''}>
                           {r.status === 'SENT'
                             ? <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/></svg>
                             : r.status === 'FAILED'
@@ -452,21 +707,41 @@ export default function BulkEmailDetailPage() {
                           {' '}{r.status}
                         </span>
                       </td>
-                      <td className="px-5 py-3 text-gray-500 hidden md:table-cell max-w-[200px] truncate text-xs">
-                        {r.error || (r.messageId ? `ID: ${r.messageId}` : '—')}
+                      {/* Opened */}
+                      <td className="px-5 py-3 whitespace-nowrap">
+                        {r.unsubscribed ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-300">Unsubscribed</span>
+                        ) : r.openCount > 0 ? (
+                          <span className="inline-flex items-center gap-1 text-sky-600 dark:text-sky-400 text-xs font-semibold" title={r.lastOpenedAt ? `Last opened ${fmtDate(r.lastOpenedAt)}` : ''}>
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                            {r.openCount > 1 ? `×${r.openCount}` : 'Yes'}
+                          </span>
+                        ) : <span className="text-gray-300 dark:text-gray-600">—</span>}
+                      </td>
+                      {/* Clicked */}
+                      <td className="px-5 py-3 whitespace-nowrap">
+                        {r.clickCount > 0 ? (
+                          <span className="inline-flex items-center gap-1 text-violet-600 dark:text-violet-400 text-xs font-semibold" title={r.lastClickedAt ? `Last clicked ${fmtDate(r.lastClickedAt)}` : ''}>
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg>
+                            {r.clickCount > 1 ? `×${r.clickCount}` : 'Yes'}
+                          </span>
+                        ) : <span className="text-gray-300 dark:text-gray-600">—</span>}
                       </td>
                       <td className="px-5 py-3 text-gray-400 text-xs hidden lg:table-cell whitespace-nowrap">
                         {r.sentAt ? fmtDate(r.sentAt) : '—'}
                       </td>
                     </tr>
                   ))}
+                  {pageRows.length === 0 && (
+                    <tr><td colSpan={7} className="px-5 py-10 text-center text-sm text-gray-400">No recipients match this filter.</td></tr>
+                  )}
                 </tbody>
               </table>
-              {job.rows.length > RECIP_PAGE_SIZE && (
+              {filtered.length > RECIP_PAGE_SIZE && (
                 <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-500">
                   <span>
                     {(recipPage * RECIP_PAGE_SIZE + 1).toLocaleString()}–
-                    {Math.min((recipPage + 1) * RECIP_PAGE_SIZE, job.rows.length).toLocaleString()} of {job.rows.length.toLocaleString()}
+                    {Math.min((recipPage + 1) * RECIP_PAGE_SIZE, filtered.length).toLocaleString()} of {filtered.length.toLocaleString()}
                   </span>
                   <div className="flex gap-2">
                     <button
@@ -476,7 +751,7 @@ export default function BulkEmailDetailPage() {
                     >Prev</button>
                     <button
                       className="px-3 py-1 rounded-lg border border-gray-200 dark:border-gray-600 disabled:opacity-40 hover:border-primary"
-                      disabled={(recipPage + 1) * RECIP_PAGE_SIZE >= job.rows.length}
+                      disabled={(recipPage + 1) * RECIP_PAGE_SIZE >= filtered.length}
                       onClick={() => setRecipPage(p => p + 1)}
                     >Next</button>
                   </div>
@@ -485,7 +760,8 @@ export default function BulkEmailDetailPage() {
             </div>
           )}
         </div>
-      )}
+        )
+      })()}
 
       {/* ── ATTACHMENT ── */}
       {tab === 'attachment' && (
@@ -603,6 +879,78 @@ export default function BulkEmailDetailPage() {
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+// ── Analytics helpers ───────────────────────────────────────────────────────────
+function pctOf(fraction) {
+  if (!fraction || fraction <= 0) return 0
+  return Math.round(fraction * 100)
+}
+
+const CHIP_TONES = {
+  sky:    'bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-300',
+  violet: 'bg-violet-50 text-violet-700 dark:bg-violet-900/20 dark:text-violet-300',
+  rose:   'bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300',
+  gray:   'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+}
+
+function EngagementChip({ label, value, sub, tone = 'gray' }) {
+  return (
+    <span className={`inline-flex items-baseline gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${CHIP_TONES[tone]}`}>
+      {label}
+      <span className="font-bold">{value}</span>
+      {sub && <span className="opacity-60 font-normal">{sub}</span>}
+    </span>
+  )
+}
+
+const TILE_TONES = {
+  sky:     { bar: 'bg-sky-500',     text: 'text-sky-600 dark:text-sky-400'         },
+  violet:  { bar: 'bg-violet-500',  text: 'text-violet-600 dark:text-violet-400'   },
+  emerald: { bar: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400' },
+  rose:    { bar: 'bg-rose-500',    text: 'text-rose-600 dark:text-rose-400'       },
+}
+
+function RateTile({ label, pct, value, detail, tone = 'sky' }) {
+  const t = TILE_TONES[tone] || TILE_TONES.sky
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-5">
+      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{label}</p>
+      <p className={`text-3xl font-bold mt-1 ${t.text}`}>{value != null ? value : `${pct}%`}</p>
+      {pct != null && value == null && (
+        <div className="h-1.5 mt-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+          <div className={`h-full rounded-full ${t.bar}`} style={{ width: `${Math.min(100, pct)}%` }} />
+        </div>
+      )}
+      {detail && <p className="text-xs text-gray-400 mt-2">{detail}</p>}
+    </div>
+  )
+}
+
+function TimelineChart({ points }) {
+  if (!points || points.length === 0) {
+    return <p className="text-sm text-gray-400 py-8 text-center">No opens or clicks recorded yet.</p>
+  }
+  const max = Math.max(1, ...points.map(p => Math.max(p.opens, p.clicks)))
+  return (
+    <div className="overflow-x-auto">
+      <div className="flex items-end gap-3 min-w-full h-44 px-1" style={{ minWidth: `${points.length * 44}px` }}>
+        {points.map((p, i) => (
+          <div key={i} className="flex-1 flex flex-col items-center justify-end gap-1 h-full min-w-[32px]">
+            <div className="flex items-end gap-0.5 h-full w-full justify-center">
+              <div className="w-2.5 bg-sky-400 rounded-t transition-all" title={`${p.opens} opens`}
+                   style={{ height: `${Math.max(2, (p.opens / max) * 100)}%` }} />
+              <div className="w-2.5 bg-violet-500 rounded-t transition-all" title={`${p.clicks} clicks`}
+                   style={{ height: `${Math.max(2, (p.clicks / max) * 100)}%` }} />
+            </div>
+            <span className="text-[9px] text-gray-400 whitespace-nowrap -rotate-45 origin-top-left mt-1 h-6">
+              {(p.bucket || '').replace(/^\d{4}-/, '').replace(' ', ' ')}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

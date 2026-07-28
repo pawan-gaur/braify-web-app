@@ -322,6 +322,14 @@ export const bulkEmailResend       = (id)                  => http.post(`/bulk-e
 export const bulkEmailRetryPending = (id)                  => http.post(`/bulk-email/jobs/${id}/retry-pending`).then(r => r.data)
 export const bulkEmailCancelJob    = (id)                  => http.post(`/bulk-email/jobs/${id}/cancel`).then(r => r.data)
 export const bulkEmailGetAudit     = (id)                  => http.get(`/bulk-email/jobs/${id}/audit`).then(r => r.data)
+export const bulkEmailGetAnalytics = (id)                  => http.get(`/bulk-email/jobs/${id}/analytics`).then(r => r.data)
+export const bulkEmailResendSegment = (id, segment, label) =>
+  http.post(`/bulk-email/jobs/${id}/resend-segment`, null, { params: { segment, label: label || undefined } }).then(r => r.data)
+
+// ── Bulk Email Suppressions (unsubscribe list) ─────────────
+export const bulkEmailListSuppressions = ()      => http.get('/bulk-email/suppressions').then(r => r.data)
+export const bulkEmailAddSuppression   = (email) => http.post('/bulk-email/suppressions', { email }).then(r => r.data)
+export const bulkEmailRemoveSuppression = (id)   => http.delete(`/bulk-email/suppressions/${id}`).then(r => r.data)
 
 // ── Subscription (Platform Admin) ──────────────────────────
 export const getSubscription    = (orgId)           => http.get(`/organizations/${orgId}/subscription`).then(r => r.data)
