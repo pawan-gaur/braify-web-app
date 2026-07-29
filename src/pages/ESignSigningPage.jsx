@@ -17,7 +17,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react'
 import BrandLogo from '../components/ui/BrandLogo'
 import { useParams } from 'react-router-dom'
-import { esignOpenDocument, esignSignField, esignSubmitDocument, esignUploadAttachment, esignDownloadSignSource } from '../services/api'
+import { esignOpenDocument, esignSignField, esignSubmitDocument, esignUploadAttachment, esignDownloadSignSource, esignConsent } from '../services/api'
 import { IconCheck } from '../components/ui/icons'
 import PdfPageCanvas from '../components/esign/PdfPageCanvas'
 
@@ -134,6 +134,11 @@ export default function ESignSigningPage() {
   const [saving,      setSaving]      = useState(false)
   const [applyToAll,  setApplyToAll]  = useState(false)    // duplicate this value to every matching field
   const [pdfScale,    setPdfScale]    = useState(1)        // rendered px per PDF point (WYSIWYG font sizing)
+  /* ESIGN/UETA electronic-records-&-signatures consent gate */
+  const [consented,   setConsented]   = useState(false)
+  const [agreeChecked, setAgreeChecked] = useState(false)
+  const [consentBusy, setConsentBusy] = useState(false)
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false)  // intent-to-sign modal
 
   /* "adopt once, click to apply" — the signer's reusable value per field type
      (SIGNATURE / INITIALS / DATE). After the first time they fill one, clicking
@@ -170,6 +175,20 @@ export default function ESignSigningPage() {
   const fieldFontPx    = f => Math.max(6, (f.fontSize || 12) * pdfScale)
   const mySignatory    = coSignatories.find(s => s.id === mySignatoryId)
   const isMultiParty   = coSignatories.length > 1
+  // Consent gate: already consented on the server (reload-safe) OR just accepted this session.
+  const hasConsent     = consented || !!mySignatory?.consentedAt
+  async function handleConsent() {
+    setConsentBusy(true)
+    try {
+      const updated = await esignConsent(token)
+      setDoc(updated)          // carries the new consentedAt on the signatory
+      setConsented(true)
+    } catch (e) {
+      alert(e.message)
+    } finally {
+      setConsentBusy(false)
+    }
+  }
 
   /* ── Load document ── */
   useEffect(() => {
@@ -444,17 +463,23 @@ export default function ESignSigningPage() {
   }
 
   /* ── Submit ── */
-  async function handleSubmit() {
+  // Opens the intent-to-sign confirmation modal (replaces the native confirm dialog).
+  function handleSubmit() {
     const unsignedRequired = myFields.filter(f => f.required && !f.signed)
     if (unsignedRequired.length > 0) {
       alert(`Please sign all required fields (${unsignedRequired.length} remaining)`)
       return
     }
-    if (!confirm('Submit document? You cannot make changes after submitting.')) return
+    setShowSubmitConfirm(true)
+  }
+
+  // Performs the actual submission once the signer confirms intent.
+  async function doSubmit() {
     setSubmitting(true)
     try {
       const res = await esignSubmitDocument(token)
       setSubmitStatus(res?.status || null)
+      setShowSubmitConfirm(false)
       setSubmitted(true)
     } catch (e) {
       alert(e.message)
@@ -1278,6 +1303,67 @@ export default function ESignSigningPage() {
                   : applyToAll && matchingUnsignedCount > 0
                     ? `Apply to all ${matchingUnsignedCount + 1}`
                     : (activeField.signed ? 'Update' : 'Apply Signature')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Intent-to-sign confirmation (replaces the native confirm dialog) ── */}
+      {showSubmitConfirm && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-100">
+              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </div>
+              <h2 className="text-lg font-bold text-gray-900">Sign &amp; submit</h2>
+            </div>
+            <div className="px-6 py-4 text-sm text-gray-600">
+              <p>By submitting, I agree that my electronic signature is the legal equivalent of my
+                handwritten signature, that I intend to sign and be bound by this document, and that
+                <strong> I cannot make changes after submitting</strong>.</p>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-2">
+              <button onClick={() => setShowSubmitConfirm(false)} disabled={submitting}
+                className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+                Cancel
+              </button>
+              <button onClick={doSubmit} disabled={submitting}
+                className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 disabled:opacity-50">
+                {submitting ? 'Submitting…' : 'Sign & Submit'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── ESIGN/UETA electronic-records-&-signatures consent gate ── */}
+      {!hasConsent && !submitted && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h2 className="text-lg font-bold text-gray-900">Consent to use electronic records &amp; signatures</h2>
+            </div>
+            <div className="px-6 py-4 text-sm text-gray-600 space-y-3 max-h-[50vh] overflow-y-auto">
+              <p>To sign this document electronically, please review and agree to the following:</p>
+              <ul className="list-disc pl-5 space-y-1.5">
+                <li>You consent to receive and sign this document, and related records, in <strong>electronic form</strong> rather than on paper.</li>
+                <li>Your electronic signature is <strong>legally binding</strong> and is the equivalent of your handwritten signature.</li>
+                <li>You may request a paper copy, or withdraw your consent, by contacting the sender. Withdrawing consent means you will be unable to complete signing electronically.</li>
+                <li>To view and sign you need a modern web browser and a device that can display PDF documents.</li>
+              </ul>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100">
+              <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
+                <input type="checkbox" checked={agreeChecked} onChange={e => setAgreeChecked(e.target.checked)} className="mt-0.5"/>
+                <span>I have read the disclosure above and I agree to use electronic records and signatures.</span>
+              </label>
+              <button onClick={handleConsent} disabled={!agreeChecked || consentBusy}
+                className="btn btn-accent w-full mt-4 disabled:opacity-40">
+                {consentBusy ? 'Recording…' : 'I Agree — Continue'}
               </button>
             </div>
           </div>

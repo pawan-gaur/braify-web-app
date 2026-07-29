@@ -830,7 +830,8 @@ export default function LandingPage() {
                 <ul className="space-y-2.5">
                   {col.links.map(l => (
                     <li key={l}>
-                      <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors">{l}</a>
+                      <a href={{ 'Privacy Policy': '/privacy', 'Terms of Use': '/terms' }[l] || '#'}
+                         className="text-sm text-gray-400 hover:text-white transition-colors">{l}</a>
                     </li>
                   ))}
                 </ul>
@@ -841,8 +842,8 @@ export default function LandingPage() {
           <div className="border-t border-white/5 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-xs text-gray-500">© {new Date().getFullYear()} Braify. All rights reserved.</p>
             <div className="flex gap-5">
-              {['Privacy', 'Terms', 'Cookies'].map(l => (
-                <a key={l} href="#" className="text-xs text-gray-500 hover:text-gray-300 transition-colors">{l}</a>
+              {[['Privacy', '/privacy'], ['Terms', '/terms'], ['Security', '/trust'], ['Cookies', '#']].map(([l, href]) => (
+                <a key={l} href={href} className="text-xs text-gray-500 hover:text-gray-300 transition-colors">{l}</a>
               ))}
             </div>
           </div>

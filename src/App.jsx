@@ -56,6 +56,9 @@ const FeatureDetailPage      = lazy(() => import('./pages/FeatureDetailPage'))
 const PlatformSettingsPage         = lazy(() => import('./pages/PlatformSettingsPage'))
 const PlatformSecurityPoliciesPage = lazy(() => import('./pages/PlatformSecurityPoliciesPage'))
 const PlatformUserAccessPage       = lazy(() => import('./pages/PlatformUserAccessPage'))
+const TrustPage              = lazy(() => import('./pages/TrustPage'))
+const PrivacyPage            = lazy(() => import('./pages/PrivacyPage'))
+const TermsPage              = lazy(() => import('./pages/TermsPage'))
 
 /* Centered spinner shown while a lazy route chunk loads. */
 function RouteFallback() {
@@ -211,6 +214,11 @@ function AppRoutes() {
       />
       <Route path="/get-started"      element={<GetStartedPage />} />
       <Route path="/features/:slug"   element={<FeatureDetailPage />} />
+      {/* Trust / legal (public) */}
+      <Route path="/trust"    element={<TrustPage />} />
+      <Route path="/security" element={<TrustPage />} />
+      <Route path="/privacy"  element={<PrivacyPage />} />
+      <Route path="/terms"    element={<TermsPage />} />
       <Route path="/accept-invite"   element={<AcceptInvitePage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password"  element={<ResetPasswordPage />} />
