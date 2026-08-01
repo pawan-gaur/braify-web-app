@@ -19,6 +19,7 @@ import BrandLogo from '../components/ui/BrandLogo'
 import { useParams } from 'react-router-dom'
 import { esignOpenDocument, esignSignField, esignSubmitDocument, esignUploadAttachment, esignDownloadSignSource, esignConsent } from '../services/api'
 import { IconCheck } from '../components/ui/icons'
+import { useToast } from '../context/ToastContext'
 import PdfPageCanvas from '../components/esign/PdfPageCanvas'
 
 const FIELD_COLORS = {
@@ -110,6 +111,7 @@ function SignedFieldInner({ sigMethod, sigValue, signerName, dateStr, caption, f
 
 export default function ESignSigningPage() {
   const { token } = useParams()
+  const toast = useToast()
 
   const [doc,        setDoc]        = useState(null)
   const [pdfUrl,     setPdfUrl]     = useState(null)
@@ -184,7 +186,7 @@ export default function ESignSigningPage() {
       setDoc(updated)          // carries the new consentedAt on the signatory
       setConsented(true)
     } catch (e) {
-      alert(e.message)
+      toast.error(e.message)
     } finally {
       setConsentBusy(false)
     }
@@ -367,7 +369,7 @@ export default function ESignSigningPage() {
       const checked = isChecked(field._signedValue ?? field.value)
       setApplyingId(field.id)
       signFieldWith(field, checked ? 'false' : 'true', 'TYPE')
-        .catch(e => alert(e.message))
+        .catch(e => toast.error(e.message))
         .finally(() => setApplyingId(null))
       return
     }
@@ -377,7 +379,7 @@ export default function ESignSigningPage() {
     if (a) {
       setApplyingId(field.id)
       signFieldWith(field, a.value, a.method)
-        .catch(e => alert(e.message))
+        .catch(e => toast.error(e.message))
         .finally(() => setApplyingId(null))
     } else {
       openModal(field)
@@ -456,7 +458,7 @@ export default function ESignSigningPage() {
       clearCanvas()
       setTypedText('')
     } catch (e) {
-      alert(e.message)
+      toast.error(e.message)
     } finally {
       setSaving(false)
     }
@@ -467,7 +469,7 @@ export default function ESignSigningPage() {
   function handleSubmit() {
     const unsignedRequired = myFields.filter(f => f.required && !f.signed)
     if (unsignedRequired.length > 0) {
-      alert(`Please sign all required fields (${unsignedRequired.length} remaining)`)
+      toast.warning(`Please sign all required fields (${unsignedRequired.length} remaining)`)
       return
     }
     setShowSubmitConfirm(true)
@@ -482,7 +484,7 @@ export default function ESignSigningPage() {
       setShowSubmitConfirm(false)
       setSubmitted(true)
     } catch (e) {
-      alert(e.message)
+      toast.error(e.message)
     } finally {
       setSubmitting(false)
     }

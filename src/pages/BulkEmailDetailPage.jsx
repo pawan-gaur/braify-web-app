@@ -207,11 +207,22 @@ export default function BulkEmailDetailPage() {
   }
 
   const [segmentBusy, setSegmentBusy] = useState('')
+  const [confirmSegment, setConfirmSegment] = useState(null)   // 'UNOPENED' | 'UNCLICKED' | null
+
+  /** How many recipients a follow-up to this segment would email. */
+  function segmentCount(segment) {
+    const sent = analytics?.sentCount ?? job?.sentCount ?? 0
+    if (segment === 'UNOPENED')  return Math.max(0, sent - (analytics?.openedRecipients  ?? job?.openedCount  ?? 0))
+    if (segment === 'UNCLICKED') return Math.max(0, sent - (analytics?.clickedRecipients ?? job?.clickedCount ?? 0))
+    return 0
+  }
+
   async function doResendSegment(segment) {
     setSegmentBusy(segment)
     try {
       const created = await bulkEmailResendSegment(id, segment)
       toast.success(`Follow-up campaign started — ${created.totalCount} recipient(s)`)
+      setConfirmSegment(null)
       navigate(`/bulk-email/${created.id}`)
     } catch (e) {
       toast.error(e.message)
@@ -533,7 +544,7 @@ export default function BulkEmailDetailPage() {
                     return (
                       <>
                         <button
-                          onClick={() => doResendSegment('UNOPENED')}
+                          onClick={() => setConfirmSegment('UNOPENED')}
                           disabled={!!segmentBusy || nonOpeners === 0}
                           className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold border border-sky-300 text-sky-700 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         >
@@ -543,7 +554,7 @@ export default function BulkEmailDetailPage() {
                           Email non-openers ({nonOpeners})
                         </button>
                         <button
-                          onClick={() => doResendSegment('UNCLICKED')}
+                          onClick={() => setConfirmSegment('UNCLICKED')}
                           disabled={!!segmentBusy || nonClickers === 0}
                           className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold border border-violet-300 text-violet-700 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         >
@@ -877,6 +888,47 @@ export default function BulkEmailDetailPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Re-engage confirmation (shows how many will be emailed before sending) ── */}
+      {confirmSegment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
+             onClick={() => !segmentBusy && setConfirmSegment(null)}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden"
+               onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+              <div className="w-10 h-10 rounded-full bg-accent-50 dark:bg-accent-900/30 flex items-center justify-center shrink-0">
+                <svg className="w-5 h-5 text-accent-600 dark:text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+              </div>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Send follow-up campaign?</h2>
+            </div>
+            <div className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300 space-y-2">
+              <p>
+                This will create a new campaign and <strong>email {segmentCount(confirmSegment).toLocaleString()} recipient(s)</strong> who
+                {confirmSegment === 'UNOPENED' ? ' did not open ' : ' did not click '}
+                “{job.label}”.
+              </p>
+              <p className="text-gray-500 dark:text-gray-400">
+                Emails send immediately using the same template. Unsubscribed and invalid addresses are skipped.
+                This cannot be undone.
+              </p>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-2">
+              <button onClick={() => setConfirmSegment(null)} disabled={!!segmentBusy}
+                className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
+                Cancel
+              </button>
+              <button onClick={() => doResendSegment(confirmSegment)} disabled={!!segmentBusy || segmentCount(confirmSegment) === 0}
+                className="btn btn-accent btn-sm disabled:opacity-50">
+                {segmentBusy
+                  ? 'Sending…'
+                  : `Send to ${segmentCount(confirmSegment).toLocaleString()} recipient(s)`}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
