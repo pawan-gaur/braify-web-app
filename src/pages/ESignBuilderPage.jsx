@@ -15,6 +15,7 @@ import Breadcrumbs from '../components/ui/Breadcrumbs'
 import { IconX, IconCheck, IconArrowRight, IconArrowLeft } from '../components/ui/icons'
 import PdfPageCanvas from '../components/esign/PdfPageCanvas'
 import SignatureCaptureModal from '../components/esign/SignatureCaptureModal'
+import { fmtFieldDate } from '../utils/date'
 import EmailAutocomplete from '../components/ui/EmailAutocomplete'
 import useEmailContacts, { addLocalContacts } from '../hooks/useEmailContacts'
 
@@ -34,6 +35,13 @@ const SOURCE_META = {
 }
 
 const DEFAULT_FIELD_SIZE = { width: 18, height: 5 }
+// Type-specific placement sizes (% of page). Image fields default larger & squarer so a
+// stamp/signature isn't squeezed into a thin line; everything is still resizable afterwards.
+const FIELD_DEFAULT_SIZE = {
+  STAMP:     { width: 16, height: 12 },
+  SIGNATURE: { width: 22, height: 8  },
+  INITIALS:  { width: 12, height: 7  },
+}
 const STEPS    = ['Setup', 'Place Fields', 'Send']
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -546,12 +554,13 @@ export default function ESignBuilderPage({ initialDocStatus }) {
     const y    = toPercent(e.clientY - rect.top,  rect.height)
     const isCreator = fillMode === 'CREATOR'
     const typeDef = FIELD_TYPES.find(t => t.type === selectedType)
+    const size = FIELD_DEFAULT_SIZE[selectedType] || DEFAULT_FIELD_SIZE
     setFields(prev => [...prev, {
       id: crypto.randomUUID(), page: pdfCurrentPage,
-      x:  Math.min(Math.max(x - DEFAULT_FIELD_SIZE.width  / 2, 0), 100 - DEFAULT_FIELD_SIZE.width),
-      y:  Math.min(Math.max(y - DEFAULT_FIELD_SIZE.height / 2, 0), 100 - DEFAULT_FIELD_SIZE.height),
-      width:  DEFAULT_FIELD_SIZE.width,
-      height: DEFAULT_FIELD_SIZE.height,
+      x:  Math.min(Math.max(x - size.width  / 2, 0), 100 - size.width),
+      y:  Math.min(Math.max(y - size.height / 2, 0), 100 - size.height),
+      width:  size.width,
+      height: size.height,
       fieldType: selectedType,
       label: typeDef?.label || selectedType,
       required: true,
@@ -1649,7 +1658,8 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                               ) : (
                                 <img src={f.value} alt="signature"
                                   style={{ position: 'absolute', inset: 2, width: 'calc(100% - 4px)',
-                                           height: 'calc(100% - 4px)', objectFit: 'contain' }} />
+                                           height: 'calc(100% - 4px)', objectFit: 'contain',
+                                           pointerEvents: 'none' }} />
                               )
                             ) : isCreatorField(f) && (f.fieldType === 'TEXT' || f.fieldType === 'DATE') && f.value ? (
                               // Pre-filled data — render at the chosen size (px = pt × render scale) so the
@@ -1658,7 +1668,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                                              display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
                                              height: '100%', padding: '0 3px', userSelect: 'none',
                                              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {f.value}
+                                {f.fieldType === 'DATE' ? fmtFieldDate(f.value) : f.value}
                               </span>
                             ) : (
                               <span style={{ fontSize: 10, fontWeight: 700, color,

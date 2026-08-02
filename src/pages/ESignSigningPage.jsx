@@ -20,6 +20,7 @@ import { useParams } from 'react-router-dom'
 import { esignOpenDocument, esignSignField, esignSubmitDocument, esignUploadAttachment, esignDownloadSignSource, esignConsent } from '../services/api'
 import { IconCheck } from '../components/ui/icons'
 import { useToast } from '../context/ToastContext'
+import { fmtFieldDate } from '../utils/date'
 import PdfPageCanvas from '../components/esign/PdfPageCanvas'
 
 const FIELD_COLORS = {
@@ -777,7 +778,7 @@ export default function ESignSigningPage() {
           ) : (
             <span style={{ fontSize: f.value ? fieldFontPx(f) : 13, lineHeight: 1.1, color: '#1e293b', fontWeight: 500, textAlign: 'center',
                            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', userSelect: 'none' }}>
-              {f.value || f.label}
+              {f.value ? (f.fieldType === 'DATE' ? fmtFieldDate(f.value) : f.value) : f.label}
             </span>
           )}
         </div>
@@ -853,7 +854,7 @@ export default function ESignSigningPage() {
           <>
             <SignedFieldInner
               sigMethod={sigMethod}
-              sigValue={sigValue}
+              sigValue={f.fieldType === 'DATE' ? fmtFieldDate(sigValue) : sigValue}
               signerName={f.fieldType === 'STAMP' ? undefined : f.signerName}
               dateStr={f.fieldType === 'STAMP' ? undefined : dateStr}
               caption={f.fieldType === 'STAMP' ? undefined : caption}
