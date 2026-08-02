@@ -92,6 +92,21 @@ export function fmtDateTimeGB(iso) {
 }
 
 /**
+ * Format a plain calendar-date field value ("YYYY-MM-DD", as produced by an
+ * <input type="date">) for display as "DD/MM/YYYY". Pure string reordering — no Date
+ * parsing — so it never shifts by timezone. Non-ISO input is returned unchanged.
+ *
+ * @param {string|null} value
+ * @returns {string}
+ * @example fmtFieldDate('2026-05-16') // → "16/05/2026"
+ */
+export function fmtFieldDate(value) {
+  if (!value) return value
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value).trim())
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : value
+}
+
+/**
  * Relative time label: "2 minutes ago", "3 hours ago", "5 days ago".
  * For timestamps older than 30 days, falls back to fmtDate().
  *

@@ -18,12 +18,14 @@ import Breadcrumbs from '../components/ui/Breadcrumbs'
 import ViewToggle, { useView } from '../components/ui/ViewToggle'
 import { fmtDateTimeGB as fmtDate } from '../utils/date'
 import { IconX, IconChevronsLeft, IconChevronsRight, IconChevronLeft, IconChevronRight } from '../components/ui/icons'
+import SuppressionModal from '../components/bulkemail/SuppressionModal'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const POLL_MS          = 5000
 const PAGE_SIZE_OPTIONS = [10, 20, 50]
 
 const STATUS_COLORS = {
+  SCHEDULED:  'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
   PENDING:    'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300',
   PROCESSING: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
   COMPLETED:  'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
@@ -33,6 +35,7 @@ const STATUS_COLORS = {
 }
 
 const STATUS_BAR = {
+  SCHEDULED:  'bg-purple-400',
   PENDING:    'bg-yellow-400',
   PROCESSING: 'bg-blue-400',
   COMPLETED:  'bg-green-400',
@@ -40,6 +43,9 @@ const STATUS_BAR = {
   FAILED:     'bg-red-400',
   CANCELLED:  'bg-gray-300 dark:bg-gray-600',
 }
+
+// Recipient-distinct engagement rate (clicks are the reliable signal).
+function rate(n, d) { return d > 0 ? Math.round((n / d) * 100) : 0 }
 
 // ── SVG icons for attachment types ─────────────────────────────────────────────
 function AttachmentIcon({ type, className = 'w-4 h-4' }) {
@@ -202,6 +208,7 @@ export default function BulkEmailJobsPage() {
   const [size, setSize]         = useState(20)
   const [totalPages, setTotalPages]   = useState(0)
   const [totalElements, setTotalElements] = useState(0)
+  const [suppressOpen, setSuppressOpen] = useState(false)
   const pollRef = useRef(null)
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
@@ -287,17 +294,32 @@ export default function BulkEmailJobsPage() {
             Send templated emails to a list of recipients
           </p>
         </div>
-        <button
-          onClick={() => navigate('/bulk-email/send')}
-          className="btn btn-accent"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-          </svg>
-          Send Bulk Email
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setSuppressOpen(true)}
+            className="btn btn-secondary"
+            title="Manage the unsubscribe / do-not-email list"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+            </svg>
+            Unsubscribes
+          </button>
+          <button
+            onClick={() => navigate('/bulk-email/send')}
+            className="btn btn-accent"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+            Send Bulk Email
+          </button>
+        </div>
       </div>
+
+      <SuppressionModal open={suppressOpen} onClose={() => setSuppressOpen(false)} />
 
       {/* ── Toolbar ────────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-3 mb-5">
@@ -328,6 +350,7 @@ export default function BulkEmailJobsPage() {
                      focus:outline-none focus:ring-2 focus:ring-accent-500"
         >
           <option value="">All Statuses</option>
+          <option value="SCHEDULED">Scheduled</option>
           <option value="PENDING">Pending</option>
           <option value="PROCESSING">Processing</option>
           <option value="COMPLETED">Completed</option>
@@ -439,6 +462,20 @@ export default function BulkEmailJobsPage() {
                         : <span className="text-gray-400">{pct}%</span>}
                       <span className="text-gray-400">of {job.totalCount}</span>
                     </div>
+
+                    {/* Engagement / schedule */}
+                    {job.sentCount > 0 && (
+                      <div className="flex items-center gap-3 text-[11px] text-gray-500 dark:text-gray-400">
+                        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-sky-400"/>{rate(job.openedCount, job.sentCount)}% opened</span>
+                        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-violet-500"/>{rate(job.clickedCount, job.sentCount)}% clicked</span>
+                      </div>
+                    )}
+                    {job.status === 'SCHEDULED' && job.scheduledAt && (
+                      <div className="flex items-center gap-1 text-[11px] text-purple-600 dark:text-purple-400">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        Sends {fmtDate(job.scheduledAt)}
+                      </div>
+                    )}
 
                     {/* ID + date */}
                     <div className="flex items-center justify-between gap-2 mt-auto pt-2
@@ -585,17 +622,31 @@ export default function BulkEmailJobsPage() {
 
                     {/* Progress */}
                     <td className="px-4 py-3.5 hidden sm:table-cell">
-                      <div className="flex items-center gap-2">
-                        <div className="w-24">
-                          <ProgressBar job={job} />
-                        </div>
-                        <span className="text-xs text-gray-500 whitespace-nowrap">
-                          {job.sentCount}/{job.totalCount}
-                          {job.failedCount > 0 && (
-                            <span className="text-red-500 ml-1 inline-flex items-center gap-0.5">· {job.failedCount}<IconX className="w-3 h-3 inline" /></span>
-                          )}
+                      {job.status === 'SCHEDULED' ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400 whitespace-nowrap">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                          {job.scheduledAt ? fmtDate(job.scheduledAt) : 'Scheduled'}
                         </span>
-                      </div>
+                      ) : (
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-24">
+                              <ProgressBar job={job} />
+                            </div>
+                            <span className="text-xs text-gray-500 whitespace-nowrap">
+                              {job.sentCount}/{job.totalCount}
+                              {job.failedCount > 0 && (
+                                <span className="text-red-500 ml-1 inline-flex items-center gap-0.5">· {job.failedCount}<IconX className="w-3 h-3 inline" /></span>
+                              )}
+                            </span>
+                          </div>
+                          {job.sentCount > 0 && (
+                            <div className="text-[10px] text-gray-400 mt-1 whitespace-nowrap">
+                              {rate(job.openedCount, job.sentCount)}% opened · {rate(job.clickedCount, job.sentCount)}% clicked
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </td>
 
                     {/* Created */}

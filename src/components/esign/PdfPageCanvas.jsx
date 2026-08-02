@@ -20,7 +20,7 @@ pdfjsLib.GlobalWorkerOptions.workerPort = new PdfjsWorker()
  * @param onError           called if the PDF can't be loaded/rendered (e.g. CORS on a cloud URL),
  *                          so callers can fall back to another viewer
  */
-export default function PdfPageCanvas({ source, pageNumber, onPageCountChange, onError }) {
+export default function PdfPageCanvas({ source, pageNumber, onPageCountChange, onError, onViewport }) {
   const canvasRef = useRef(null)
   const [failed, setFailed] = useState(false)
 
@@ -59,6 +59,11 @@ export default function PdfPageCanvas({ source, pageNumber, onPageCountChange, o
 
         canvas.width  = scaled.width
         canvas.height = scaled.height
+
+        // Report the render scale so overlays can size text in the SAME px-per-point
+        // ratio as the rendered page → the on-screen font matches the final PDF (WYSIWYG).
+        onViewport?.({ scale, pageWidthPt: viewport.width, pageHeightPt: viewport.height,
+                       pxWidth: scaled.width, pxHeight: scaled.height })
 
         const ctx = canvas.getContext('2d')
         ctx.clearRect(0, 0, canvas.width, canvas.height)

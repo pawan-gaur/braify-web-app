@@ -169,6 +169,8 @@ export default function BulkEmailSendPage() {
   const [jobLabel,  setJobLabel]  = useState('')
   const [sending,   setSending]   = useState(false)
   const [sendError, setSendError] = useState('')
+  const [scheduleMode, setScheduleMode] = useState('now')   // 'now' | 'later'
+  const [scheduledAt,  setScheduledAt]  = useState('')      // datetime-local string
 
   // ── Load email & PDF templates ───────────────────────────────────────────
   useEffect(() => {
@@ -331,8 +333,17 @@ export default function BulkEmailSendPage() {
       // Sheet 2 fields are sent when primary = EXCEL_SHEET OR when secondary toggle is on
       const needsExcelFields = attachmentType === 'EXCEL_SHEET' || includeExcelSheet
 
+      // Scheduling — validate a future time when "Schedule for later" is chosen
+      let scheduledIso
+      if (scheduleMode === 'later') {
+        if (!scheduledAt) { setSendError('Pick a date and time to schedule the campaign'); setSending(false); return }
+        if (new Date(scheduledAt).getTime() <= Date.now()) { setSendError('Scheduled time must be in the future'); setSending(false); return }
+        scheduledIso = scheduledAt   // "YYYY-MM-DDTHH:mm" — parsed as LocalDateTime by the backend
+      }
+
       const payload = {
         label:           jobLabel.trim() || undefined,
+        scheduledAt:     scheduledIso,
         emailTemplateId: selectedTemplateId,
         emailColumn,
         nameColumn:      nameColumn || undefined,
@@ -364,7 +375,7 @@ export default function BulkEmailSendPage() {
         }),
       }
       const job = await bulkEmailCreateJob(payload)
-      showToast('Campaign started — redirecting to status…', 'success')
+      showToast(scheduledIso ? 'Campaign scheduled — redirecting…' : 'Campaign started — redirecting to status…', 'success')
       navigate(`/bulk-email/${job.id}`)
     } catch (e) {
       setSendError(e.message || 'Failed to start campaign')
@@ -1075,6 +1086,33 @@ export default function BulkEmailSendPage() {
             value={jobLabel} onChange={e => setJobLabel(e.target.value)} className={INPUT}/>
         </div>
 
+        {/* Schedule */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">When to send</label>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setScheduleMode('now')}
+              className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-colors ${
+                scheduleMode === 'now'
+                  ? 'border-accent-500 bg-accent-50 dark:bg-accent-900/20 text-accent-700 dark:text-accent-300'
+                  : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+              Send now
+            </button>
+            <button type="button" onClick={() => setScheduleMode('later')}
+              className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-colors ${
+                scheduleMode === 'later'
+                  ? 'border-accent-500 bg-accent-50 dark:bg-accent-900/20 text-accent-700 dark:text-accent-300'
+                  : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
+              Schedule for later
+            </button>
+          </div>
+          {scheduleMode === 'later' && (
+            <input type="datetime-local" value={scheduledAt}
+              onChange={e => setScheduledAt(e.target.value)}
+              min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)}
+              className={`${INPUT} mt-2`} />
+          )}
+        </div>
+
         {/* Error banner */}
         {sendError && (
           <div className="flex items-start gap-3 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700">
@@ -1099,7 +1137,14 @@ export default function BulkEmailSendPage() {
           {sending ? (
             <>
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0"/>
-              Starting campaign…
+              {scheduleMode === 'later' ? 'Scheduling…' : 'Starting campaign…'}
+            </>
+          ) : scheduleMode === 'later' ? (
+            <>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              Schedule Campaign — {xlsxRows.length} Email{xlsxRows.length !== 1 ? 's' : ''}
             </>
           ) : (
             <>

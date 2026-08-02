@@ -1,0 +1,75 @@
+name: CD — braify-web-app (dev)
+
+# Deploys the `develop` branch to the DEV EC2 instance.
+# Prod (deploy.yml) deploys `main`; this file deploys `develop`.
+# Uses DEV_-prefixed secrets so it targets a separate box from production:
+#   DEV_EC2_HOST · DEV_EC2_USERNAME · DEV_EC2_SSH_KEY · DEV_VITE_API_BASE_URL (optional)
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-dev-app
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout ────────────────────────────────────────────────────
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── 2. Node 20 ─────────────────────────────────────────────────────
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # ── 3. Install & Build ─────────────────────────────────────────────
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build bundle
+        run: npm run build
+        env:
+          # Frontend calls relative /api paths — Nginx on the dev box proxies them to
+          # the backend on the same domain, so no absolute URL is normally needed.
+          VITE_API_BASE_URL: ${{ secrets.DEV_VITE_API_BASE_URL }}
+
+      # ── 4. Clear old build on DEV EC2 ──────────────────────────────────
+      - name: Clear old build
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host:     ${{ secrets.DEV_EC2_HOST }}
+          username: ${{ secrets.DEV_EC2_USERNAME }}
+          key:      ${{ secrets.DEV_EC2_SSH_KEY }}
+          script: |
+            sudo mkdir -p /var/www/braify-web-app
+            sudo rm -rf /var/www/braify-web-app/*
+            sudo chown -R "$USER":"$USER" /var/www/braify-web-app
+
+      # ── 5. Upload dist to DEV EC2 ──────────────────────────────────────
+      - name: Upload dist to dev EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host:     ${{ secrets.DEV_EC2_HOST }}
+          username: ${{ secrets.DEV_EC2_USERNAME }}
+          key:      ${{ secrets.DEV_EC2_SSH_KEY }}
+          source:   "dist/*"
+          target:   "/var/www/braify-web-app/"
+          strip_components: 1
+
+      # ── 6. Reload Nginx ────────────────────────────────────────────────
+      - name: Reload Nginx
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host:     ${{ secrets.DEV_EC2_HOST }}
+          username: ${{ secrets.DEV_EC2_USERNAME }}
+          key:      ${{ secrets.DEV_EC2_SSH_KEY }}
+          script: |
+            sudo nginx -t && sudo systemctl reload nginx
+            echo "✅ Nginx reloaded — braify-web-app (dev) is live"

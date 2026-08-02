@@ -296,6 +296,7 @@ export const esignFinalizeBatch   = (batchId, totalCreated, totalSent, totalFail
 export const esignOpenDocument    = (token)                => http.get(`/esign/sign/${token}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data)
 export const esignSignField       = (token, fieldId, body) => http.put(`/esign/sign/${token}/fields/${fieldId}`, body, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data)
 export const esignSubmitDocument  = (token)                => http.post(`/esign/sign/${token}/submit`, {}, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data)
+export const esignConsent         = (token)                => http.post(`/esign/sign/${token}/consent`, {}, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data)
 export const esignUploadAttachment = (token, file) => {
   const fd = new FormData(); fd.append('file', file)
   return http.post(`/esign/sign/${token}/attachments`, fd, { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' } }).then(r => r.data)
@@ -322,6 +323,14 @@ export const bulkEmailResend       = (id)                  => http.post(`/bulk-e
 export const bulkEmailRetryPending = (id)                  => http.post(`/bulk-email/jobs/${id}/retry-pending`).then(r => r.data)
 export const bulkEmailCancelJob    = (id)                  => http.post(`/bulk-email/jobs/${id}/cancel`).then(r => r.data)
 export const bulkEmailGetAudit     = (id)                  => http.get(`/bulk-email/jobs/${id}/audit`).then(r => r.data)
+export const bulkEmailGetAnalytics = (id)                  => http.get(`/bulk-email/jobs/${id}/analytics`).then(r => r.data)
+export const bulkEmailResendSegment = (id, segment, label) =>
+  http.post(`/bulk-email/jobs/${id}/resend-segment`, null, { params: { segment, label: label || undefined } }).then(r => r.data)
+
+// ── Bulk Email Suppressions (unsubscribe list) ─────────────
+export const bulkEmailListSuppressions = ()      => http.get('/bulk-email/suppressions').then(r => r.data)
+export const bulkEmailAddSuppression   = (email) => http.post('/bulk-email/suppressions', { email }).then(r => r.data)
+export const bulkEmailRemoveSuppression = (id)   => http.delete(`/bulk-email/suppressions/${id}`).then(r => r.data)
 
 // ── Subscription (Platform Admin) ──────────────────────────
 export const getSubscription    = (orgId)           => http.get(`/organizations/${orgId}/subscription`).then(r => r.data)

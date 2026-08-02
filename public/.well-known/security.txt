@@ -1,0 +1,7 @@
+# Braify security contact (RFC 9116)
+# Update the domain/expiry before publishing.
+Contact: mailto:security@braify.com
+Canonical: https://braify.com/.well-known/security.txt
+Policy: https://braify.com/trust
+Preferred-Languages: en
+Expires: 2027-01-01T00:00:00.000Z
