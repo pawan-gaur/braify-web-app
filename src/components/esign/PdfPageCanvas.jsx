@@ -20,7 +20,7 @@ pdfjsLib.GlobalWorkerOptions.workerPort = new PdfjsWorker()
  * @param onError           called if the PDF can't be loaded/rendered (e.g. CORS on a cloud URL),
  *                          so callers can fall back to another viewer
  */
-export default function PdfPageCanvas({ source, pageNumber, onPageCountChange, onError, onViewport }) {
+export default function PdfPageCanvas({ source, pageNumber, onPageCountChange, onError, onViewport, zoom = 1 }) {
   const canvasRef = useRef(null)
   const [failed, setFailed] = useState(false)
 
@@ -52,18 +52,24 @@ export default function PdfPageCanvas({ source, pageNumber, onPageCountChange, o
         const canvas    = canvasRef.current
         if (!canvas) return
         const container = canvas.parentElement
-        const width     = container ? (container.clientWidth || 600) : 600
+        const cssWidth  = container ? (container.clientWidth || 600) : 600
         const viewport  = page.getViewport({ scale: 1 })
-        const scale     = width / viewport.width
-        const scaled    = page.getViewport({ scale })
+        // CSS px per PDF point — used both for the overlay font sizing (WYSIWYG) and as the
+        // display width. The BUFFER is rendered at cssScale × devicePixelRatio so text stays
+        // crisp on high-DPI / mobile screens (otherwise a fit-to-width A4 page is upscaled & blurry).
+        const cssScale  = cssWidth / viewport.width
+        const dpr       = Math.min(window.devicePixelRatio || 1, 3)
+        const scaled    = page.getViewport({ scale: cssScale * dpr })
 
-        canvas.width  = scaled.width
+        canvas.width  = scaled.width           // high-res backing buffer
         canvas.height = scaled.height
+        canvas.style.width  = '100%'           // displayed at the container's CSS width
+        canvas.style.height = 'auto'
 
-        // Report the render scale so overlays can size text in the SAME px-per-point
-        // ratio as the rendered page → the on-screen font matches the final PDF (WYSIWYG).
-        onViewport?.({ scale, pageWidthPt: viewport.width, pageHeightPt: viewport.height,
-                       pxWidth: scaled.width, pxHeight: scaled.height })
+        // Report the CSS-px scale (not the DPR-inflated buffer scale) so overlay text renders
+        // at the correct on-screen size and matches the final PDF.
+        onViewport?.({ scale: cssScale, pageWidthPt: viewport.width, pageHeightPt: viewport.height,
+                       pxWidth: cssWidth, pxHeight: scaled.height / dpr })
 
         const ctx = canvas.getContext('2d')
         ctx.clearRect(0, 0, canvas.width, canvas.height)
@@ -74,7 +80,7 @@ export default function PdfPageCanvas({ source, pageNumber, onPageCountChange, o
     })()
 
     return () => { cancelled = true }
-  }, [source, pageNumber])
+  }, [source, pageNumber, zoom])   // re-render at the new width when the zoom level changes
 
   if (failed) {
     return (

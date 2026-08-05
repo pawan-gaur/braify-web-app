@@ -15,6 +15,7 @@ import Breadcrumbs from '../components/ui/Breadcrumbs'
 import { IconX, IconCheck, IconArrowRight, IconArrowLeft } from '../components/ui/icons'
 import PdfPageCanvas from '../components/esign/PdfPageCanvas'
 import SignatureCaptureModal from '../components/esign/SignatureCaptureModal'
+import PdfZoomControl from '../components/esign/PdfZoomControl'
 import { fmtFieldDate } from '../utils/date'
 import EmailAutocomplete from '../components/ui/EmailAutocomplete'
 import useEmailContacts, { addLocalContacts } from '../hooks/useEmailContacts'
@@ -124,6 +125,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
   const [fillMode, setFillMode] = useState('SIGNER')                      // 'SIGNER' | 'CREATOR' (pre-fill)
   const [signingField, setSigningField] = useState(null)                 // creator SIGNATURE/INITIALS field being captured
   const [pdfScale, setPdfScale] = useState(1)                            // rendered px per PDF point (for WYSIWYG font sizing)
+  const [pdfZoom,  setPdfZoom]  = useState(1)                            // 1 = fit width; up to 3× for readability
 
   /* ── PDF source selection ─────────────────────────────────────────────── */
   const [enabledSources, setEnabledSources] = useState({ single: true, template: false, api: false })
@@ -1612,14 +1614,19 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                   {/* Page navigation (top) — multi-page PDFs only */}
                   {renderPdfPager('top')}
 
+                  {/* Zoom control */}
+                  <PdfZoomControl zoom={pdfZoom} setZoom={setPdfZoom} />
+
                   {/* PDF page (canvas) + click-to-place field overlay */}
-                  <div ref={overlayRef}
-                       className="relative w-full border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white">
+                  <div className="overflow-x-auto">
+                  <div ref={overlayRef} style={{ width: `${pdfZoom * 100}%` }}
+                       className="relative border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white">
                     <PdfPageCanvas
                       source={pdfBase64ForPreview}
                       pageNumber={pdfCurrentPage}
                       onPageCountChange={setPdfPageCount}
                       onViewport={vp => setPdfScale(vp.scale || 1)}
+                      zoom={pdfZoom}
                     />
                     <div className="absolute inset-0"
                          style={{ cursor: 'crosshair' }}
@@ -1709,6 +1716,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                         )
                       })}
                     </div>
+                  </div>
                   </div>
 
                   {/* Page navigation (bottom) — advance without scrolling back up */}

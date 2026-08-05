@@ -11,6 +11,7 @@ import BrandLogo from '../components/ui/BrandLogo'
 import { useParams } from 'react-router-dom'
 import { esignOpenView, esignViewPdf } from '../services/api'
 import PdfPageCanvas from '../components/esign/PdfPageCanvas'
+import PdfZoomControl from '../components/esign/PdfZoomControl'
 
 const STATUS_LABELS = {
   DRAFT: 'Draft', PENDING: 'Pending', IN_REVIEW: 'In review',
@@ -27,6 +28,7 @@ export default function ESignViewPage() {
   const [error,   setError]   = useState(null)
   const [pageCount, setPageCount] = useState(1)
   const [page,      setPage]      = useState(1)
+  const [pdfZoom,   setPdfZoom]   = useState(1)   // 1 = fit width; up to 3× for readability
   const pageWrapRef = useRef(null)   // page canvas wrapper — scrolled to top on page change
 
   /* Change page and scroll the page canvas back to the top. */
@@ -135,10 +137,14 @@ export default function ESignViewPage() {
       {/* PDF */}
       <div className="flex-1 overflow-y-auto">
         <div className="p-3">
-          <div ref={pageWrapRef} className="relative w-full max-w-4xl mx-auto border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm scroll-mt-4">
-            {pdfUrl
-              ? <PdfPageCanvas source={pdfUrl} pageNumber={page} onPageCountChange={setPageCount} />
-              : <div className="h-96 flex items-center justify-center text-gray-400 text-sm">No document to display</div>}
+          <PdfZoomControl zoom={pdfZoom} setZoom={setPdfZoom} />
+          <div ref={pageWrapRef} className="max-w-4xl mx-auto overflow-x-auto scroll-mt-4">
+            <div style={{ width: `${pdfZoom * 100}%` }}
+              className="relative border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+              {pdfUrl
+                ? <PdfPageCanvas source={pdfUrl} pageNumber={page} onPageCountChange={setPageCount} zoom={pdfZoom} />
+                : <div className="h-96 flex items-center justify-center text-gray-400 text-sm">No document to display</div>}
+            </div>
           </div>
 
           {/* Page navigation (bottom) */}
