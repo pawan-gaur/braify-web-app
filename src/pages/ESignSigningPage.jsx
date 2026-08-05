@@ -128,6 +128,7 @@ export default function ESignSigningPage() {
   const [pdfCurrentPage, setPdfCurrentPage] = useState(1)
   const [pdfRenderFailed, setPdfRenderFailed] = useState(false)  // fall back to iframe if pdfjs can't load
   const [viewMode, setViewMode] = useState('PAGED')   // PAGED (page-by-page) | CONTINUOUS (whole document)
+  const [pdfZoom,  setPdfZoom]  = useState(1)          // 1 = fit width; up to 3× for readability on mobile
 
   /* modal state */
   const [activeField, setActiveField] = useState(null)
@@ -698,6 +699,30 @@ export default function ESignSigningPage() {
     )
   }
 
+  /* Zoom control — enlarge the page for readability (esp. on mobile). 1 = fit width. */
+  const clampZoom = z => Math.min(3, Math.max(1, Math.round(z * 100) / 100))
+  const renderZoom = () => {
+    if (pdfRenderFailed) return null
+    const btn = 'w-8 h-8 flex items-center justify-center rounded-md text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent'
+    return (
+      <div className="flex justify-center mb-3">
+        <div className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-1 py-0.5 shadow-sm">
+          <button type="button" title="Zoom out" onClick={() => setPdfZoom(z => clampZoom(z - 0.25))} disabled={pdfZoom <= 1} className={btn}>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4"/></svg>
+          </button>
+          <span className="min-w-[3rem] text-center text-sm font-medium text-gray-700 tabular-nums">{Math.round(pdfZoom * 100)}%</span>
+          <button type="button" title="Zoom in" onClick={() => setPdfZoom(z => clampZoom(z + 0.25))} disabled={pdfZoom >= 3} className={btn}>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
+          </button>
+          {pdfZoom !== 1 && (
+            <button type="button" title="Reset zoom" onClick={() => setPdfZoom(1)}
+              className="ml-1 px-2 h-8 text-xs font-medium text-accent hover:bg-gray-100 rounded-md">Fit</button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   /* Prev / Page X of Y / Next pager. On the last page, Next becomes Submit Document.
      Rendered both above and below the page canvas so the signer never scrolls back up. */
   const renderPager = (pos) => {
@@ -967,6 +992,7 @@ export default function ESignSigningPage() {
             /* Canvas render — either page-by-page (PAGED) or the whole document (CONTINUOUS). */
             <div className="p-3">
               {renderViewToggle()}
+              {renderZoom()}
 
               {viewMode === 'CONTINUOUS' ? (
                 /* Whole document: every page stacked so the signer can scroll straight through. */
@@ -976,16 +1002,20 @@ export default function ESignSigningPage() {
                       {pdfPageCount > 1 && (
                         <p className="text-center text-xs text-gray-400 mb-1">Page {pageNum} of {pdfPageCount}</p>
                       )}
-                      <div className="relative w-full max-w-4xl mx-auto border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
-                        <PdfPageCanvas
-                          source={pdfUrl}
-                          pageNumber={pageNum}
-                          onPageCountChange={setPdfPageCount}
-                          onViewport={vp => setPdfScale(vp.scale || 1)}
-                          onError={() => setPdfRenderFailed(true)}
-                        />
-                        <div className="absolute inset-0">
-                          {fields.filter(f => (f.page || 1) === pageNum).map(renderField)}
+                      <div className="max-w-4xl mx-auto overflow-x-auto">
+                        <div style={{ width: `${pdfZoom * 100}%` }}
+                          className="relative border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                          <PdfPageCanvas
+                            source={pdfUrl}
+                            pageNumber={pageNum}
+                            onPageCountChange={setPdfPageCount}
+                            onViewport={vp => setPdfScale(vp.scale || 1)}
+                            onError={() => setPdfRenderFailed(true)}
+                            zoom={pdfZoom}
+                          />
+                          <div className="absolute inset-0">
+                            {fields.filter(f => (f.page || 1) === pageNum).map(renderField)}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -995,16 +1025,20 @@ export default function ESignSigningPage() {
                 <>
                   {renderPager('top')}
 
-                  <div ref={pageWrapRef} className="relative w-full max-w-4xl mx-auto border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm scroll-mt-4">
-                    <PdfPageCanvas
-                      source={pdfUrl}
-                      pageNumber={pdfCurrentPage}
-                      onPageCountChange={setPdfPageCount}
-                      onViewport={vp => setPdfScale(vp.scale || 1)}
-                      onError={() => setPdfRenderFailed(true)}
-                    />
-                    <div className="absolute inset-0">
-                      {fields.filter(f => (f.page || 1) === pdfCurrentPage).map(renderField)}
+                  <div ref={pageWrapRef} className="max-w-4xl mx-auto overflow-x-auto scroll-mt-4">
+                    <div style={{ width: `${pdfZoom * 100}%` }}
+                      className="relative border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                      <PdfPageCanvas
+                        source={pdfUrl}
+                        pageNumber={pdfCurrentPage}
+                        onPageCountChange={setPdfPageCount}
+                        onViewport={vp => setPdfScale(vp.scale || 1)}
+                        onError={() => setPdfRenderFailed(true)}
+                        zoom={pdfZoom}
+                      />
+                      <div className="absolute inset-0">
+                        {fields.filter(f => (f.page || 1) === pdfCurrentPage).map(renderField)}
+                      </div>
                     </div>
                   </div>
 
