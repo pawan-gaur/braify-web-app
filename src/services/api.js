@@ -355,6 +355,28 @@ export const updateBranding = (orgId, payload)  => http.put(`/organizations/${or
 export const getCloudConfig    = (orgId)          => http.get(`/organizations/${orgId}/cloud-config`).then(r => r.data)
 export const updateCloudConfig = (orgId, payload) => http.put(`/organizations/${orgId}/cloud-config`, payload).then(r => r.data)
 
+// ── Org Email Config (per-org provider; falls back to platform default) ──
+export const getEmailConfig    = (orgId)          => http.get(`/organizations/${orgId}/email-config`).then(r => r.data)
+export const updateEmailConfig = (orgId, payload) => http.put(`/organizations/${orgId}/email-config`, payload).then(r => r.data)
+export const testEmailConfig   = (orgId, payload) => http.post(`/organizations/${orgId}/email-config/test`, payload).then(r => r.data)
+
+// ── Platform default Email Config (PLATFORM_ADMIN only) ──────
+export const getPlatformEmailConfig    = ()        => http.get('/platform/email-config').then(r => r.data)
+export const updatePlatformEmailConfig = (payload) => http.put('/platform/email-config', payload).then(r => r.data)
+export const testPlatformEmailConfig   = (payload) => http.post('/platform/email-config/test', payload).then(r => r.data)
+
+// ── Org SMS Config (per-org provider; falls back to platform default) ──
+export const getSmsConfig    = (orgId)          => http.get(`/organizations/${orgId}/sms-config`).then(r => r.data)
+export const updateSmsConfig = (orgId, payload) => http.put(`/organizations/${orgId}/sms-config`, payload).then(r => r.data)
+export const testSmsConfig   = (orgId, payload) => http.post(`/organizations/${orgId}/sms-config/test`, payload).then(r => r.data)
+
+// ── Platform default SMS / Cloud Config (PLATFORM_ADMIN only) ─
+export const getPlatformSmsConfig    = ()        => http.get('/platform/sms-config').then(r => r.data)
+export const updatePlatformSmsConfig = (payload) => http.put('/platform/sms-config', payload).then(r => r.data)
+export const testPlatformSmsConfig   = (payload) => http.post('/platform/sms-config/test', payload).then(r => r.data)
+export const getPlatformCloudConfig    = ()        => http.get('/platform/cloud-config').then(r => r.data)
+export const updatePlatformCloudConfig = (payload) => http.put('/platform/cloud-config', payload).then(r => r.data)
+
 // ── Template Sharing ────────────────────────────────────────
 export const shareTemplate        = (payload)     => http.post('/sharing', payload).then(r => r.data)
 export const revokeShare          = (id)          => http.delete(`/sharing/${id}`)

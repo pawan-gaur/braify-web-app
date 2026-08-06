@@ -59,6 +59,7 @@ const PlatformUserAccessPage       = lazy(() => import('./pages/PlatformUserAcce
 const TrustPage              = lazy(() => import('./pages/TrustPage'))
 const PrivacyPage            = lazy(() => import('./pages/PrivacyPage'))
 const TermsPage              = lazy(() => import('./pages/TermsPage'))
+const PlatformProvidersPage        = lazy(() => import('./pages/PlatformProvidersPage'))
 
 /* Centered spinner shown while a lazy route chunk loads. */
 function RouteFallback() {
@@ -169,6 +170,7 @@ function Shell() {
           <Route path="/settings/platform"          element={<PlatformSettingsPage />} />
           <Route path="/settings/platform/security" element={<PlatformSecurityPoliciesPage />} />
           <Route path="/settings/platform/access"   element={<PlatformUserAccessPage />} />
+          <Route path="/settings/platform/providers" element={<PlatformProvidersPage />} />
           <Route path="/settings/org-settings" element={<OrgSettingsPage />} />
           <Route path="/settings/api-keys"   element={<ApiKeysPage />} />
           <Route path="/settings/placeholders" element={<GlobalPlaceholdersPage />} />
