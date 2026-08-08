@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-
 import { AppProvider, useApp }  from './context/AppContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ToastProvider } from './context/ToastContext'
+import { NetworkStatusProvider } from './context/NetworkStatusContext'
+import ConnectionBanner from './components/ui/ConnectionBanner'
 import { FEATURES } from './config/features'
 import ToastContainer   from './components/ui/ToastContainer'
 import ProtectedRoute   from './components/auth/ProtectedRoute'
@@ -248,11 +250,15 @@ export default function App() {
     <BrowserRouter>
       <TitleManager />
       <ToastProvider>
-        <AuthProvider>
-          <AppRoutes />
-        </AuthProvider>
-        {/* Rendered outside the auth/app tree so toasts survive route changes */}
-        <ToastContainer />
+        <NetworkStatusProvider>
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
+          {/* Global connectivity banner (offline / server-down) + toasts,
+              rendered outside the auth/app tree so they survive route changes */}
+          <ConnectionBanner />
+          <ToastContainer />
+        </NetworkStatusProvider>
       </ToastProvider>
     </BrowserRouter>
   )

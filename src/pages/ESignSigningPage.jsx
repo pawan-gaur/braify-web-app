@@ -118,6 +118,7 @@ export default function ESignSigningPage() {
   const [pdfUrl,     setPdfUrl]     = useState(null)
   const [loading,    setLoading]    = useState(true)
   const [error,      setError]      = useState(null)
+  const [errorReason, setErrorReason] = useState(null)   // EXPIRED | ALREADY_SIGNED | CANCELLED | INVALID
   const [fields,     setFields]     = useState([])
   const [submitting, setSubmitting] = useState(false)
   const [submitted,  setSubmitted]  = useState(false)
@@ -212,7 +213,7 @@ export default function ESignSigningPage() {
             .catch(() => { if (d.sourcePdfUrl) setPdfUrl(d.sourcePdfUrl) })  // last-resort fallback
         }
       })
-      .catch(e => setError(e.message))
+      .catch(e => { setError(e.message); setErrorReason(e.rawData?.reason || null) })
       .finally(() => setLoading(false))
   }, [token])
 
@@ -526,19 +527,41 @@ export default function ESignSigningPage() {
 
   /* ── Loading / error / success screens ── */
   if (loading) return <Center><Spinner/></Center>
-  if (error)   return (
-    <Center>
-      <div className="text-center max-w-sm">
-        <div className="w-14 h-14 mx-auto mb-4 text-gray-400">
-          <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-          </svg>
+  if (error) {
+    const REASONS = {
+      EXPIRED:        { title: 'This signing link has expired',
+                        body: 'For security, signing links expire after a period of time.',
+                        hint: 'Please contact the sender to request a new link.',  done: false },
+      ALREADY_SIGNED: { title: "You've already signed this document",
+                        body: 'This document has already been signed.',
+                        hint: 'No further action is needed.',                       done: true  },
+      CANCELLED:      { title: 'This document was cancelled',
+                        body: 'The sender cancelled this document.',
+                        hint: 'Contact the sender if you have any questions.',       done: false },
+      INVALID:        { title: "This link isn't valid",
+                        body: error || 'We couldn’t open this document.',
+                        hint: 'Please contact the sender.',                          done: false },
+    }
+    const info = REASONS[errorReason] || REASONS.INVALID
+    return (
+      <Center>
+        <div className="text-center max-w-sm">
+          <div className={`w-14 h-14 mx-auto mb-4 ${info.done ? 'text-emerald-500' : 'text-gray-400'}`}>
+            <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {info.done
+                ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>}
+            </svg>
+          </div>
+          <h1 className="text-xl font-bold text-gray-800 mb-2">{info.title}</h1>
+          <p className="text-gray-500 text-sm">{info.body}</p>
+          <p className="text-gray-400 text-xs mt-3">{info.hint}</p>
         </div>
-        <h1 className="text-xl font-bold text-gray-800 mb-2">Unable to open document</h1>
-        <p className="text-gray-500 text-sm">{error}</p>
-      </div>
-    </Center>
-  )
+      </Center>
+    )
+  }
   if (submitted) return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">

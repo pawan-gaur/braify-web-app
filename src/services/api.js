@@ -54,16 +54,54 @@ const hardLogout = (message) => {
   return Promise.reject(new Error(message || 'Session expired. Please log in again.'))
 }
 
+/* ── Backend connectivity signal ─────────────────────────────────────────────
+ * Every real request doubles as a heartbeat. A response (even a 4xx) proves the
+ * backend is reachable; no response at all — or a gateway 5xx (502/503/504) —
+ * means it's down. We emit a window event only on transitions so the
+ * NetworkStatusProvider can show/hide the "Server is down" banner without polling
+ * during normal use. (Distinguishing this from "no internet" is done there via
+ * navigator.onLine.)
+ */
+let serverReachable = true
+const markServer = (up) => {
+  if (serverReachable === up) return
+  serverReachable = up
+  window.dispatchEvent(new CustomEvent(up ? 'braify:server-up' : 'braify:server-down'))
+}
+const isUnreachable = (err) => {
+  const s = err.response?.status
+  return !err.response || err.code === 'ERR_NETWORK' || err.code === 'ECONNABORTED'
+      || s === 502 || s === 503 || s === 504
+}
+
+/**
+ * Lightweight reachability probe used to detect recovery while the banner is up.
+ * Bypasses these interceptors (bare axios) and accepts ANY HTTP status as "reachable"
+ * — a 404 from the backend still proves it's answering; only a gateway 5xx or a
+ * network failure counts as down. Hits an /api path so it goes through the proxy
+ * to the backend (not the static server).
+ */
+export const pingHealth = () =>
+  axios.get('/api/health', { timeout: 5000, validateStatus: () => true })
+    .then(r => r.status < 500)
+    .catch(() => false)
+
 /**
  * Response interceptor — normalises every API error into a plain Error whose
  * .message is the text returned by the backend, and drives the silent-refresh flow.
  */
 http.interceptors.response.use(
-  res => res,
+  res => { markServer(true); return res },
   async err => {
     let   data     = err.response?.data
     const status   = err.response?.status
     const original = err.config
+
+    // Heartbeat for the connectivity banner: a clear no-response / gateway 5xx means
+    // down; a normal response (incl. 4xx) means up. Ambiguous plain 500s (e.g. a dev
+    // proxy answering 500 when the backend is refused) are left to the health probe.
+    if (isUnreachable(err)) markServer(false)
+    else if (status && status < 500) markServer(true)
 
     // Blob responses (PDF preview / download / export use responseType:'blob')
     // deliver JSON error bodies as a Blob, so `data.message` is invisible. Read
@@ -108,13 +146,27 @@ http.interceptors.response.use(
       }
     }
 
-    // Backend sends { message, status, timestamp } via GlobalExceptionHandler
-    const message =
-      (typeof data === 'object' && data?.message)
-        ? data.message
-        : (typeof data === 'string' && data.trim())
+    // Prefer a real message from the backend (validation / business errors, sent as
+    // { message, status, timestamp } by GlobalExceptionHandler). Otherwise show a
+    // friendly connectivity/server message instead of axios's raw
+    // "Request failed with status code N".
+    const backendMsg =
+      (data && typeof data === 'object' && typeof data.message === 'string' && data.message.trim())
+        ? data.message.trim()
+        : (typeof data === 'string' && data.trim() && !/^\s*</.test(data))  // skip HTML error pages
           ? data.trim()
-          : err.message || `HTTP ${status ?? 'error'}`
+          : null
+
+    let message
+    if (backendMsg) {
+      message = backendMsg
+    } else if (!navigator.onLine) {
+      message = 'No network connection. Check your internet and try again.'
+    } else if (isUnreachable(err) || (status && status >= 500)) {
+      message = 'Unable to reach the server. Please try again in a moment.'
+    } else {
+      message = err.message || `Request failed${status ? ` (${status})` : ''}`
+    }
 
     const normalised         = new Error(message)
     normalised.status        = status
