@@ -368,6 +368,8 @@ export const esignOpenDocument    = (token)                => http.get(`/esign/s
 export const esignSignField       = (token, fieldId, body) => http.put(`/esign/sign/${token}/fields/${fieldId}`, body, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data)
 export const esignSubmitDocument  = (token)                => http.post(`/esign/sign/${token}/submit`, {}, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data)
 export const esignConsent         = (token)                => http.post(`/esign/sign/${token}/consent`, {}, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data)
+export const esignUnsubscribeReminders = (token)           => http.post(`/esign/sign/${token}/unsubscribe`, {}, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data)
+export const esignResubscribeReminders = (token)           => http.post(`/esign/sign/${token}/resubscribe`, {}, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data)
 export const esignUploadAttachment = (token, file) => {
   const fd = new FormData(); fd.append('file', file)
   return http.post(`/esign/sign/${token}/attachments`, fd, { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' } }).then(r => r.data)
