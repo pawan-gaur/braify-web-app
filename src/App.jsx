@@ -43,6 +43,7 @@ const BulkEmailJobsPage      = lazy(() => import('./pages/BulkEmailJobsPage'))
 const BulkEmailSendPage      = lazy(() => import('./pages/BulkEmailSendPage'))
 const BulkEmailDetailPage    = lazy(() => import('./pages/BulkEmailDetailPage'))
 const ESignVerifyPage        = lazy(() => import('./pages/ESignVerifyPage'))
+const ESignUnsubscribePage   = lazy(() => import('./pages/ESignUnsubscribePage'))
 const ESignViewPage          = lazy(() => import('./pages/ESignViewPage'))
 const GetStartedPage         = lazy(() => import('./pages/GetStartedPage'))
 const OnboardingRequestsPage = lazy(() => import('./pages/OnboardingRequestsPage'))
@@ -231,6 +232,7 @@ function AppRoutes() {
       {/* E-Sign public routes */}
       <Route path="/sign/:token"        element={<ESignSigningPage />} />
       <Route path="/esign/view/:token"  element={<ESignViewPage />} />
+      <Route path="/esign/unsubscribe/:token" element={<ESignUnsubscribePage />} />
       <Route path="/verify/:id"         element={<ESignVerifyPage />} />
 
       {/* Everything else is protected */}

@@ -486,6 +486,9 @@ export default function ESignDetailPage() {
                           Reminded {s.reminderCount}×{s.lastReminderAt ? ` · last ${fmtDateTime(s.lastReminderAt)}` : ''}
                         </p>
                       )}
+                      {!signed && s.remindersOptedOut && (
+                        <p className="text-[11px] font-semibold text-amber-600 truncate">Unsubscribed from reminders</p>
+                      )}
                     </div>
                     <div className="flex flex-col items-end shrink-0 gap-1">
                       <span className={`text-xs font-semibold ${signed ? 'text-green-600' : viewed ? 'text-blue-600' : 'text-gray-400'}`}>
