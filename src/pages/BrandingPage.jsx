@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { getBranding, updateBranding, getCloudConfig, updateCloudConfig } from '../services/api'
+import { getBranding, updateBranding, getCloudConfig, updateCloudConfig, getEsignReminderPolicy, updateEsignReminderPolicy } from '../services/api'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import LogoUpload from '../components/ui/LogoUpload'
@@ -53,7 +53,16 @@ export default function OrgSettingsPage() {
   const [loading,   setLoading]   = useState(true)
   const [saving,    setSaving]    = useState(false)
   const [savingCloud, setSavingCloud] = useState(false)
+  const [savingReminders, setSavingReminders] = useState(false)
   const [orgFeatures, setOrgFeatures] = useState([])   // which features org has enabled
+
+  /* E-sign reminder policy form state */
+  const [reminderForm, setReminderForm] = useState({
+    enabled: true,
+    firstReminderAfterHours: 24,
+    repeatEveryHours: 24,
+    maxReminders: 10,
+  })
 
   /* Branding form state */
   const [form, setForm] = useState({
@@ -88,8 +97,20 @@ export default function OrgSettingsPage() {
     Promise.allSettled([
       getBranding(orgId),
       getCloudConfig(orgId),
-    ]).then(([brandingResult, cloudResult]) => {
+      getEsignReminderPolicy(orgId),
+    ]).then(([brandingResult, cloudResult, reminderResult]) => {
       setOrgFeatures(user?.features ?? [])
+
+      // Reminder policy (falls back to backend defaults on failure)
+      if (reminderResult.status === 'fulfilled' && reminderResult.value) {
+        const p = reminderResult.value
+        setReminderForm({
+          enabled: p.enabled ?? true,
+          firstReminderAfterHours: p.firstReminderAfterHours ?? 24,
+          repeatEveryHours: p.repeatEveryHours ?? 24,
+          maxReminders: p.maxReminders ?? 10,
+        })
+      }
 
       // Branding
       if (brandingResult.status === 'fulfilled') {
@@ -128,8 +149,34 @@ export default function OrgSettingsPage() {
     }).finally(() => setLoading(false))
   }, [orgId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const set      = (key, val) => setForm(f      => ({ ...f,      [key]: val }))
-  const setCloud = (key, val) => setCloudForm(f => ({ ...f, [key]: val }))
+  const set         = (key, val) => setForm(f         => ({ ...f, [key]: val }))
+  const setCloud    = (key, val) => setCloudForm(f    => ({ ...f, [key]: val }))
+  const setReminder = (key, val) => setReminderForm(f => ({ ...f, [key]: val }))
+
+  /* Save reminder policy */
+  const handleSaveReminders = async () => {
+    setSavingReminders(true)
+    try {
+      const payload = {
+        enabled: !!reminderForm.enabled,
+        firstReminderAfterHours: Number(reminderForm.firstReminderAfterHours) || 24,
+        repeatEveryHours: Number(reminderForm.repeatEveryHours) || 24,
+        maxReminders: Number(reminderForm.maxReminders) || 10,
+      }
+      const saved = await updateEsignReminderPolicy(orgId, payload)
+      setReminderForm({
+        enabled: saved.enabled ?? true,
+        firstReminderAfterHours: saved.firstReminderAfterHours ?? 24,
+        repeatEveryHours: saved.repeatEveryHours ?? 24,
+        maxReminders: saved.maxReminders ?? 10,
+      })
+      toast.success('Reminder policy saved.')
+    } catch (err) {
+      toast.error(err?.response?.data?.message || err.message || 'Failed to save reminder policy.')
+    } finally {
+      setSavingReminders(false)
+    }
+  }
 
   /* Save branding */
   const handleSave = async () => {
@@ -192,6 +239,9 @@ export default function OrgSettingsPage() {
     { id: 'identity', label: 'Identity',      icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
     { id: 'theme',    label: 'Theme & Colors', icon: 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01' },
     { id: 'access',   label: 'Access Control', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
+    ...(( user?.features ?? []).includes('E_SIGN')
+      ? [{ id: 'reminders', label: 'E-Sign Reminders', icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' }]
+      : []),
     { id: 'cloud',    label: 'Cloud Storage',  icon: 'M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z' },
   ]
 
@@ -249,6 +299,16 @@ export default function OrgSettingsPage() {
         />
       )}
 
+      {/* ── Tab: E-Sign Reminders ── */}
+      {activeTab === 'reminders' && (
+        <RemindersTab
+          form={reminderForm}
+          set={setReminder}
+          saving={savingReminders}
+          onSave={handleSaveReminders}
+        />
+      )}
+
       {/* ── Tab: Cloud Storage ── */}
       {activeTab === 'cloud' && (
         <CloudStorageTab
@@ -258,6 +318,81 @@ export default function OrgSettingsPage() {
           onSave={handleSaveCloud}
         />
       )}
+    </div>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Tab: E-Sign Reminders — automatic reminder schedule for the org
+══════════════════════════════════════════════════════════════════ */
+function RemindersTab({ form, set, saving, onSave }) {
+  const num = (key, val) => set(key, val === '' ? '' : Math.max(0, parseInt(val, 10) || 0))
+  return (
+    <div className="max-w-2xl space-y-6">
+      <div className="card p-6 space-y-5">
+        <div>
+          <h2 className="text-sm font-bold text-gray-700 dark:text-gray-200">Automatic reminders</h2>
+          <p className="text-xs text-ink-3 mt-1">
+            The default schedule for chasing signatures on documents in your organization. Senders can still
+            opt an individual document out, or send a manual reminder any time.
+          </p>
+        </div>
+
+        {/* Master toggle */}
+        <label className="flex items-center justify-between gap-4 py-2">
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+            Send automatic reminders
+            <span className="block text-xs text-ink-3 font-normal">Turn off to disable scheduled reminders org-wide.</span>
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={form.enabled}
+            onClick={() => set('enabled', !form.enabled)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0
+              ${form.enabled ? 'bg-gradient-accent' : 'bg-gray-300 dark:bg-gray-600'}`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+              ${form.enabled ? 'translate-x-6' : 'translate-x-1'}`}/>
+          </button>
+        </label>
+
+        <div className={`grid grid-cols-1 sm:grid-cols-3 gap-4 transition-opacity ${form.enabled ? '' : 'opacity-50 pointer-events-none'}`}>
+          <NumberField label="First reminder after" suffix="hours" value={form.firstReminderAfterHours}
+            onChange={v => num('firstReminderAfterHours', v)} min={1} max={720}
+            hint="Delay from send before the first reminder." />
+          <NumberField label="Then repeat every" suffix="hours" value={form.repeatEveryHours}
+            onChange={v => num('repeatEveryHours', v)} min={1} max={720}
+            hint="Interval between follow-up reminders." />
+          <NumberField label="Maximum reminders" suffix="total" value={form.maxReminders}
+            onChange={v => num('maxReminders', v)} min={1} max={50}
+            hint="Stop after this many per signer." />
+        </div>
+
+        <p className="text-xs text-ink-3">
+          Reminders never extend a document’s expiry — they stop automatically once it’s signed or expires.
+        </p>
+      </div>
+
+      <SaveBar saving={saving} onSave={onSave} />
+    </div>
+  )
+}
+
+function NumberField({ label, suffix, value, onChange, min, max, hint }) {
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">{label}</label>
+      <div className="flex items-center gap-2">
+        <input
+          type="number" min={min} max={max} value={value}
+          onChange={e => onChange(e.target.value)}
+          className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900
+                     text-sm text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-400"
+        />
+        <span className="text-xs text-ink-3 whitespace-nowrap">{suffix}</span>
+      </div>
+      {hint && <p className="text-[11px] text-ink-3 mt-1">{hint}</p>}
     </div>
   )
 }

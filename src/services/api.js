@@ -326,6 +326,25 @@ export const esignReactivateDocument = (id, days = 7)      => http.post(`/esign/
 export const esignResendSignatory = (id, signatoryId, days = 7) => http.post(`/esign/documents/${id}/signatories/${signatoryId}/resend?tokenValidDays=${days}`).then(r => r.data)
 export const esignResendCopy      = (id)                   => http.post(`/esign/documents/${id}/resend-copy`).then(r => r.data)
 export const esignResendCopyTo    = (id, email)            => http.post(`/esign/documents/${id}/resend-copy/recipient?email=${encodeURIComponent(email)}`).then(r => r.data)
+export const emailLogsList = ({ page = 0, size = 20, orgId, category, status, recipientType, search, dateFrom, dateTo } = {}) => {
+  const params = new URLSearchParams()
+  params.set('page', page); params.set('size', size)
+  if (orgId)         params.set('orgId', orgId)
+  if (category)      params.set('category', category)
+  if (status)        params.set('status', status)
+  if (recipientType) params.set('recipientType', recipientType)
+  if (search)        params.set('search', search)
+  if (dateFrom)      params.set('dateFrom', dateFrom)
+  if (dateTo)        params.set('dateTo', dateTo)
+  return http.get(`/email-logs?${params}`).then(r => r.data)
+}
+
+// E-sign reminder policy (org-level; ORG_ADMIN own org · PLATFORM_ADMIN any)
+export const getEsignReminderPolicy    = (orgId)         => http.get(`/organizations/${orgId}/esign-reminder-policy`).then(r => r.data)
+export const updateEsignReminderPolicy = (orgId, policy) => http.put(`/organizations/${orgId}/esign-reminder-policy`, policy).then(r => r.data)
+
+export const esignRemindNow       = (id)                   => http.post(`/esign/documents/${id}/remind`).then(r => r.data)
+export const esignSetReminders    = (id, enabled)          => http.put(`/esign/documents/${id}/reminders?enabled=${enabled}`).then(r => r.data)
 export const esignGetAudit        = (id)                   => http.get(`/esign/documents/${id}/audit`).then(r => r.data)
 export const esignDownloadSigned  = (id)                   => http.get(`/esign/documents/${id}/signed-pdf`, { responseType: 'blob' }).then(r => r.data)
 export const esignDownloadSource  = (id)                   => http.get(`/esign/documents/${id}/source-pdf`, { responseType: 'blob' }).then(r => r.data)

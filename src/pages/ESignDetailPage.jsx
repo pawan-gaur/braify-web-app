@@ -7,7 +7,7 @@
  */
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { esignGetDocument, esignGetAudit, esignDownloadSigned, esignListAttachments, esignDownloadAttachment, esignResendSignatory, esignResendCopy, esignResendCopyTo, esignResendDocument, esignReactivateDocument } from '../services/api'
+import { esignGetDocument, esignGetAudit, esignDownloadSigned, esignListAttachments, esignDownloadAttachment, esignResendSignatory, esignResendCopy, esignResendCopyTo, esignResendDocument, esignReactivateDocument, esignRemindNow, esignSetReminders } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import { IconCheck } from '../components/ui/icons'
@@ -43,6 +43,20 @@ const EVENT_ICONS = {
 
 import { fmtDateTimeGB as fmtDateTime } from '../utils/date'
 
+/** Human "time left until the signing window closes" (e.g. "2 days left", "5 hours left", "Expired"). */
+function expiresInLabel(iso) {
+  if (!iso) return null
+  const ms = new Date(iso).getTime() - Date.now()
+  if (Number.isNaN(ms)) return null
+  if (ms <= 0) return 'Expired'
+  const mins = Math.round(ms / 60000)
+  const hours = Math.round(ms / 3_600_000)
+  const days = Math.round(ms / 86_400_000)
+  if (mins < 60) return `${mins} minute${mins === 1 ? '' : 's'} left`
+  if (hours < 48) return `${hours} hour${hours === 1 ? '' : 's'} left`
+  return `${days} day${days === 1 ? '' : 's'} left`
+}
+
 export default function ESignDetailPage() {
   const { id }     = useParams()
   const navigate   = useNavigate()
@@ -60,6 +74,8 @@ export default function ESignDetailPage() {
   const [resendingEmail, setResendingEmail] = useState(null) // recipient email currently being resent
   const [docBusy, setDocBusy] = useState(false)              // document-level resend / reactivate in flight
   const [reactivateOpen, setReactivateOpen] = useState(false)
+  const [remindBusy, setRemindBusy] = useState(false)        // "send reminder now" in flight
+  const [reminderToggleBusy, setReminderToggleBusy] = useState(false) // auto-reminder toggle in flight
 
   useEffect(() => {
     Promise.all([
@@ -154,6 +170,32 @@ export default function ESignDetailPage() {
       showToast(e.message || 'Failed to resend invitation', 'error')
     } finally {
       setResendingSig(null)
+    }
+  }
+
+  async function handleRemindNow() {
+    setRemindBusy(true)
+    try {
+      const updated = await esignRemindNow(id)
+      setDoc(prev => ({ ...prev, ...updated }))
+      showToast('Reminder sent to everyone still awaiting signature', 'success')
+    } catch (e) {
+      showToast(e?.response?.data?.message || e.message || 'Failed to send reminder', 'error')
+    } finally {
+      setRemindBusy(false)
+    }
+  }
+
+  async function handleToggleReminders(next) {
+    setReminderToggleBusy(true)
+    try {
+      const updated = await esignSetReminders(id, next)
+      setDoc(prev => ({ ...prev, ...updated }))
+      showToast(next ? 'Automatic reminders turned on' : 'Automatic reminders turned off', 'success')
+    } catch (e) {
+      showToast(e?.response?.data?.message || e.message || 'Failed to update reminder setting', 'error')
+    } finally {
+      setReminderToggleBusy(false)
     }
   }
 
@@ -287,6 +329,25 @@ export default function ESignDetailPage() {
                 Resend
               </button>
             )}
+            {/* Send reminder now — while awaiting signatures */}
+            {['PENDING', 'IN_REVIEW', 'PARTIALLY_SIGNED'].includes(doc.status) && (
+              <button
+                onClick={handleRemindNow}
+                disabled={remindBusy}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold
+                           border border-accent-300 text-accent bg-accent-50 dark:bg-accent-900/20
+                           hover:bg-accent-100 transition-colors disabled:opacity-50"
+                title="Email a reminder now to everyone who still needs to sign"
+              >
+                {remindBusy
+                  ? <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin"/>
+                  : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                    </svg>}
+                Send reminder
+              </button>
+            )}
             {/* Reactivate — revive an expired document */}
             {doc.status === 'EXPIRED' && (
               <button
@@ -350,6 +411,48 @@ export default function ESignDetailPage() {
         </div>
       </div>
 
+      {/* Reminders — while awaiting signatures */}
+      {['PENDING', 'IN_REVIEW', 'PARTIALLY_SIGNED'].includes(doc.status) && (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 mb-5 shadow-sm">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-1">Reminders</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Automatic reminders email signers who haven’t signed — first after 24 hours, then daily.
+              </p>
+              {doc.tokenExpiresAt && (
+                <p className="text-xs mt-1.5 flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  <span className="font-semibold text-orange-600 dark:text-orange-400">{expiresInLabel(doc.tokenExpiresAt)}</span>
+                  <span className="text-gray-400">· closes {fmtDateTime(doc.tokenExpiresAt)}</span>
+                </p>
+              )}
+            </div>
+            {/* Auto-reminder opt-out toggle */}
+            <label className="flex items-center gap-2.5 cursor-pointer shrink-0">
+              <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">
+                Automatic reminders {doc.remindersEnabled ? 'on' : 'off'}
+              </span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={doc.remindersEnabled}
+                disabled={reminderToggleBusy}
+                onClick={() => handleToggleReminders(!doc.remindersEnabled)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50
+                  ${doc.remindersEnabled ? 'bg-accent' : 'bg-gray-300 dark:bg-gray-600'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                  ${doc.remindersEnabled ? 'translate-x-6' : 'translate-x-1'}`}/>
+              </button>
+            </label>
+          </div>
+        </div>
+      )}
+
       {/* Signatory progress (multi-party documents) */}
       {doc.signatories?.length > 1 && (
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 mb-5 shadow-sm">
@@ -378,6 +481,11 @@ export default function ESignDetailPage() {
                         {s.name}
                       </p>
                       <p className="text-xs text-gray-400 truncate">{s.email}</p>
+                      {!signed && s.reminderCount > 0 && (
+                        <p className="text-[11px] text-gray-400 truncate" title={s.lastReminderAt ? `Last reminder ${fmtDateTime(s.lastReminderAt)}` : ''}>
+                          Reminded {s.reminderCount}×{s.lastReminderAt ? ` · last ${fmtDateTime(s.lastReminderAt)}` : ''}
+                        </p>
+                      )}
                     </div>
                     <div className="flex flex-col items-end shrink-0 gap-1">
                       <span className={`text-xs font-semibold ${signed ? 'text-green-600' : viewed ? 'text-blue-600' : 'text-gray-400'}`}>
