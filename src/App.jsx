@@ -54,6 +54,7 @@ const OrgDetailPage          = lazy(() => import('./pages/OrgDetailPage'))
 const ApiKeysPage            = lazy(() => import('./pages/ApiKeysPage'))
 const GlobalPlaceholdersPage = lazy(() => import('./pages/GlobalPlaceholdersPage'))
 const FilesPage              = lazy(() => import('./pages/FilesPage'))
+const EmailActivityPage      = lazy(() => import('./pages/EmailActivityPage'))
 const FeatureDetailPage      = lazy(() => import('./pages/FeatureDetailPage'))
 const PlatformSettingsPage         = lazy(() => import('./pages/PlatformSettingsPage'))
 const PlatformSecurityPoliciesPage = lazy(() => import('./pages/PlatformSecurityPoliciesPage'))
@@ -156,6 +157,9 @@ function Shell() {
 
           {/* ── Audit log (always available) ── */}
           <Route path="/audit-log" element={<AuditLogPage />} />
+
+          {/* ── Email activity (Org_Admin: own org · Platform_Admin: all orgs) ── */}
+          <Route path="/email-activity" element={<EmailActivityPage />} />
 
           {/* ── Admin pages ── */}
           <Route path="/organizations"              element={<OrganizationsPage />} />

@@ -49,11 +49,11 @@ const NAV_SECTIONS = [
         feature: FEATURES.FILE_STORAGE,
         icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z',
       },
-      {
-        to: '/generate', label: 'Generate PDF',
-        feature: FEATURES.PDF_TEMPLATES,
-        icon: 'M12 10v6m0 0l-3-3m3 3l3-3M3 15v4a2 2 0 002 2h14a2 2 0 002-2v-4M7 10l5-7 5 7',
-      },
+      // {
+      //   to: '/generate', label: 'Generate PDF',
+      //   feature: FEATURES.PDF_TEMPLATES,
+      //   icon: 'M12 10v6m0 0l-3-3m3 3l3-3M3 15v4a2 2 0 002 2h14a2 2 0 002-2v-4M7 10l5-7 5 7',
+      // },
     ],
   },
   {
@@ -75,6 +75,11 @@ const NAV_SECTIONS = [
         to: '/users', label: 'Users',
         minRole: ROLES.ADMIN,
         icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
+      },
+      {
+        to: '/email-activity', label: 'Email Activity',
+        minRole: ROLES.ORG_ADMIN,
+        icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
       },
       {
         to: '/sessions', label: 'Sessions',
