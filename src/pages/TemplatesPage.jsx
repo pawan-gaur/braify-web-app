@@ -1,6 +1,8 @@
 ﻿import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getTemplates, deleteTemplate } from '../services/api'
+import { getTemplates, deleteTemplate, cloneTemplate, createTemplate } from '../services/api'
+import TemplateUploadModal from '../components/templates/TemplateUploadModal'
+import TemplateCloneModal from '../components/templates/TemplateCloneModal'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
@@ -85,6 +87,8 @@ export default function TemplatesPage() {
   const [templates,        setTemplates]        = useState([])
   const [versionTemplate,  setVersionTemplate]  = useState(null)
   const [previewTemplate,  setPreviewTemplate]  = useState(null)
+  const [uploadOpen,  setUploadOpen]  = useState(false)
+  const [cloneSource, setCloneSource] = useState(null)
   const [loading,   setLoading]   = useState(true)
 
   const [tableSearch,    setTableSearch]    = useState('')
@@ -165,6 +169,9 @@ export default function TemplatesPage() {
         </div>
         <div className="flex items-center gap-3">
           <ViewToggle view={view} onChange={setView} />
+          <button className="btn btn-secondary" onClick={() => setUploadOpen(true)}>
+            Upload HTML
+          </button>
           <button className="btn btn-primary" onClick={() => navigate('/builder')}>
             + New PDF Template
           </button>
@@ -350,6 +357,14 @@ export default function TemplatesPage() {
                                 d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                             </svg>
                           </button>
+                          <button onClick={() => setCloneSource(t)}
+                            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 transition-colors"
+                            title="Clone">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                              <rect x="9" y="9" width="11" height="11" rx="2"/>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 15V5a2 2 0 012-2h10"/>
+                            </svg>
+                          </button>
                           {can('delete') && (
                             <button onClick={() => handleDelete(t.id, t.name)}
                               className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500 transition-colors"
@@ -380,6 +395,7 @@ export default function TemplatesPage() {
                 template={t}
                 onEdit={() => navigate(`/builder/${t.id}`)}
                 onGenerate={() => navigate(`/generate?templateId=${t.id}`)}
+                onClone={() => setCloneSource(t)}
                 onDelete={can('delete') ? () => handleDelete(t.id, t.name) : null}
                 onVersions={() => setVersionTemplate(t)}
                 onPreview={() => setPreviewTemplate(t)}
@@ -410,6 +426,18 @@ export default function TemplatesPage() {
           onClose={() => setPreviewTemplate(null)}
         />
       )}
+
+      <TemplateUploadModal
+        open={uploadOpen} kind="PDF"
+        onClose={() => setUploadOpen(false)}
+        onCreate={createTemplate}
+        onCreated={(created) => { setUploadOpen(false); toast.success('Template created from HTML'); navigate(`/builder/${created.id}`) }}
+      />
+      <TemplateCloneModal
+        open={!!cloneSource} source={cloneSource} cloneFn={cloneTemplate}
+        onClose={() => setCloneSource(null)}
+        onCloned={() => { setCloneSource(null); toast.success('Template cloned'); load() }}
+      />
     </div>
   )
 }
@@ -611,7 +639,7 @@ function StarterCard({ template, category, onOpen }) {
 }
 
 /* ── My Templates: TemplateCard ──────────────────────────────────────────── */
-function TemplateCard({ template, onEdit, onGenerate, onDelete = null, onVersions, onPreview }) {
+function TemplateCard({ template, onEdit, onGenerate, onDelete = null, onClone = null, onVersions, onPreview }) {
   const date = fmtDate(template.updatedAt)
 
   return (
@@ -733,6 +761,14 @@ function TemplateCard({ template, onEdit, onGenerate, onDelete = null, onVersion
                    m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
           </button>
+          {onClone && (
+            <button className="btn btn-ghost btn-sm px-2" onClick={onClone} title="Clone template">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <rect x="9" y="9" width="11" height="11" rx="2"/>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 15V5a2 2 0 012-2h10"/>
+              </svg>
+            </button>
+          )}
           {onDelete && (
             <button className="btn btn-ghost btn-sm px-2 text-red-400 hover:bg-red-50 hover:text-red-600"
               onClick={onDelete} title="Delete template">

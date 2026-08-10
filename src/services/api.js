@@ -182,6 +182,7 @@ export const getTemplate  = (id) => http.get(`/templates/${id}`).then(r => r.dat
 export const createTemplate = (payload) => http.post('/templates', payload).then(r => r.data)
 export const updateTemplate = (id, payload) => http.put(`/templates/${id}`, payload).then(r => r.data)
 export const deleteTemplate = (id) => http.delete(`/templates/${id}`)
+export const cloneTemplate  = (id, body = {}) => http.post(`/templates/${id}/clone`, body).then(r => r.data)
 
 // ── Email templates ────────────────────────────────────────
 export const getEmailTemplates    = ()         => http.get('/email-templates').then(r => r.data)
@@ -190,6 +191,7 @@ export const getEmailTemplate     = (id)       => http.get(`/email-templates/${i
 export const createEmailTemplate  = (payload)  => http.post('/email-templates', payload).then(r => r.data)
 export const updateEmailTemplate  = (id, p)    => http.put(`/email-templates/${id}`, p).then(r => r.data)
 export const deleteEmailTemplate  = (id)       => http.delete(`/email-templates/${id}`)
+export const cloneEmailTemplate   = (id, body = {}) => http.post(`/email-templates/${id}/clone`, body).then(r => r.data)
 export const sendEmailTemplate    = (id, payload) => http.post(`/email-templates/${id}/send`, payload).then(r => r.data)
 
 // ── Global placeholders (org-level, auto-injected into email + PDF) ─────────

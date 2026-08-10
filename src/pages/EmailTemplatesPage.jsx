@@ -1,6 +1,8 @@
 ﻿import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getEmailTemplates, getInternalEmailTemplates, deleteEmailTemplate, sendEmailTemplate, getGlobalPlaceholders } from '../services/api'
+import { getEmailTemplates, getInternalEmailTemplates, deleteEmailTemplate, sendEmailTemplate, getGlobalPlaceholders, cloneEmailTemplate, createEmailTemplate } from '../services/api'
+import TemplateUploadModal from '../components/templates/TemplateUploadModal'
+import TemplateCloneModal from '../components/templates/TemplateCloneModal'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
@@ -87,6 +89,8 @@ export default function EmailTemplatesPage() {
   const [versionTemplate, setVersionTemplate] = useState(null)
   const [previewTemplate, setPreviewTemplate] = useState(null)
   const [sendTemplate,    setSendTemplate]    = useState(null)
+  const [uploadOpen,      setUploadOpen]      = useState(false)
+  const [cloneSource,     setCloneSource]     = useState(null)
 
   const [tableSortKey, setTableSortKey] = useState('updatedAt_desc')
 
@@ -205,6 +209,9 @@ export default function EmailTemplatesPage() {
             </div>
           )}
           <ViewToggle view={view} onChange={setView} />
+          <button className="btn btn-secondary" onClick={() => setUploadOpen(true)}>
+            Upload HTML
+          </button>
           {/* Split button: quick blank OR from library */}
           <div className="flex rounded-xl overflow-hidden shadow-sm">
             <button
@@ -449,6 +456,14 @@ export default function EmailTemplatesPage() {
                               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                           </svg>
                         </button>
+                        <button onClick={() => setCloneSource(t)}
+                          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 transition-colors"
+                          title="Clone">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                            <rect x="9" y="9" width="11" height="11" rx="2"/>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 15V5a2 2 0 012-2h10"/>
+                          </svg>
+                        </button>
                         {can('delete') && (
                           <button onClick={() => handleDelete(t.id, t.name)}
                             className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500 transition-colors"
@@ -479,6 +494,7 @@ export default function EmailTemplatesPage() {
               template={t}
               onEdit={() => navigate(`/email-builder/${t.id}`)}
               onDelete={can('delete') ? () => handleDelete(t.id, t.name) : null}
+              onClone={() => setCloneSource(t)}
               onVersions={() => setVersionTemplate(t)}
               onPreview={() => setPreviewTemplate(t)}
               onSend={() => setSendTemplate(t)}
@@ -520,12 +536,24 @@ export default function EmailTemplatesPage() {
           onClose={() => setSendTemplate(null)}
         />
       )}
+
+      <TemplateUploadModal
+        open={uploadOpen} kind="Email"
+        onClose={() => setUploadOpen(false)}
+        onCreate={createEmailTemplate}
+        onCreated={(created) => { setUploadOpen(false); toast.success('Email template created from HTML'); navigate(`/email-builder/${created.id}`) }}
+      />
+      <TemplateCloneModal
+        open={!!cloneSource} source={cloneSource} cloneFn={cloneEmailTemplate}
+        onClose={() => setCloneSource(null)}
+        onCloned={() => { setCloneSource(null); toast.success('Template cloned'); load() }}
+      />
     </div>
   )
 }
 
 /* ── Email Template Card ─────────────────────────────────────────────────── */
-function EmailTemplateCard({ template, onEdit, onDelete = null, onVersions, onPreview, onSend }) {
+function EmailTemplateCard({ template, onEdit, onDelete = null, onClone = null, onVersions, onPreview, onSend }) {
   const date = fmtDate(template.updatedAt)
 
   return (
@@ -680,6 +708,15 @@ function EmailTemplateCard({ template, onEdit, onDelete = null, onVersions, onPr
                    -1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
             </svg>
           </button>
+          {/* Clone */}
+          {onClone && (
+            <button className="btn btn-ghost btn-sm px-2" onClick={onClone} title="Clone template">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <rect x="9" y="9" width="11" height="11" rx="2"/>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 15V5a2 2 0 012-2h10"/>
+              </svg>
+            </button>
+          )}
           {/* Versions */}
           <button className="btn btn-ghost btn-sm px-2" onClick={onVersions} title="Version history">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
