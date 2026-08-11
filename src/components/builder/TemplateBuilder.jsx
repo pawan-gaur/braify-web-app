@@ -17,6 +17,43 @@ function savedAgo(ts, now) {
   return `${Math.round(mins / 60)}h ago`
 }
 
+/* True when the stored content is a complete HTML document (uploaded design) rather than the
+   body fragment the block editor normally produces. Such templates carry their own <style>. */
+function looksFullHtml(raw) {
+  return !!raw && /<!doctype|<html[\s>]|<head[\s>]|<style[\s>]/i.test(raw)
+}
+
+/* Split a full HTML document into { html: body-inner, css: concatenated <style> blocks } so the
+   block editor can render it styled. Falls back to treating the input as a plain fragment. */
+function splitFullHtml(raw, fallbackCss) {
+  if (!looksFullHtml(raw)) return { html: raw || '', css: fallbackCss || '' }
+  try {
+    const doc = new DOMParser().parseFromString(raw, 'text/html')
+    const css = [...doc.querySelectorAll('style')].map(s => s.textContent).join('\n\n')
+    const body = doc.body ? doc.body.innerHTML : raw
+    return { html: body, css: css || fallbackCss || '' }
+  } catch {
+    return { html: raw, css: fallbackCss || '' }
+  }
+}
+
+/* Reassemble a full HTML document from the editor's body HTML + CSS, so an uploaded design keeps
+   being rendered verbatim by the backend (which renders complete documents as-is). */
+function assembleFullHtml(bodyHtml, css) {
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+${css}
+</style>
+</head>
+<body>
+${bodyHtml}
+</body>
+</html>`
+}
+
 /* ── Constants ────────────────────────────────────────────────────────────── */
 const DEVICES = [
   { label: 'A4 Portrait',   value: 'A4 Portrait'   },
@@ -104,6 +141,9 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
   const navigate   = useNavigate()
   const editorRef  = useRef(null)
   const mountedRef = useRef(false)
+  // True when this template is a self-contained HTML document (uploaded design). Kept so that
+  // saving re-emits a full document, preserving the backend's verbatim rendering.
+  const isStandaloneRef = useRef(looksFullHtml(initialTemplate?.htmlContent))
 
   const [lastSaved, setLastSaved] = useState(null)          // timestamp of last save
   const [now,       setNow]       = useState(() => Date.now())
@@ -220,10 +260,16 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
 
     if (initialTemplate?.gjsData) {
       try { editor.loadProjectData(JSON.parse(initialTemplate.gjsData)) }
-      catch { editor.setComponents(initialTemplate.htmlContent || ''); editor.setStyle(initialTemplate.cssContent || '') }
+      catch {
+        const { html, css } = splitFullHtml(initialTemplate.htmlContent, initialTemplate.cssContent)
+        editor.setComponents(html); editor.setStyle(css)
+      }
     } else if (initialTemplate?.htmlContent) {
-      editor.setComponents(initialTemplate.htmlContent)
-      editor.setStyle(initialTemplate.cssContent || '')
+      // A full uploaded document carries its CSS in <style>; extract it into the canvas so the
+      // editor renders styled (matching the PDF) instead of showing bare, unstyled markup.
+      const { html, css } = splitFullHtml(initialTemplate.htmlContent, initialTemplate.cssContent)
+      editor.setComponents(html)
+      editor.setStyle(css)
       setTimeout(() => refreshPlaceholders(editor.getHtml()), 200)
     }
 
@@ -452,7 +498,11 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
     const css     = editor.getCss()
     const gjsData = JSON.stringify(editor.getProjectData())
     refreshPlaceholders(html)
-    Promise.resolve(onSave({ ...settings, htmlContent: html, cssContent: css, gjsData }))
+    // For an uploaded self-contained design, re-emit a full document so the backend keeps rendering
+    // it verbatim (its own styling/@page), rather than wrapping a fragment in the system shell.
+    const htmlContent = isStandaloneRef.current ? assembleFullHtml(html, css) : html
+    const cssContent  = isStandaloneRef.current ? '' : css
+    Promise.resolve(onSave({ ...settings, htmlContent, cssContent, gjsData }))
       .then(() => setLastSaved(Date.now()))
       .catch(() => {})
   }
