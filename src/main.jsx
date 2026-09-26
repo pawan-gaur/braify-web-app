@@ -4,6 +4,7 @@ import App from './App.jsx'
 import '@fontsource-variable/inter-tight'   // self-hosted display/body font
 import './styles/global.css'
 import './styles/landing.css'
+import './styles/dashboard.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

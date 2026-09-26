@@ -8,36 +8,39 @@ import { WHY, FEATURE_GRID, FEATURE_SLUGS } from './content'
 
 /* ═══ Why companies choose Braify — bento ════════════════════════════════
  * Three pillars, each with a tiny live demo of the claim it makes. */
+// Canvas is 520 wide so the widest chip ("Analytics", ~150px) fits either side of the hub.
+const HUB_W = 520
+const HUB_X = HUB_W / 2
 const HUB_TILES = [
-  { id: 'pdf',   x: 70,  y: 60 },
-  { id: 'email', x: 330, y: 60 },
-  { id: 'sign',  x: 70,  y: 200 },
-  { id: 'stats', x: 330, y: 200 },
+  { id: 'pdf',   x: 105,           y: 60 },
+  { id: 'email', x: HUB_W - 105,   y: 60 },
+  { id: 'sign',  x: 105,           y: 200 },
+  { id: 'stats', x: HUB_W - 105,   y: 200 },
 ]
 
 function OnePlatformArt() {
   return (
-    <div aria-hidden="true" className="relative mx-auto w-full max-w-[400px]">
-      <ScaledStage width={400} height={260}>
-        <svg className="absolute inset-0" width="400" height="260" fill="none">
+    <div aria-hidden="true" className="relative mx-auto w-full max-w-[520px]">
+      <ScaledStage width={HUB_W} height={260}>
+        <svg className="absolute inset-0" width={HUB_W} height="260" fill="none">
           {HUB_TILES.map(t => (
-            <path key={t.id} d={`M${t.x} ${t.y} C ${t.x} 130, 200 ${t.y}, 200 130`} stroke={CHANNELS[t.id].fg}
+            <path key={t.id} d={`M${t.x} ${t.y} C ${t.x} 130, ${HUB_X} ${t.y}, ${HUB_X} 130`} stroke={CHANNELS[t.id].fg}
               strokeOpacity="0.65" strokeWidth="1.5" className="lp-dash" />
           ))}
         </svg>
-        <div className="absolute left-[200px] top-[130px] -translate-x-1/2 -translate-y-1/2">
-          <span className="lp-ring absolute -inset-6 rounded-[30px] border border-[#C9BDF7]" />
+        <div className="absolute top-[130px] -translate-x-1/2 -translate-y-1/2" style={{ left: HUB_X }}>
+          <span className="lp-ring absolute -inset-6 rounded-[30px] border border-[#A5E4EB]" />
           <div className="relative w-[84px] h-[84px] rounded-[24px] bg-white border border-white flex items-center justify-center
-                          shadow-[0_16px_40px_rgba(109,82,232,0.35)]">
+                          shadow-[0_16px_40px_rgba(20,170,190,0.35)]">
             <BrandLogo size={40} />
           </div>
         </div>
         {HUB_TILES.map((t, i) => (
-          <div key={t.id} className={`absolute -translate-x-1/2 -translate-y-1/2 ${i % 2 ? 'lp-float' : 'lp-float-slow'}`}
-            style={{ left: t.x, top: t.y }}>
-            <div className="flex items-center gap-2 rounded-xl bg-white/85 border border-white backdrop-blur pl-1.5 pr-3 py-1.5 shadow-[0_8px_20px_rgba(76,60,160,0.12)]">
+          // centring lives on the outer div; the float animation (which sets `transform`) on the inner one
+          <div key={t.id} className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: t.x, top: t.y }}>
+            <div className={`flex items-center gap-2 rounded-xl bg-white/85 border border-white backdrop-blur pl-1.5 pr-3 py-1.5 shadow-[0_8px_20px_rgba(14,116,144,0.12)] ${i % 2 ? 'lp-float' : 'lp-float-slow'}`}>
               <ChannelTile id={t.id} size="sm" />
-              <span className="text-[12px] font-semibold text-[#16143A] whitespace-nowrap">{CHANNELS[t.id].label}</span>
+              <span className="text-[12px] font-semibold text-[#0C2530] whitespace-nowrap">{CHANNELS[t.id].label}</span>
             </div>
           </div>
         ))}
@@ -53,16 +56,16 @@ function FeatureAccessArt() {
   // E-Sign and File Storage flip as the org's licence changes
   const on = [true, true, step % 2 === 0, step >= 2]
   return (
-    <div ref={ref} aria-hidden="true" className="rounded-2xl border border-black/[0.06] bg-[#FAF9FF] p-3">
+    <div ref={ref} aria-hidden="true" className="rounded-2xl border border-black/[0.06] bg-[#F5FCFD] p-3">
       <div className="flex items-center justify-between px-1 pb-2">
-        <span className="lp-mono text-[10px] tracking-[0.14em] text-[#8B88A6]">ACME CORP · FEATURES</span>
-        <span className="lp-mono text-[10px] text-[#6D52E8]">{on.filter(Boolean).length}/4</span>
+        <span className="lp-mono text-[10px] tracking-[0.14em] text-[#7F979F]">ACME CORP · FEATURES</span>
+        <span className="lp-mono text-[10px] text-[#0B8E9E]">{on.filter(Boolean).length}/4</span>
       </div>
       <div className="space-y-1.5">
         {TOGGLES.map((t, i) => (
           <div key={t} className="flex items-center justify-between rounded-lg bg-white border border-black/[0.05] px-2.5 py-1.5">
-            <span className={`text-[12px] transition-colors ${on[i] ? 'text-[#16143A]' : 'text-[#A3A0BC]'}`}>{t}</span>
-            <span className={`relative w-8 h-[18px] rounded-full transition-colors duration-500 ${on[i] ? 'bg-[#6D52E8]' : 'bg-black/15'}`}>
+            <span className={`text-[12px] transition-colors ${on[i] ? 'text-[#0C2530]' : 'text-[#9DB1B7]'}`}>{t}</span>
+            <span className={`relative w-8 h-[18px] rounded-full transition-colors duration-500 ${on[i] ? 'bg-[#0B8E9E]' : 'bg-black/15'}`}>
               <span className={`absolute top-[3px] w-3 h-3 rounded-full bg-white shadow transition-all duration-500 ${on[i] ? 'left-[17px]' : 'left-[3px]'}`} />
             </span>
           </div>
@@ -77,20 +80,20 @@ const AUDIT = [
   ['SENT',     '#0ea5e9', 'Email → billing@acme.com'],
   ['SIGNED',   '#14b8a6', 'INV-2041 by Acme Corp'],
   ['UPDATED',  '#d97706', 'Role → Admin'],
-  ['RESTORED', '#6D52E8', 'Offer letter · v12'],
+  ['RESTORED', '#0B8E9E', 'Offer letter · v12'],
   ['UPLOADED', '#0891b2', 'contract-final.pdf'],
 ]
 
 function AuditArt() {
   const rows = [...AUDIT, ...AUDIT]
   return (
-    <div aria-hidden="true" className="relative h-[150px] overflow-clip rounded-2xl border border-black/[0.06] bg-[#FAF9FF]
+    <div aria-hidden="true" className="relative h-[150px] overflow-clip rounded-2xl border border-black/[0.06] bg-[#F5FCFD]
                                        [mask-image:linear-gradient(to_bottom,transparent,black_18%,black_82%,transparent)]">
       <ul className="lp-ticker px-3">
         {rows.map(([verb, color, what], i) => (
           <li key={i} className="flex items-center gap-2.5 py-1.5">
             <span className="lp-mono w-[70px] text-center text-[9px] font-semibold rounded px-1 py-0.5" style={{ color, background: `${color}14` }}>{verb}</span>
-            <span className="text-[12px] text-[#3A3858] truncate">{what}</span>
+            <span className="text-[12px] text-[#33505A] truncate">{what}</span>
           </li>
         ))}
       </ul>
@@ -110,20 +113,20 @@ export function WhyBraify({ onStart }) {
 
         <div className="grid md:grid-cols-3 md:grid-rows-2 gap-4">
           <Reveal className="md:col-span-2 md:row-span-2">
-            <Spotlight as="article" glow="#8B6DF7"
-              className="h-full overflow-clip rounded-[24px] bg-gradient-to-br from-[#EEE9FF] via-[#EAF1FF] to-[#E4F7F1] border border-white p-7 md:p-9 flex flex-col
-                         shadow-[0_24px_60px_rgba(76,60,160,0.10)]">
+            <Spotlight as="article" glow="#22BCCB"
+              className="h-full overflow-clip rounded-[24px] bg-gradient-to-br from-[#DDF7FA] via-[#EAF1FF] to-[#E4F7F1] border border-white p-7 md:p-9 flex flex-col
+                         shadow-[0_24px_60px_rgba(14,116,144,0.10)]">
               <Aurora className="opacity-60" />
-              <span className="relative lp-mono text-[10.5px] tracking-[0.18em] uppercase text-[#6D52E8]">One platform</span>
+              <span className="relative lp-mono text-[10.5px] tracking-[0.18em] uppercase text-[#0B8E9E]">One platform</span>
               <div className="relative my-6 md:my-4 flex-1 flex items-center"><OnePlatformArt /></div>
               <div className="relative">
-                <h3 className="text-[26px] md:text-[30px] leading-tight font-bold tracking-tight text-[#16143A] max-w-lg">{a.title}</h3>
-                <p className="mt-3 text-[15px] leading-relaxed text-[#55527A] max-w-xl">{a.desc}</p>
+                <h3 className="text-[26px] md:text-[30px] leading-tight font-bold tracking-tight text-[#0C2530] max-w-lg">{a.title}</h3>
+                <p className="mt-3 text-[15px] leading-relaxed text-[#4A6670] max-w-xl">{a.desc}</p>
               </div>
             </Spotlight>
           </Reveal>
 
-          {[[b, '#6D52E8', 'Per-org access', <FeatureAccessArt key="f" />], [c, '#d97706', 'Full custody', <AuditArt key="a" />]].map(([w, color, eyebrow, art], i) => (
+          {[[b, '#0B8E9E', 'Per-org access', <FeatureAccessArt key="f" />], [c, '#d97706', 'Full custody', <AuditArt key="a" />]].map(([w, color, eyebrow, art], i) => (
             <Reveal key={w.title} delay={(i + 1) * 90}>
               <Spotlight as="article" glow={color}
                 className="h-full rounded-[24px] bg-white border border-black/[0.07] p-6 flex flex-col gap-5
@@ -131,8 +134,8 @@ export function WhyBraify({ onStart }) {
                 <span className="lp-mono text-[10.5px] tracking-[0.18em] uppercase" style={{ color }}>{eyebrow}</span>
                 {art}
                 <div>
-                  <h3 className="text-[18px] leading-snug font-bold tracking-tight text-[#16143A]">{w.title}</h3>
-                  <p className="mt-1.5 text-[13.5px] leading-relaxed text-[#625F80]">{w.desc}</p>
+                  <h3 className="text-[18px] leading-snug font-bold tracking-tight text-[#0C2530]">{w.title}</h3>
+                  <p className="mt-1.5 text-[13.5px] leading-relaxed text-[#587079]">{w.desc}</p>
                 </div>
               </Spotlight>
             </Reveal>
@@ -153,30 +156,30 @@ const WITH_OUT = ['pdf', 'email', 'sign', 'stats']
 
 function WithoutPanel() {
   return (
-    <div className="rounded-[20px] bg-[#FAF9FF] border border-black/[0.07] p-5 h-full">
+    <div className="rounded-[20px] bg-[#F5FCFD] border border-black/[0.07] p-5 h-full">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="lp-mono text-[11px] font-normal tracking-[0.16em] text-[#625F80]">WITHOUT BRAIFY</h3>
-        <span className="lp-mono text-[10.5px] tracking-[0.1em] text-[#625F80] border border-black/10 rounded-full px-2.5 py-0.5">4 TOOLS</span>
+        <h3 className="lp-mono text-[11px] font-normal tracking-[0.16em] text-[#587079]">WITHOUT BRAIFY</h3>
+        <span className="lp-mono text-[10.5px] tracking-[0.1em] text-[#587079] border border-black/10 rounded-full px-2.5 py-0.5">4 TOOLS</span>
       </div>
       <div aria-hidden="true">
         <ScaledStage width={470} height={220}>
           <svg className="absolute inset-0" width="470" height="220" fill="none">
             {[62, 178, 292, 408].map(x => (
-              <path key={x} d={`M235 62 C 235 110, ${x} 100, ${x} 142`} stroke="#D2CCEB" strokeWidth="1.4" />
+              <path key={x} d={`M235 62 C 235 110, ${x} 100, ${x} 142`} stroke="#C3E2E7" strokeWidth="1.4" />
             ))}
           </svg>
           <div className="absolute left-1/2 -translate-x-1/2 top-4 flex items-center gap-2 bg-white rounded-xl border border-black/[0.08] px-3 py-2 shadow-sm">
-            <span className="lp-mono w-7 h-7 rounded-lg bg-[#F1EEFB] text-[8.5px] font-semibold text-[#625F80] flex items-center justify-center">TEAM</span>
+            <span className="lp-mono w-7 h-7 rounded-lg bg-[#E8F7F9] text-[8.5px] font-semibold text-[#587079] flex items-center justify-center">TEAM</span>
             <div className="leading-tight">
-              <p className="text-[12.5px] font-semibold text-[#16143A]">Your team</p>
-              <p className="lp-mono text-[9.5px] text-[#8B88A6]">copy · paste · chase</p>
+              <p className="text-[12.5px] font-semibold text-[#0C2530]">Your team</p>
+              <p className="lp-mono text-[9.5px] text-[#7F979F]">copy · paste · chase</p>
             </div>
           </div>
           {TOOLS.map((t, i) => (
             <div key={t} className="absolute top-[142px] w-[104px] -translate-x-1/2 bg-white rounded-xl border border-black/[0.08] px-2.5 py-2 shadow-sm"
               style={{ left: 62 + i * 115.3 }}>
-              <p className="text-[11.5px] font-semibold text-[#3A3858]">{t}</p>
-              <p className="lp-mono text-[9px] text-[#A3A0BC]">export · re-upload</p>
+              <p className="text-[11.5px] font-semibold text-[#33505A]">{t}</p>
+              <p className="lp-mono text-[9px] text-[#9DB1B7]">export · re-upload</p>
             </div>
           ))}
         </ScaledStage>
@@ -191,12 +194,12 @@ function WithPanel() {
   const xs = [70, 180, 290, 400]
   const out = x => `M235 124 C 235 150, ${x} 150, ${x} 172`
   return (
-    <div ref={ref} className="relative overflow-clip rounded-[20px] bg-gradient-to-b from-white to-[#F1ECFF] border border-[#D6CCFB] p-5 h-full
-                              shadow-[0_24px_60px_rgba(109,82,232,0.14)]">
+    <div ref={ref} className="relative overflow-clip rounded-[20px] bg-gradient-to-b from-white to-[#E4F8FA] border border-[#B3EAF0] p-5 h-full
+                              shadow-[0_24px_60px_rgba(20,170,190,0.14)]">
       <Aurora className="opacity-50" />
       <div className="relative flex items-center justify-between mb-2">
-        <h3 className="lp-mono text-[11px] font-normal tracking-[0.16em] text-[#6D52E8]">WITH BRAIFY</h3>
-        <span className="lp-mono text-[10.5px] tracking-[0.1em] text-[#6D52E8] bg-[#F3F0FF] border border-[#D6CCFB] rounded-full px-2.5 py-0.5">1 PLATFORM</span>
+        <h3 className="lp-mono text-[11px] font-normal tracking-[0.16em] text-[#0B8E9E]">WITH BRAIFY</h3>
+        <span className="lp-mono text-[10.5px] tracking-[0.1em] text-[#0B8E9E] bg-[#E2F8FA] border border-[#B3EAF0] rounded-full px-2.5 py-0.5">1 PLATFORM</span>
       </div>
       <div aria-hidden="true" className="relative">
         <ScaledStage width={470} height={220}>
@@ -209,12 +212,12 @@ function WithPanel() {
             <Packet path={out(xs[step])} trigger={step} dur={0.8} color={CHANNELS[WITH_OUT[step]].fg} r={3.5} />
           </svg>
           <div className="absolute left-1/2 -translate-x-1/2 top-0 flex items-center gap-2 bg-white rounded-xl border border-black/[0.08] px-3 py-1.5 shadow-sm">
-            <span className="lp-mono w-6 h-6 rounded-md bg-[#F3F0FF] text-[8px] font-semibold text-[#6D52E8] flex items-center justify-center">TEAM</span>
-            <p className="text-[12px] font-semibold text-[#16143A]">Your team</p>
+            <span className="lp-mono w-6 h-6 rounded-md bg-[#E2F8FA] text-[8px] font-semibold text-[#0B8E9E] flex items-center justify-center">TEAM</span>
+            <p className="text-[12px] font-semibold text-[#0C2530]">Your team</p>
           </div>
-          <span className="lp-mono absolute left-[243px] top-[52px] text-[9.5px] text-[#6D52E8]">one template</span>
+          <span className="lp-mono absolute left-[243px] top-[52px] text-[9.5px] text-[#0B8E9E]">one template</span>
           <div className="absolute left-1/2 -translate-x-1/2 top-[78px] w-[250px] flex items-center gap-2.5 rounded-xl px-3 py-2.5
-                          shadow-[0_14px_40px_rgba(109,82,232,0.55)]" style={{ backgroundImage: 'linear-gradient(120deg,#2F5BF0,#6D52E8)' }}>
+                          shadow-[0_14px_40px_rgba(20,170,190,0.55)]" style={{ backgroundImage: 'linear-gradient(120deg,#2F5BF0,#0B8E9E)' }}>
             <span className="w-7 h-7 rounded-lg bg-white flex items-center justify-center"><BrandLogo size={20} /></span>
             <div className="flex-1 leading-tight">
               <p className="text-[12.5px] font-semibold text-white">Braify</p>
@@ -229,7 +232,7 @@ function WithPanel() {
           ))}
         </ScaledStage>
       </div>
-      <p className="relative mt-1 inline-flex items-center gap-2 rounded-full bg-white border border-[#D6CCFB] text-[#16143A] px-3.5 py-1.5 shadow-sm">
+      <p className="relative mt-1 inline-flex items-center gap-2 rounded-full bg-white border border-[#B3EAF0] text-[#0C2530] px-3.5 py-1.5 shadow-sm">
         <Check className="w-3 h-3 text-emerald-500" strokeWidth={3} />
         <span className="lp-mono text-[11px]">Design once. Deliver as PDF, email or e-signature.</span>
       </p>
@@ -282,9 +285,9 @@ function ApiDiagram({ step }) {
       </svg>
 
       <div className="absolute left-0 top-[60px] w-[178px] rounded-2xl bg-white border border-black/[0.08] p-3.5 shadow-[0_10px_28px_rgba(20,20,40,0.07)]">
-        <span className="lp-mono inline-flex w-7 h-7 rounded-lg bg-[#F1EEFB] text-[9px] font-semibold text-[#625F80] items-center justify-center">APP</span>
-        <p className="mt-2.5 text-[13px] font-semibold text-[#16143A]">Your application</p>
-        <p className="lp-mono text-[9.5px] text-[#8B88A6] mt-0.5">X-API-Key: brf_••••</p>
+        <span className="lp-mono inline-flex w-7 h-7 rounded-lg bg-[#E8F7F9] text-[9px] font-semibold text-[#587079] items-center justify-center">APP</span>
+        <p className="mt-2.5 text-[13px] font-semibold text-[#0C2530]">Your application</p>
+        <p className="lp-mono text-[9.5px] text-[#7F979F] mt-0.5">X-API-Key: brf_••••</p>
         <span key={step} className="lp-rise lp-mono mt-2.5 inline-block text-[9.5px] text-brand bg-brand-50 rounded px-1.5 py-0.5">
           {ep.m} {ep.path}
         </span>
@@ -311,8 +314,8 @@ function ApiDiagram({ step }) {
                   boxShadow: on ? '0 6px 18px rgba(47,91,240,0.12)' : 'none',
                 }}>
                 <span className={`lp-mono w-[46px] text-center text-[9.5px] font-semibold rounded px-1 py-0.5 ${METHOD_STYLE[e.m]}`}>{e.m}</span>
-                <span className="lp-mono text-[12px] text-[#16143A] flex-1">/api/external{e.path}</span>
-                <span className={`text-[12px] transition-colors ${on ? 'text-[#16143A] font-semibold' : 'text-[#8B88A6]'}`}>{e.label}</span>
+                <span className="lp-mono text-[12px] text-[#0C2530] flex-1">/api/external{e.path}</span>
+                <span className={`text-[12px] transition-colors ${on ? 'text-[#0C2530] font-semibold' : 'text-[#7F979F]'}`}>{e.label}</span>
               </div>
             )
           })}
@@ -327,7 +330,7 @@ function ApiDiagram({ step }) {
             className="absolute left-[846px] w-[154px] -translate-y-1/2 flex items-center gap-2.5 rounded-xl bg-white border px-2.5 py-2 transition-all duration-500"
             style={{ top: y, borderColor: on ? c.ring : 'rgba(0,0,0,0.07)', boxShadow: on ? `0 0 0 3px ${c.bg}` : 'none' }}>
             <ChannelTile id={API_OUT[i]} size="sm" active={on} />
-            <span className="text-[12.5px] font-semibold text-[#16143A]">{c.label}</span>
+            <span className="text-[12.5px] font-semibold text-[#0C2530]">{c.label}</span>
           </div>
         )
       })}
@@ -340,7 +343,7 @@ export function Capabilities({ onStart }) {
 
   return (
     <section id="features" aria-labelledby="features-title"
-      className="relative py-24 md:py-28 bg-[#F1F5FF] border-y border-[#E3E9FB] overflow-clip">
+      className="relative py-24 md:py-28 bg-[#EEF8FC] border-y border-[#D6EDF5] overflow-clip">
       <div aria-hidden="true" className="lp-grid pointer-events-none absolute inset-0 [mask-image:linear-gradient(to_bottom,black,transparent_60%)]" />
       <div aria-hidden="true" className="pointer-events-none absolute -top-32 -left-32 w-[560px] h-[460px] rounded-full blur-3xl"
         style={{ background: 'radial-gradient(closest-side, rgba(47,91,240,0.12), transparent)' }} />
@@ -373,20 +376,20 @@ export function Capabilities({ onStart }) {
                   <span className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: f.color + '18' }}>
                     <Icon d={f.icon} color={f.color} />
                   </span>
-                  <span aria-hidden="true" className="lp-mono text-[10px] text-[#B3B0CA]">{String(i + 1).padStart(2, '0')}</span>
+                  <span aria-hidden="true" className="lp-mono text-[10px] text-[#AFC1C6]">{String(i + 1).padStart(2, '0')}</span>
                 </div>
-                <h3 className="font-bold text-[15px] text-[#16143A] mb-1.5">{f.title}</h3>
-                <p className="text-[13px] text-[#625F80] leading-relaxed">{f.desc}</p>
+                <h3 className="font-bold text-[15px] text-[#0C2530] mb-1.5">{f.title}</h3>
+                <p className="text-[13px] text-[#587079] leading-relaxed">{f.desc}</p>
                 {slug ? (
                   <Link to={`/features/${slug}`}
                     className="mt-4 inline-flex items-center gap-1 text-[12.5px] font-semibold opacity-70 group-hover:opacity-100 transition-opacity"
-                    style={{ color: `color-mix(in srgb, ${f.color} 70%, #16143A)` }}>
+                    style={{ color: `color-mix(in srgb, ${f.color} 70%, #0C2530)` }}>
                     Learn more <span className="sr-only">about {f.title}</span><Arrow className="w-3.5 h-3.5" />
                   </Link>
                 ) : (
                   <button onClick={onStart}
                     className="mt-4 inline-flex items-center gap-1 text-[12.5px] font-semibold opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
-                    style={{ color: `color-mix(in srgb, ${f.color} 70%, #16143A)` }}>
+                    style={{ color: `color-mix(in srgb, ${f.color} 70%, #0C2530)` }}>
                     Get started <Arrow className="w-3.5 h-3.5" />
                   </button>
                 )}

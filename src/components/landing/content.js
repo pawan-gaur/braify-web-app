@@ -188,7 +188,7 @@ export const PLANS = [
   {
     name: 'Enterprise',
     badge: 'Custom',
-    badgeColor: 'bg-accent-100 text-accent-700',
+    badgeColor: 'bg-cyan-50 text-cyan-800',
     price: 'Custom',
     period: 'pricing',
     highlight: false,
@@ -230,6 +230,13 @@ export const ANNOUNCEMENT = 'New: Analytics dashboard, scheduled reports & file 
 export const HERO_NOTES = ['No credit card required', 'Free plan available', 'Pro free during beta']
 
 /* ─── Social proof ──────────────────────────────────────────────────────── */
+/* Real customers (logos self-hosted in /public/clients), shown first in the strip. */
+export const CLIENTS = [
+  { name: 'Eden Care', logo: '/clients/eden-care.png', url: 'https://www.edencaremedical.com/' },
+  { name: 'Ginja AI',  logo: '/clients/ginja.svg',     url: 'https://www.ginja.ai/' },
+  { name: 'Uplint',    logo: '/clients/uplint.svg',    url: 'https://uplint.dev/' },
+]
+/* Placeholder names (not real customers). */
 export const LOGOS = ['ACME CORP', 'GLOBEX INC', 'INITECH', 'UMBRELLA', 'MASSIVE DYN']
 
 /* ─── Why Braify ────────────────────────────────────────────────────────── */
@@ -241,7 +248,7 @@ export const WHY = [
 
 /* ─── Roles ─────────────────────────────────────────────────────────────── */
 export const ROLES = [
-  { role: 'Org Admin', tag: 'ORG', color: '#6D52E8', bg: '#F3F0FF',
+  { role: 'Org Admin', tag: 'ORG', color: '#0B8E9E', bg: '#E2F8FA',
     path: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
     summary: 'Runs the organisation — people, templates and the complete audit history.',
     perms: ['Manage users in their org', 'Access all org templates', 'View full org audit log', 'All licensed feature access'] },

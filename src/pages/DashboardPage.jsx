@@ -4,9 +4,13 @@ import { getDashboardStats, getDashboardAnalytics } from '../services/api'
 import { useAuth, ROLES } from '../context/AuthContext'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
-import { FEATURE_META } from '../config/features'
+import { FEATURES, FEATURE_META } from '../config/features'
 import { fmtDateTime as fmtDate } from '../utils/date'
-import { IconTrendUp, IconTrendDown, IconArrowRight } from '../components/ui/icons'
+import { IconTrendDown, IconArrowRight } from '../components/ui/icons'
+import {
+  PipelineBand, SparkKpi, AttentionPanel, attentionCount, ActivityFeed, QuickCreate, NewMenu,
+  createActions, TrendChart,
+} from '../components/dashboard/OverviewKit'
 
 const CRUMBS = [{ label: 'Dashboard' }]
 
@@ -18,200 +22,6 @@ function greeting() {
 function pct(n, total) {
   if (!total) return 0
   return Math.round((n / total) * 100)
-}
-
-/* ── useCountUp — animates a number from 0 to target with easing ─────────── */
-function useCountUp(target, { duration = 800 } = {}) {
-  const [value, setValue] = useState(0)
-  useEffect(() => {
-    if (target == null) { setValue(0); return }
-    const start = performance.now()
-    const from = 0
-    const to = Number(target) || 0
-    let raf
-    const tick = (now) => {
-      const elapsed = now - start
-      const t = Math.min(1, elapsed / duration)
-      // ease-out cubic
-      const eased = 1 - Math.pow(1 - t, 3)
-      setValue(Math.round(from + (to - from) * eased))
-      if (t < 1) raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [target, duration])
-  return value
-}
-
-/* ── Hero metric ─────────────────────────────────────────────────────────── */
-function HeroMetric({ value, label, trend, sub, max, onClick }) {
-  const animated = useCountUp(value)
-  const percent = max ? Math.min(100, Math.round((value / max) * 100)) : null
-  const barColor = percent != null && percent > 90 ? 'bg-rose-300'
-                 : percent != null && percent > 75 ? 'bg-amber-300'
-                 : 'bg-white'
-
-  return (
-    <div
-      onClick={onClick}
-      className={`surface-accent relative overflow-hidden p-6 h-full
-                  transition-all duration-250 ease-spring
-                  ${onClick ? 'cursor-pointer hover:-translate-y-1' : ''}`}
-    >
-      {/* decorative glow */}
-      <div className="absolute -top-16 -right-10 w-56 h-56 rounded-full bg-white/15 blur-2xl pointer-events-none"/>
-      <p className="text-xs font-bold uppercase tracking-wider text-white/80 relative">{label}</p>
-      <div className="mt-3 flex items-baseline gap-3 flex-wrap relative">
-        <span className="text-6xl md:text-7xl font-extrabold text-white tracking-tightest tabular-nums leading-none">
-          {animated.toLocaleString()}
-        </span>
-        {trend != null && (
-          <span className="inline-flex items-center gap-1 text-sm font-bold px-2.5 py-1 rounded-full bg-white/20 text-white">
-            {trend >= 0 ? <IconTrendUp className="w-3.5 h-3.5"/> : <IconTrendDown className="w-3.5 h-3.5"/>} {Math.abs(trend)}%
-          </span>
-        )}
-      </div>
-      {sub && <p className="text-sm text-white/85 mt-2 relative">{sub}</p>}
-
-      {percent != null && (
-        <div className="mt-5 relative">
-          <div className="flex items-center justify-between text-xs text-white/80 mb-1.5">
-            <span>{percent}% of monthly quota</span>
-            <span className="tabular-nums">{value?.toLocaleString()} / {max?.toLocaleString()}</span>
-          </div>
-          <div className="h-1.5 rounded-full bg-white/25 overflow-hidden">
-            <div
-              className={`h-full ${barColor} transition-[width] duration-700 ease-spring`}
-              style={{ width: `${percent}%` }}
-            />
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-/* ── Metric pill — compact supporting metric (new dashboard design) ─────── */
-function MetricPill({ label, value, sub, onClick, accent = 'brand' }) {
-  const animated = useCountUp(value)
-  const accentMap = {
-    brand:   'text-brand',
-    success: 'text-emerald-600',
-    warning: 'text-amber-600',
-    danger:  'text-rose-600',
-  }
-  return (
-    <div
-      onClick={onClick}
-      className={`card ${onClick ? 'cursor-pointer card-hover' : ''}`}
-    >
-      <p className="text-eyebrow">{label}</p>
-      <p className={`text-3xl font-semibold tracking-tight mt-2 tabular-nums ${accentMap[accent] ?? accentMap.brand}`}>
-        {animated.toLocaleString()}
-      </p>
-      {sub && <p className="text-xs text-ink-3 mt-1">{sub}</p>}
-    </div>
-  )
-}
-
-/* ── Today panel — smart action suggestions based on state ──────────────── */
-function TodayPanel({ stats, isOrgAdmin, onNavigate }) {
-  const items = []
-
-  const esignOverdue = stats?.esignOverdue ?? 0
-  const esignPending = stats?.esignPending ?? 0
-  const pendingInvites = stats?.pendingInvites ?? 0
-  const quotaPct = stats?.docsQuotaPercent ?? null
-
-  if (esignOverdue > 0) {
-    items.push({
-      tone: 'danger',
-      icon: 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
-      title: `${esignOverdue} e-sign ${esignOverdue === 1 ? 'document is' : 'documents are'} overdue`,
-      action: 'Review',
-      to: '/esign',
-    })
-  }
-  if (esignPending > 0) {
-    items.push({
-      tone: 'brand',
-      icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
-      title: `${esignPending} ${esignPending === 1 ? 'document is' : 'documents are'} awaiting signature`,
-      action: 'View',
-      to: '/esign',
-    })
-  }
-  if (pendingInvites > 0 && isOrgAdmin) {
-    items.push({
-      tone: 'warning',
-      icon: 'M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1a3 3 0 006 0v-1a8 8 0 10-3.4 6.6',
-      title: `${pendingInvites} pending team ${pendingInvites === 1 ? 'invite' : 'invites'}`,
-      action: 'Manage',
-      to: '/users',
-    })
-  }
-  if (quotaPct != null && quotaPct >= 80) {
-    items.push({
-      tone: 'warning',
-      icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
-      title: `You're at ${quotaPct}% of your monthly quota`,
-      action: 'Upgrade',
-      to: '/usage',
-    })
-  }
-
-  // Empty state — first-time delight
-  if (items.length === 0) {
-    return (
-      <div className="card text-center py-10">
-        <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-3 animate-float-bob">
-          <svg className="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/>
-          </svg>
-        </div>
-        <p className="text-sm font-semibold text-ink">You're all caught up</p>
-        <p className="text-xs text-ink-3 mt-1">No urgent actions today.</p>
-      </div>
-    )
-  }
-
-  const toneClasses = {
-    danger:  { bg: 'bg-rose-50',    icon: 'text-rose-500',    ring: 'bg-rose-500' },
-    warning: { bg: 'bg-amber-50',   icon: 'text-amber-500',   ring: 'bg-amber-500' },
-    brand:   { bg: 'bg-brand-50',   icon: 'text-brand',       ring: 'bg-brand' },
-  }
-
-  return (
-    <div className="card">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold text-ink">Today</h2>
-        <span className="text-eyebrow">{items.length} {items.length === 1 ? 'item' : 'items'}</span>
-      </div>
-      <ul className="space-y-2">
-        {items.map((it, i) => {
-          const t = toneClasses[it.tone]
-          return (
-            <li
-              key={i}
-              className="group flex items-center gap-3 p-3 rounded-input hover:bg-ink-9 transition-colors cursor-pointer"
-              onClick={() => onNavigate(it.to)}
-            >
-              <div className={`w-9 h-9 rounded-input ${t.bg} flex items-center justify-center shrink-0`}>
-                <svg className={`w-4.5 h-4.5 ${t.icon}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={it.icon}/>
-                </svg>
-              </div>
-              <p className="flex-1 text-sm text-ink-2 leading-snug">{it.title}</p>
-              <span className="inline-flex items-center gap-1 text-xs font-semibold text-brand opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                {it.action}
-                <IconArrowRight className="w-3.5 h-3.5"/>
-              </span>
-            </li>
-          )
-        })}
-      </ul>
-    </div>
-  )
 }
 
 /* ── Colour palette ──────────────────────────────────────────────────────── */
@@ -341,87 +151,21 @@ function StatPill({ value, color }) {
 
 /* ── Charts ──────────────────────────────────────────────────────────────── */
 
-function BarChart({ data = [], color = '#2F5BF0', label, exportRef }) {
-  const max    = Math.max(...data.map(d => d.count), 1)
-  const W      = 100 / Math.max(data.length, 1)
-  const BAR_W  = Math.min(W * 0.55, 14)
-  const HEIGHT = 100
+function BarChart({ data = [], color = '#6D52E8', label, exportRef }) {
   return (
-    <div ref={exportRef}>
+    <div>
       {label && <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">{label}</p>}
-      <div className="relative" style={{ height: HEIGHT + 32 }}>
-        {[0, 0.5, 1].map(f => (
-          <div key={f} className="absolute left-0 right-0 border-t border-gray-100 dark:border-gray-700/60"
-            style={{ bottom: 24 + f * HEIGHT }}/>
-        ))}
-        <svg className="absolute inset-0 w-full" style={{ height: HEIGHT + 24 }}
-          viewBox={`0 0 100 ${HEIGHT + 4}`} preserveAspectRatio="none">
-          {data.map((d, i) => {
-            const barH = max === 0 ? 0 : Math.max((d.count / max) * HEIGHT, d.count > 0 ? 4 : 0)
-            const x    = i * W + W / 2 - BAR_W / 2
-            return (
-              <g key={i}>
-                <rect x={x} y={0} width={BAR_W} height={HEIGHT}
-                  fill="currentColor" className="text-gray-100 dark:text-gray-700/40" rx="2"/>
-                {d.count > 0 && (
-                  <rect x={x} y={HEIGHT - barH} width={BAR_W} height={barH} fill={color} rx="2" opacity="0.85">
-                    <title>{d.count} in {d.label}</title>
-                  </rect>
-                )}
-              </g>
-            )
-          })}
-        </svg>
-        <div className="absolute bottom-0 left-0 right-0 flex" style={{ height: 24 }}>
-          {data.map((d, i) => (
-            <div key={i} className="flex-1 flex items-end justify-center pb-0.5">
-              <span className="text-[9px] font-medium text-gray-400 truncate text-center">{d.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      <TrendChart series={[{ label: label ?? 'Count', color, data }]} exportRef={exportRef} height={140} />
     </div>
   )
 }
 
 function GroupedBarChart({ pdfData = [], emailData = [], exportRef }) {
-  const allCounts = [...pdfData, ...emailData].map(d => d.count)
-  const max    = Math.max(...allCounts, 1)
-  const HEIGHT = 120
-  const groups = pdfData.length
   return (
-    <div ref={exportRef} className="relative" style={{ height: HEIGHT + 36 }}>
-      {[0, 0.5, 1].map(f => (
-        <div key={f} className="absolute left-0 right-0 border-t border-gray-100 dark:border-gray-700/60"
-          style={{ bottom: 28 + f * HEIGHT }}/>
-      ))}
-      <svg className="absolute left-0 right-0 w-full" style={{ height: HEIGHT + 28, bottom: 0 }}
-        viewBox={`0 0 ${groups * 40} ${HEIGHT + 4}`} preserveAspectRatio="none">
-        {pdfData.map((d, i) => {
-          const eD  = emailData[i] ?? { count: 0 }
-          const gX  = i * 40 + 4
-          const pH  = Math.max((d.count / max) * HEIGHT, d.count > 0 ? 4 : 0)
-          const eH  = Math.max((eD.count / max) * HEIGHT, eD.count > 0 ? 4 : 0)
-          return (
-            <g key={i}>
-              <rect x={gX}      y={HEIGHT - pH} width={13} height={Math.max(pH, 0)} fill="#2F5BF0" rx="2" opacity="0.85">
-                <title>{d.count} PDF in {d.label}</title>
-              </rect>
-              <rect x={gX + 15} y={HEIGHT - eH} width={13} height={Math.max(eH, 0)} fill="#10b981" rx="2" opacity="0.85">
-                <title>{eD.count} Email in {eD.label}</title>
-              </rect>
-            </g>
-          )
-        })}
-      </svg>
-      <div className="absolute bottom-0 left-0 right-0 flex" style={{ height: 28 }}>
-        {pdfData.map((d, i) => (
-          <div key={i} className="flex-1 flex items-end justify-center pb-1">
-            <span className="text-[9px] font-medium text-gray-400">{d.label}</span>
-          </div>
-        ))}
-      </div>
-    </div>
+    <TrendChart exportRef={exportRef} series={[
+      { label: 'PDF', color: '#6D52E8', data: pdfData },
+      { label: 'Email', color: '#0ea5e9', data: emailData },
+    ]} />
   )
 }
 
@@ -689,70 +433,18 @@ function ScheduledReportsPanel({ orgId }) {
   )
 }
 
-/* ── Live activity feed (polls every 30 s when enabled) ──────────────────── */
-function LiveActivityFeed({ stats, onNavigate }) {
-  const [live, setLive]   = useState(false)
-  const [blink, setBlink] = useState(false)
-  const timerRef          = useRef(null)
-
-  useEffect(() => {
-    if (!live) { clearInterval(timerRef.current); return }
-    timerRef.current = setInterval(() => setBlink(b => !b), 2000)
-    return () => clearInterval(timerRef.current)
-  }, [live])
-
-  const items = stats?.recentActivity ?? []
-
-  return (
-    <div className="card flex flex-col h-full">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="text-sm font-bold text-gray-800 dark:text-gray-100">Activity Feed</h2>
-          <p className="text-xs text-gray-400 mt-0.5">{live ? 'Refreshes every 30s' : 'Manual mode'}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setLive(l => !l)}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all
-              ${live
-                ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400'
-                : 'border-gray-200 dark:border-gray-700 text-gray-500'}`}>
-            <span className={`w-2 h-2 rounded-full ${live ? 'bg-emerald-500' : 'bg-gray-300'} ${live && blink ? 'opacity-40' : 'opacity-100'} transition-opacity`}/>
-            {live ? 'Live' : 'Live off'}
-          </button>
-          <button onClick={() => onNavigate('/audit-log')}
-            className="inline-flex items-center gap-1 text-xs text-brand hover:underline font-medium">Full log <IconArrowRight className="w-3.5 h-3.5"/></button>
-        </div>
-      </div>
-      {!items.length
-        ? <div className="flex-1 flex items-center justify-center text-gray-400 py-8 text-xs">No activity yet</div>
-        : (
-          <ul className="space-y-3 overflow-y-auto max-h-72 flex-1 pr-1">
-            {items.map((log, i) => (
-              <li key={log.id ?? i} className="flex items-start gap-2.5">
-                <span className={`shrink-0 mt-0.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold
-                  ${ACTION_COLOR[log.action] ?? 'bg-gray-100 text-gray-500'}`}>
-                  {log.action?.replace('_', ' ')}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{log.templateName}</p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">{log.performedBy} · {fmtDate(log.timestamp)}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )
-      }
-    </div>
-  )
-}
-
 /* ═══════════════════════════════════════════════════════════════════════════
    MAIN PAGE
 ═══════════════════════════════════════════════════════════════════════════ */
 export default function DashboardPage() {
   useDocumentTitle('Dashboard')
-  const { user } = useAuth()
+  const { user, hasFeature } = useAuth()
   const navigate = useNavigate()
+  const can = {
+    pdf:   hasFeature(FEATURES.PDF_TEMPLATES),
+    email: hasFeature(FEATURES.EMAIL_TEMPLATES),
+    esign: hasFeature(FEATURES.E_SIGN),
+  }
 
   const isPlatformAdmin = user?.role === ROLES.PLATFORM_ADMIN
   const isOrgAdmin      = user?.role === ROLES.ORG_ADMIN || isPlatformAdmin
@@ -817,31 +509,22 @@ export default function DashboardPage() {
 
   /* ── Skeleton (matches new hero layout shape) ── */
   if (loading) return (
-    <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+    <div className="dash max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-5">
       <div className="space-y-2">
         <div className="skeleton h-8 w-72"/>
-        <div className="skeleton h-4 w-48"/>
+        <div className="skeleton h-4 w-56"/>
+      </div>
+      <div className="skeleton h-10 w-80 rounded-2xl"/>
+      <div className="skeleton h-40 rounded-[22px]"/>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[...Array(4)].map((_, i) => <div key={i} className="skeleton h-32 rounded-[20px]"/>)}
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 skeleton h-52"/>
-        <div className="skeleton h-52"/>
+        <div className="lg:col-span-2 skeleton h-72 rounded-[20px]"/>
+        <div className="skeleton h-72 rounded-[20px]"/>
       </div>
-      <div className="grid grid-cols-3 gap-4">
-        {[...Array(3)].map((_, i) => <div key={i} className="skeleton h-28"/>)}
-      </div>
-      <div className="skeleton h-64"/>
     </div>
   )
-
-  /* ── Trend helpers ── */
-  const trend = (arr) => {
-    const last = arr?.at(-1)?.count ?? 0, prev = arr?.at(-2)?.count ?? 0
-    if (prev === 0) return null
-    const t = Math.round(((last - prev) / prev) * 100)
-    return t >= 0
-      ? <span className="inline-flex items-center gap-1 text-emerald-500 font-semibold text-xs"><IconTrendUp className="w-3.5 h-3.5"/> {t}% vs last month</span>
-      : <span className="inline-flex items-center gap-1 text-rose-500 font-semibold text-xs"><IconTrendDown className="w-3.5 h-3.5"/> {Math.abs(t)}% vs last month</span>
-  }
 
   const TABS_ORG = [
     { id: 'overview',  label: 'Overview',  icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg> },
@@ -889,43 +572,49 @@ export default function DashboardPage() {
     : esignFunnel
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="dash max-w-7xl mx-auto px-4 sm:px-6 py-8">
       <Breadcrumbs items={CRUMBS}/>
 
-      {/* ── Header — bold display title with gradient name ── */}
-      <div className="mt-4 mb-8 flex items-end justify-between gap-4 flex-wrap animate-fade-in-up">
+      {/* ── Header — greeting, what needs attention, refresh + new ── */}
+      <div className="mt-4 mb-6 flex items-end justify-between gap-4 flex-wrap animate-fade-in-up">
         <div>
-          <h1 className="display-2 text-ink dark:text-white font-extrabold">
+          <h1 className="display-2 text-[#16143A] dark:text-white font-extrabold">
             {greeting()}, <span className="text-gradient">{user?.firstName}</span>
           </h1>
-          <p className="text-sm text-ink-3 mt-1.5">
+          <p className="text-sm text-[#625F80] dark:text-gray-400 mt-1.5">
             {isPlatformAdmin
               ? 'Platform overview across all organisations'
-              : new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
+              : (() => {
+                  const date = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
+                  const n = attentionCount(stats, isOrgAdmin, can)
+                  return n ? `${date} · ${n} ${n === 1 ? 'thing needs' : 'things need'} you` : `${date} · You’re all caught up`
+                })()
             }
           </p>
         </div>
-        <button
-          onClick={loadStats}
-          className="btn btn-outline btn-sm gap-1.5"
-          title="Refresh"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-          </svg>
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={loadStats} title="Refresh"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold text-[#3A3858] dark:text-gray-300
+                       bg-white/80 dark:bg-white/[0.04] border border-[#ECE8FA] dark:border-gray-700 hover:border-[#D6CCFB] transition-colors">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            Refresh
+          </button>
+          {!isPlatformAdmin && <NewMenu actions={createActions({ can, isOrgAdmin })} onNavigate={navigate}/>}
+        </div>
       </div>
 
       {/* ── Tab bar ── */}
-      <div className="flex gap-1 glass rounded-xl p-1 mb-6 w-fit overflow-x-auto">
+      <div role="tablist" aria-label="Dashboard sections" className="dash-tabs flex gap-1 rounded-2xl p-1 mb-6 w-fit max-w-full overflow-x-auto">
         {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap
+          <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap
               ${tab === t.id
-                ? 'bg-gradient-accent text-white shadow-soft'
-                : 'text-ink-3 dark:text-gray-400 hover:text-ink dark:hover:text-gray-200'}`}>
+                ? 'text-white shadow-[0_8px_20px_rgba(109,82,232,0.30)]'
+                : 'text-[#625F80] dark:text-gray-400 hover:text-[#16143A] dark:hover:text-gray-200 hover:bg-white/70 dark:hover:bg-white/[0.04]'}`}
+            style={tab === t.id ? { backgroundImage: 'linear-gradient(120deg,#2F5BF0,#6D52E8)' } : undefined}>
             {t.icon}
             {t.label}
           </button>
@@ -936,119 +625,51 @@ export default function DashboardPage() {
           ORG — OVERVIEW TAB (Apple-style: focus + drilldown)
       ════════════════════════════════════════ */}
       {tab === 'overview' && (
-        <div className="space-y-6 animate-fade-in-up">
+        <div className="space-y-5 animate-fade-in-up">
 
-          {/* ─── Hero: single big KPI + Today panel ─── */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2">
-              <HeroMetric
-                label="Documents this month"
-                value={stats?.docsThisMonth ?? esignSent ?? 0}
-                max={stats?.docsQuotaLimit}
-                trend={(() => {
-                  const arr = stats?.esignGrowth
-                  if (!arr || arr.length < 2) return null
-                  const last = arr.at(-1)?.count ?? 0, prev = arr.at(-2)?.count ?? 0
-                  if (prev === 0) return null
-                  return Math.round(((last - prev) / prev) * 100)
-                })()}
-                sub={(() => {
-                  const pending = stats?.esignPending ?? 0
-                  const completed = stats?.esignCompleted ?? 0
-                  return `${completed.toLocaleString()} completed · ${pending.toLocaleString()} in progress`
-                })()}
-                onClick={() => navigate('/esign')}
-              />
-            </div>
-            <TodayPanel stats={stats} isOrgAdmin={isOrgAdmin} onNavigate={navigate}/>
+          {/* ─── Pipeline band: the same Design → Sign → Track story as the landing page ─── */}
+          <PipelineBand stats={stats} esignSent={esignSent} can={can} onNavigate={navigate}/>
+
+          {/* ─── KPI cards with sparklines ─── */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {can.pdf && (
+              <SparkKpi label="PDF templates" value={stats?.totalPdfTemplates} series={stats?.pdfGrowth}
+                color="#6D52E8" onClick={() => navigate('/templates')}/>
+            )}
+            {can.email && (
+              <SparkKpi label="Email templates" value={stats?.totalEmailTemplates} series={stats?.emailGrowth}
+                color="#0ea5e9" onClick={() => navigate('/email-templates')}/>
+            )}
+            {can.esign && (
+              <SparkKpi label="Sign rate" series={stats?.esignGrowth} color="#10b981"
+                value={esignSent > 0 ? `${pct(stats?.esignCompleted ?? 0, esignSent)}%` : '—'}
+                sub={`${(stats?.esignCompleted ?? 0).toLocaleString()} of ${esignSent.toLocaleString()} signed`}
+                onClick={() => navigate('/esign')}/>
+            )}
+            <SparkKpi label="Team" value={stats?.totalUsers} series={stats?.userGrowth} color="#d97706"
+              sub={isOrgAdmin && stats?.pendingInvites ? `${stats.pendingInvites} ${stats.pendingInvites === 1 ? 'invite' : 'invites'} pending` : undefined}
+              onClick={isOrgAdmin ? () => navigate('/users') : undefined}/>
           </div>
 
-          {/* ─── Compact supporting metrics ─── */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <MetricPill
-              label="PDF Templates"
-              value={stats?.totalPdfTemplates ?? 0}
-              sub={trend(stats?.pdfGrowth) ?? '—'}
-              onClick={() => navigate('/templates')}
-            />
-            <MetricPill
-              label="Email Templates"
-              value={stats?.totalEmailTemplates ?? 0}
-              sub={trend(stats?.emailGrowth) ?? '—'}
-              accent="success"
-              onClick={() => navigate('/email-templates')}
-            />
-            <MetricPill
-              label="E-Sign sent"
-              value={esignSent}
-              sub={`${stats?.esignCompleted ?? 0} signed`}
-              onClick={() => navigate('/esign')}
-            />
-            <MetricPill
-              label="Team members"
-              value={stats?.totalUsers ?? 0}
-              sub={isOrgAdmin && stats?.pendingInvites ? `${stats.pendingInvites} pending` : 'active'}
-              accent={stats?.pendingInvites ? 'warning' : 'brand'}
-              onClick={() => isOrgAdmin && navigate('/users')}
-            />
-          </div>
-
-          {/* ─── Two-up: Recent activity + Quick actions ─── */}
+          {/* ─── Needs attention + activity  |  Quick create ─── */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2">
-              <LiveActivityFeed stats={stats} onNavigate={navigate}/>
+            <div className="lg:col-span-2 dash-card p-5 space-y-6">
+              <AttentionPanel stats={stats} isOrgAdmin={isOrgAdmin} can={can} onNavigate={navigate}/>
+              <ActivityFeed stats={stats} onNavigate={navigate} onRefresh={loadStats}/>
             </div>
-            <div className="card">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-semibold text-ink">Create</h2>
-                <span className="kbd">N</span>
-              </div>
-              <div className="space-y-1">
-                {[
-                  { label: 'PDF Template',   to: '/builder',       icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9v11a2 2 0 01-2 2z' },
-                  { label: 'Email Template', to: '/email-builder', icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
-                  { label: 'Generate PDF',   to: '/generate',      icon: 'M12 10v6m0 0l-3-3m3 3l3-3M3 15v4a2 2 0 002 2h14a2 2 0 002-2v-4M7 10l5-7 5 7' },
-                  { label: 'E-Sign document', to: '/esign/new',    icon: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z' },
-                  ...(isOrgAdmin ? [{ label: 'Invite team member', to: '/users', icon: 'M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z' }] : []),
-                ].map(a => (
-                  <button
-                    key={a.label}
-                    onClick={() => navigate(a.to)}
-                    className="group w-full flex items-center gap-3 px-3 py-2.5 rounded-input
-                               hover:bg-ink-9 transition-all duration-200 ease-spring text-left active:scale-[0.98]"
-                  >
-                    <div className="w-8 h-8 rounded-input bg-ink-8 flex items-center justify-center
-                                    group-hover:bg-brand-50 transition-colors">
-                      <svg className="w-4 h-4 text-ink-3 group-hover:text-brand transition-colors"
-                           fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={a.icon}/>
-                      </svg>
-                    </div>
-                    <span className="text-sm font-medium text-ink flex-1">{a.label}</span>
-                    <svg className="w-4 h-4 text-ink-5 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all"
-                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
-                    </svg>
-                  </button>
-                ))}
-              </div>
+            <div className="dash-card p-5">
+              <QuickCreate actions={createActions({ can, isOrgAdmin })} onNavigate={navigate}/>
             </div>
           </div>
 
-          {/* ─── Growth chart — secondary, below the fold ─── */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2 card">
-              <SectionHeader title="Template growth" sub="PDF & Email templates created per month"/>
-              <div className="flex items-center gap-4 text-xs font-medium mb-3">
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-brand inline-block"/>PDF</span>
-                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block"/>Email</span>
-              </div>
-              <GroupedBarChart pdfData={stats?.pdfGrowth ?? []} emailData={stats?.emailGrowth ?? []}/>
-            </div>
-            <div className="card">
-              <SectionHeader title="New users" sub="Sign-ups per month"/>
-              <BarChart data={stats?.userGrowth ?? []} color="#0066FF"/>
-            </div>
+          {/* ─── Documents over time ─── */}
+          <div className="dash-card p-5">
+            <SectionHeader title="Documents over time" sub="Created and sent per month"/>
+            <TrendChart series={[
+              can.pdf   && { label: 'PDF templates',   color: '#6D52E8', data: stats?.pdfGrowth   ?? [] },
+              can.email && { label: 'Email templates', color: '#0ea5e9', data: stats?.emailGrowth ?? [] },
+              can.esign && { label: 'E-sign sent',     color: '#10b981', data: stats?.esignGrowth ?? [] },
+            ].filter(Boolean)}/>
           </div>
         </div>
       )}
@@ -1665,7 +1286,7 @@ export default function DashboardPage() {
               )
             }
           </div>
-          <LiveActivityFeed stats={stats} onNavigate={navigate}/>
+          <div className="dash-card p-5"><ActivityFeed stats={stats} onNavigate={navigate} onRefresh={loadStats}/></div>
         </div>
       )}
     </div>

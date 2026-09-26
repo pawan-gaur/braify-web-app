@@ -30,7 +30,7 @@ export default function LandingPage() {
   }, [searchParams])
 
   return (
-    <div className="min-h-screen bg-[#F8F6FF] font-sans text-[#16143A] overflow-x-hidden">
+    <div className="min-h-screen bg-[#F4FDFE] font-sans text-[#0C2530] overflow-x-hidden">
       <PublicNavbar onPricingClick={toPricing} />
 
       <main>

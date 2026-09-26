@@ -13,7 +13,7 @@ export const CHANNELS = {
 }
 
 export const BRAND = '#2F5BF0'
-export const LINE = '#DCD6F2'
+export const LINE = '#CBE8EC'
 
 /* ─── Hooks ───────────────────────────────────────────────────────────── */
 export function usePrefersReducedMotion() {
@@ -149,7 +149,7 @@ export function ChannelTile({ id, size = 'md', active = true, className = '' }) 
       style={{
         color: c.fg,
         background: c.bg,
-        borderColor: active ? c.ring : '#E6E1F5',
+        borderColor: active ? c.ring : '#D3EFF2',
         opacity: active ? 1 : 0.55,
       }}>
       {c.code}
@@ -164,19 +164,19 @@ export function Eyebrow({ n, children, dark = false, className = '' }) {
                      ${dark ? 'bg-white/[0.06] border-white/10' : 'bg-white border-black/[0.07] shadow-sm'}`}>
       {n ? (
         <span className="lp-mono text-[10px] font-semibold text-white rounded-full px-2 py-0.5"
-          style={{ backgroundImage: 'linear-gradient(120deg,#2F5BF0,#6D52E8)' }}>
+          style={{ backgroundImage: 'linear-gradient(120deg,#2F5BF0,#0B8E9E)' }}>
           {n}
         </span>
       ) : (
         <span className="ml-1.5 w-1.5 h-1.5 rounded-full" style={{ backgroundImage: 'linear-gradient(120deg,#2F5BF0,#14b8a6)' }} />
       )}
-      <span className={`lp-mono text-[10.5px] tracking-[0.16em] uppercase ${dark ? 'text-white/70' : 'text-[#4A4768]'}`}>{children}</span>
+      <span className={`lp-mono text-[10.5px] tracking-[0.16em] uppercase ${dark ? 'text-white/70' : 'text-[#435E68]'}`}>{children}</span>
     </div>
   )
 }
 
-export const GRADIENT = 'linear-gradient(100deg,#2F5BF0 0%,#6D52E8 48%,#0d9488 100%)'
-export const GRADIENT_ON_DARK = 'linear-gradient(100deg,#8FA8FF 0%,#B79CFF 48%,#5EEAD4 100%)'
+export const GRADIENT = 'linear-gradient(100deg,#2F5BF0 0%,#1597D0 50%,#0B9DA8 100%)'
+export const GRADIENT_ON_DARK = 'linear-gradient(100deg,#8FA8FF 0%,#7FE3EA 48%,#5EEAD4 100%)'
 
 export function GradientText({ children, dark = false, className = '' }) {
   return (
@@ -194,7 +194,7 @@ export function SectionHead({ n, eyebrow, title, accent, id, dark = false, child
       <div>
         {eyebrow && <Eyebrow n={n} dark={dark} className="mb-6">{eyebrow}</Eyebrow>}
         <h2 id={id} className={`text-balance text-[38px] leading-[1.03] md:text-[56px] font-bold tracking-tightest
-                                ${dark ? 'text-white' : 'text-[#16143A]'}`}>
+                                ${dark ? 'text-white' : 'text-[#0C2530]'}`}>
           {title}
           {accent && (
             <>
@@ -205,7 +205,7 @@ export function SectionHead({ n, eyebrow, title, accent, id, dark = false, child
         </h2>
       </div>
       {children && (
-        <p className={`text-[17px] leading-relaxed md:pb-2 max-w-md ${dark ? 'text-white/60' : 'text-[#5A5775]'}`}>{children}</p>
+        <p className={`text-[17px] leading-relaxed md:pb-2 max-w-md ${dark ? 'text-white/60' : 'text-[#4F6A73]'}`}>{children}</p>
       )}
     </Reveal>
   )
@@ -215,7 +215,7 @@ export function SectionHead({ n, eyebrow, title, accent, id, dark = false, child
  * Card with a soft glow that follows the cursor. `glow` is a hex colour.
  * Renders as any tag (`as`) so it can be an <li> or <article>.
  */
-export function Spotlight({ as: Tag = 'div', glow = '#6D52E8', className = '', children, ...rest }) {
+export function Spotlight({ as: Tag = 'div', glow = '#0B8E9E', className = '', children, ...rest }) {
   const onMove = e => {
     const r = e.currentTarget.getBoundingClientRect()
     e.currentTarget.style.setProperty('--x', `${e.clientX - r.left}px`)
@@ -277,7 +277,7 @@ export function StatusDot({ color = '#10b981', pulse = true }) {
 export function PrimaryButton({ children, onClick, className = '' }) {
   return (
     <button onClick={onClick}
-      className={`group inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-[#16143A] text-white text-sm font-semibold
+      className={`group inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-[#0C2530] text-white text-sm font-semibold
                   shadow-[0_10px_28px_rgba(17,19,22,0.22)] hover:bg-black hover:-translate-y-px transition-all active:scale-[0.98] ${className}`}>
       {children}
       <Arrow className="w-4 h-4 text-[#9db4ff] group-hover:translate-x-0.5 transition-transform" />
@@ -288,7 +288,7 @@ export function PrimaryButton({ children, onClick, className = '' }) {
 export function SecondaryButton({ children, onClick, className = '' }) {
   return (
     <button onClick={onClick}
-      className={`inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white text-[#16143A] text-sm font-semibold
+      className={`inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white text-[#0C2530] text-sm font-semibold
                   border border-black/[0.09] hover:border-black/20 hover:-translate-y-px transition-all active:scale-[0.98] ${className}`}>
       {children}
     </button>
@@ -299,9 +299,9 @@ export function GlowButton({ children, onClick, className = '' }) {
   return (
     <button onClick={onClick}
       className={`lp-sheen group inline-flex items-center gap-2 px-5 py-3 rounded-xl text-white text-sm font-semibold
-                  shadow-[0_12px_36px_rgba(109,82,232,0.45)] hover:shadow-[0_16px_44px_rgba(109,82,232,0.6)]
+                  shadow-[0_12px_36px_rgba(20,170,190,0.45)] hover:shadow-[0_16px_44px_rgba(20,170,190,0.6)]
                   hover:-translate-y-px transition-all active:scale-[0.98] ${className}`}
-      style={{ backgroundImage: 'linear-gradient(120deg,#2F5BF0 0%,#6D52E8 60%,#8B5CF6 100%)' }}>
+      style={{ backgroundImage: 'linear-gradient(120deg,#2F5BF0 0%,#1597D0 55%,#22C4D2 100%)' }}>
       <span className="relative">{children}</span>
       <Arrow className="relative w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
     </button>
@@ -311,8 +311,8 @@ export function GlowButton({ children, onClick, className = '' }) {
 export function GlassButton({ children, onClick, className = '' }) {
   return (
     <button onClick={onClick}
-      className={`inline-flex items-center gap-2 px-5 py-3 rounded-xl text-[#16143A] text-sm font-semibold
-                  bg-white/75 border border-white shadow-[0_6px_18px_rgba(76,60,160,0.10)] backdrop-blur hover:bg-white hover:-translate-y-px
+      className={`inline-flex items-center gap-2 px-5 py-3 rounded-xl text-[#0C2530] text-sm font-semibold
+                  bg-white/75 border border-white shadow-[0_6px_18px_rgba(14,116,144,0.10)] backdrop-blur hover:bg-white hover:-translate-y-px
                   transition-all active:scale-[0.98] ${className}`}>
       {children}
     </button>
@@ -324,7 +324,7 @@ export function Aurora({ className = '' }) {
   return (
     <div aria-hidden="true" className={`pointer-events-none absolute inset-0 overflow-clip ${className}`}>
       <div className="lp-drift absolute -top-40 -left-24 w-[680px] h-[560px] rounded-full blur-[110px] opacity-70"
-        style={{ background: 'radial-gradient(closest-side, #C4B5FD, transparent)' }} />
+        style={{ background: 'radial-gradient(closest-side, #9EEBF2, transparent)' }} />
       <div className="lp-drift-2 absolute -top-24 right-[-10%] w-[620px] h-[520px] rounded-full blur-[110px] opacity-60"
         style={{ background: 'radial-gradient(closest-side, #BAE6FD, transparent)' }} />
       <div className="lp-drift absolute bottom-[-30%] left-[30%] w-[700px] h-[480px] rounded-full blur-[120px] opacity-40"

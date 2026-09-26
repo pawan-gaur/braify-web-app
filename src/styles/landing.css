@@ -118,7 +118,7 @@
 
 /* Faint lavender dot grid behind the aurora */
 .lp-dots {
-  background-image: radial-gradient(rgba(109, 82, 232, 0.16) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(20,170,190, 0.16) 1px, transparent 1px);
   background-size: 22px 22px;
 }
 
@@ -136,7 +136,7 @@
   inherits: false;
 }
 .lp-conic {
-  background: conic-gradient(from var(--lp-angle), #2F5BF0, #6D52E8, #14b8a6, #2F5BF0);
+  background: conic-gradient(from var(--lp-angle), #2F5BF0, #0B8E9E, #14b8a6, #2F5BF0);
   animation: lp-angle 6s linear infinite;
 }
 @keyframes lp-angle {
@@ -155,7 +155,7 @@
 /* Merged placeholder value flashing in */
 .lp-flash { animation: lp-flash 1s ease both; }
 @keyframes lp-flash {
-  0%   { background-color: rgba(109, 82, 232, 0.28); }
+  0%   { background-color: rgba(20,170,190, 0.28); }
   100% { background-color: transparent; }
 }
 
