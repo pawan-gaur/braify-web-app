@@ -1,0 +1,228 @@
+/* ─────────────────────────────────────────────────────────────────
+   LANDING PAGE — motion + surface primitives (lp- prefix)
+   Flow-diagram language: dashed rails that drift, packets that travel
+   along SVG paths, pulse rings around the hub, floating chips.
+   ───────────────────────────────────────────────────────────────── */
+
+.lp-mono {
+  font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* Dashed connector that slowly drifts toward its destination */
+.lp-dash {
+  stroke-dasharray: 4 7;
+  animation: lp-dash 1.1s linear infinite;
+}
+@keyframes lp-dash {
+  to { stroke-dashoffset: -22px; }
+}
+
+/* Expanding ring around a hub node */
+.lp-ring {
+  animation: lp-ring 2.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+.lp-ring-delay { animation-delay: 1.3s; }
+@keyframes lp-ring {
+  0%   { opacity: 0.85; transform: scale(0.72); }
+  100% { opacity: 0;    transform: scale(1.12); }
+}
+
+/* Gentle bob for floating chips */
+.lp-float { animation: lp-float 5s ease-in-out infinite; }
+.lp-float-slow { animation: lp-float 7s ease-in-out infinite; }
+@keyframes lp-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+
+/* Slow rotation (orbit rings) */
+.lp-spin-slow { animation: lp-spin 38s linear infinite; }
+@keyframes lp-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Dot running along a horizontal rail */
+.lp-rail-run {
+  animation: lp-rail-run 6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+@keyframes lp-rail-run {
+  0%   { left: 0%;   opacity: 0; }
+  8%   { opacity: 1; }
+  92%  { opacity: 1; }
+  100% { left: 100%; opacity: 0; }
+}
+
+/* Short rise used when a status line swaps */
+.lp-rise { animation: lp-rise 420ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes lp-rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Drifting colour washes in the footer / CTA */
+.lp-drift { animation: lp-drift 18s ease-in-out infinite; }
+@keyframes lp-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(40px, -30px) scale(1.08); }
+}
+
+/* Progress bar that fills when its panel mounts */
+.lp-fill { animation: lp-fill 1.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes lp-fill {
+  from { width: 0; }
+  to   { width: 70%; }
+}
+
+/* Terminal caret */
+.lp-caret { animation: lp-blink 1s steps(2, start) infinite; }
+@keyframes lp-blink {
+  to { visibility: hidden; }
+}
+
+/* Scroll reveal — content is always in the server HTML (SEO); only the
+   entrance is animated once the element scrolls into view. */
+.lp-reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
+              transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.lp-reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* Faint blueprint grid */
+.lp-grid {
+  background-image:
+    linear-gradient(to right, rgba(47, 91, 240, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(47, 91, 240, 0.06) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-reveal { opacity: 1; transform: none; transition: none; }
+  .lp-dash, .lp-ring, .lp-float, .lp-float-slow, .lp-spin-slow,
+  .lp-rail-run, .lp-drift, .lp-caret { animation: none; }
+  .lp-fill { animation: none; width: 70%; }
+}
+
+/* ─── Signature layer (Braify's own look) ─────────────────────────── */
+
+/* Aurora blobs drifting behind dark sections */
+.lp-drift-2 { animation: lp-drift-2 22s ease-in-out infinite; }
+@keyframes lp-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(-60px, 40px) scale(1.12); }
+}
+
+/* Faint lavender dot grid behind the aurora */
+.lp-dots {
+  background-image: radial-gradient(rgba(20,170,190, 0.16) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* Infinite logo marquee (content is duplicated, so -50% loops seamlessly) */
+.lp-marquee { animation: lp-marquee 32s linear infinite; }
+.lp-marquee:hover { animation-play-state: paused; }
+@keyframes lp-marquee {
+  to { transform: translateX(-50%); }
+}
+
+/* Rotating conic border (Pro plan, highlighted cards) */
+@property --lp-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+.lp-conic {
+  background: conic-gradient(from var(--lp-angle), #2F5BF0, #0B8E9E, #14b8a6, #2F5BF0);
+  animation: lp-angle 6s linear infinite;
+}
+@keyframes lp-angle {
+  to { --lp-angle: 360deg; }
+}
+
+/* Render scan line sweeping down the live document */
+.lp-scan { animation: lp-scan 1.3s cubic-bezier(0.65, 0, 0.35, 1) both; }
+@keyframes lp-scan {
+  0%   { top: 0%;   opacity: 0; }
+  12%  { opacity: 1; }
+  88%  { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+/* Merged placeholder value flashing in */
+.lp-flash { animation: lp-flash 1s ease both; }
+@keyframes lp-flash {
+  0%   { background-color: rgba(20,170,190, 0.28); }
+  100% { background-color: transparent; }
+}
+
+/* "SIGNED" stamp thud */
+.lp-stamp { animation: lp-stamp 520ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+@keyframes lp-stamp {
+  from { opacity: 0; transform: scale(1.9) rotate(-22deg); }
+  to   { opacity: 1; transform: scale(1) rotate(-12deg); }
+}
+
+/* Toast pop */
+.lp-pop { animation: lp-pop 480ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+@keyframes lp-pop {
+  from { opacity: 0; transform: translateY(10px) scale(0.94); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Vertical ticker for the mini audit feed */
+.lp-ticker { animation: lp-ticker 12s linear infinite; }
+@keyframes lp-ticker {
+  to { transform: translateY(-50%); }
+}
+
+/* Soft shimmer on gradient buttons */
+.lp-sheen { position: relative; overflow: clip; }
+.lp-sheen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+  transform: translateX(-120%);
+  animation: lp-sheen 3.6s ease-in-out infinite;
+}
+@keyframes lp-sheen {
+  0%, 55% { transform: translateX(-120%); }
+  100%    { transform: translateX(120%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-drift-2, .lp-marquee, .lp-conic, .lp-scan, .lp-flash, .lp-stamp,
+  .lp-pop, .lp-ticker, .lp-sheen::after { animation: none; }
+}
+
+/* ─── Dark-glass variant of the public navbar (landing page) ─────────
+   Scoped to the top bar only (first child), so dropdown panels and the
+   mobile menu keep their light styling. */
+.lp-nav-dark {
+  background-color: rgba(9, 10, 22, 0.72) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+.lp-nav-dark > div:first-child > button > span,
+.lp-nav-dark > div:first-child > nav > div > button,
+.lp-nav-dark > div:first-child > nav > button,
+.lp-nav-dark > div:first-child > div > button,
+.lp-nav-dark > div:first-child > button.md\:hidden {
+  color: rgba(255, 255, 255, 0.78);
+}
+.lp-nav-dark > div:first-child > nav button:hover,
+.lp-nav-dark > div:first-child > nav .bg-gray-100,
+.lp-nav-dark > div:first-child > button.md\:hidden:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+.lp-nav-dark > div:first-child > div > button:hover { color: #fff; }
+.lp-nav-dark > div:first-child > div > button:last-child {
+  background-color: #fff;
+  color: #111316;
+}
+.lp-nav-dark > div:first-child > div > button:last-child:hover { background-color: #e9e9f2; }
+.lp-nav-dark > div:first-child .bg-gray-200 { background-color: rgba(255, 255, 255, 0.15); }

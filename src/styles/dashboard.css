@@ -1,0 +1,71 @@
+/* ─────────────────────────────────────────────────────────────────
+   DASHBOARD — "Lavender dawn" workspace
+   Scoped to `.dash` so the rest of the app keeps its current styling.
+   ───────────────────────────────────────────────────────────────── */
+
+/* Soft lavender card used by the new overview widgets */
+.dash-card {
+  background: #fff;
+  border: 1px solid #ECE8FA;
+  border-radius: 20px;
+  box-shadow: 0 1px 2px rgba(76, 60, 160, 0.04), 0 12px 32px rgba(76, 60, 160, 0.06);
+  transition: box-shadow 250ms cubic-bezier(0.22, 1, 0.36, 1), transform 250ms cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 250ms ease;
+}
+button.dash-card:not(:disabled):hover {
+  transform: translateY(-2px);
+  border-color: #DCD3F7;
+  box-shadow: 0 2px 4px rgba(76, 60, 160, 0.05), 0 20px 44px rgba(76, 60, 160, 0.12);
+}
+.dark .dash-card {
+  background: #1f2937;
+  border-color: #374151;
+  box-shadow: none;
+}
+
+/* Pastel pipeline band with drifting glows */
+.dash-band {
+  background:
+    radial-gradient(520px 260px at 0% 0%, rgba(196, 181, 253, 0.55), transparent 70%),
+    radial-gradient(520px 260px at 100% 0%, rgba(186, 230, 253, 0.55), transparent 70%),
+    radial-gradient(600px 240px at 50% 120%, rgba(167, 243, 208, 0.45), transparent 70%),
+    linear-gradient(180deg, #F4F1FF, #EEF4FF);
+  border: 1px solid #fff;
+  box-shadow: 0 20px 50px rgba(76, 60, 160, 0.10);
+}
+.dark .dash-band {
+  background:
+    radial-gradient(520px 260px at 0% 0%, rgba(109, 82, 232, 0.22), transparent 70%),
+    radial-gradient(520px 260px at 100% 0%, rgba(14, 165, 233, 0.16), transparent 70%),
+    #111827;
+  border-color: #374151;
+  box-shadow: none;
+}
+
+/* ── Scoped restyle of the existing tab content (Analytics / E-Sign / Team) ── */
+.dash .card,
+.dash .bento {
+  border-color: #ECE8FA;
+  border-radius: 20px;
+  box-shadow: 0 1px 2px rgba(76, 60, 160, 0.04), 0 12px 32px rgba(76, 60, 160, 0.06);
+}
+.dark .dash .card,
+.dark .dash .bento {
+  border-color: #374151;
+  box-shadow: none;
+}
+.dash .bento-hover:hover,
+.dash .card-hover:hover {
+  box-shadow: 0 2px 4px rgba(76, 60, 160, 0.05), 0 20px 44px rgba(76, 60, 160, 0.12);
+}
+
+/* Tab bar */
+.dash-tabs {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid #ECE8FA;
+  backdrop-filter: blur(12px);
+}
+.dark .dash-tabs {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}

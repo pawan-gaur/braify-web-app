@@ -45,41 +45,41 @@ function NavDropdown({ item, open, onFeatureClick }) {
   const d = DROPDOWNS[item]
   if (!d) return null
   return (
-    <div className={`absolute top-full left-1/2 -translate-x-1/2 mt-1 w-[560px]
-                     bg-white rounded-2xl shadow-2xl border border-gray-100
+    <div className={`absolute top-full left-0 mt-2 w-[560px] max-w-[calc(100vw-2rem)]
+                     bg-white rounded-2xl border border-[#D6F1F4] shadow-[0_24px_60px_rgba(14,116,144,0.16)]
                      transition-all duration-200 z-50 overflow-hidden
                      ${open ? 'opacity-100 translate-y-0 pointer-events-auto'
                             : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
       <div className="flex">
-        <div className="w-44 bg-gray-50 p-5 flex flex-col gap-3 shrink-0">
+        <div className="w-44 bg-gradient-to-b from-[#E9FBFC] to-[#F5FDFE] border-r border-[#E2F6F8] p-5 flex flex-col gap-3 shrink-0">
           <BraiLogo size={36} />
           <div>
-            <p className="font-bold text-gray-900 text-sm leading-snug">{d.brand.title}</p>
-            <p className="mt-1 text-xs text-gray-500 leading-relaxed">{d.brand.sub}</p>
+            <p className="font-bold text-[#0C2530] text-sm leading-snug">{d.brand.title}</p>
+            <p className="mt-1 text-xs text-[#587079] leading-relaxed">{d.brand.sub}</p>
           </div>
         </div>
         <div className="flex-1 p-3 space-y-0.5">
           {d.links.map(l => (
             <button key={l.label}
               onClick={() => l.slug && onFeatureClick(l.slug)}
-              className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors group flex items-start gap-3">
+              className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-[#F0FBFC] transition-colors group flex items-start gap-3">
               {l.icon && (
-                <div className="w-7 h-7 rounded-lg bg-brand-50 flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-brand-100 transition-colors">
-                  <svg className="w-3.5 h-3.5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-7 h-7 rounded-lg bg-[#E2F8FA] flex items-center justify-center shrink-0 mt-0.5 group-hover:bg-[#CDF3F7] transition-colors">
+                  <svg className="w-3.5 h-3.5 text-[#0B8E9E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={l.icon}/>
                   </svg>
                 </div>
               )}
               <div className="flex-1">
                 <div className="flex items-center gap-1.5">
-                  <p className="text-sm font-semibold text-gray-900 group-hover:text-brand-600 transition-colors">{l.label}</p>
+                  <p className="text-sm font-semibold text-[#0C2530] group-hover:text-[#0B8E9E] transition-colors">{l.label}</p>
                   {l.slug && (
-                    <svg className="w-3 h-3 text-gray-300 group-hover:text-brand-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-3 h-3 text-[#AFC1C6] group-hover:text-[#22BCCB] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
                     </svg>
                   )}
                 </div>
-                <p className="text-xs text-gray-400 mt-0.5">{l.desc}</p>
+                <p className="text-xs text-[#7F979F] mt-0.5">{l.desc}</p>
               </div>
             </button>
           ))}
@@ -91,10 +91,11 @@ function NavDropdown({ item, open, onFeatureClick }) {
 
 /* ═══ PUBLIC NAVBAR ════════════════════════════════════════════════════════
    Props:
+     tone            — 'dark' renders the bar as dark glass (used over the landing page's dark hero)
      onPricingClick  — called when user clicks "Pricing". If omitted, navigates to /#pricing via query param.
      activeFeature   — slug of the current feature page (highlights nothing on landing page)
 */
-export default function PublicNavbar({ onPricingClick, activeFeature }) {
+export default function PublicNavbar({ onPricingClick, activeFeature, tone = 'light' }) {
   const navigate    = useNavigate()
   const [scrolled,    setScrolled]   = useState(false)
   const [openMenu,    setOpenMenu]   = useState(null)
@@ -134,15 +135,20 @@ export default function PublicNavbar({ onPricingClick, activeFeature }) {
 
   return (
     <header ref={navRef}
-      className={`fixed top-0 inset-x-0 z-50 transition-all duration-200 bg-white
-                  ${scrolled ? 'shadow-sm' : 'shadow-none'}`}>
+      className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 bg-[#F5FDFE]/80 backdrop-blur-xl border-b
+                  ${scrolled ? 'shadow-[0_8px_30px_rgba(14,116,144,0.08)] border-[#D6F1F4]' : 'shadow-none border-transparent'}
+                  ${tone === 'dark' ? 'lp-nav-dark' : ''}`}>
+      {/* thin brand hairline once the page scrolls */}
+      <span aria-hidden="true"
+        className={`absolute inset-x-0 bottom-0 h-px transition-opacity duration-300 ${scrolled ? 'opacity-100' : 'opacity-0'}`}
+        style={{ backgroundImage: 'linear-gradient(90deg,transparent,#2F5BF0 30%,#22C4D2 70%,transparent)' }} />
       <div className="max-w-7xl mx-auto px-6 h-14 flex items-center gap-4">
 
         {/* Logo */}
         <button onClick={() => navigate('/')}
           className="flex items-center gap-2 shrink-0 hover:opacity-80 transition-opacity">
           <BraiLogo size={28} />
-          <span className="font-extrabold text-gray-900 text-lg tracking-tight">Braify</span>
+          <span className="font-extrabold text-[#0C2530] text-lg tracking-tight">Braify</span>
         </button>
 
         {/* Desktop nav */}
@@ -151,7 +157,7 @@ export default function PublicNavbar({ onPricingClick, activeFeature }) {
             <div key={item} className="relative">
               <button onClick={() => toggleMenu(item)}
                 className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
-                            ${openMenu === item ? 'text-gray-900 bg-gray-100' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}>
+                            ${openMenu === item ? 'text-[#0B6E7A] bg-[#E2F8FA] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#22C4D2]/60' : 'text-[#4A6670] hover:text-[#0C2530] hover:bg-[#E2F8FA] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#22C4D2]/60'}`}>
                 {item}
                 <svg className={`w-3.5 h-3.5 transition-transform duration-200 ${openMenu === item ? 'rotate-180' : ''}`}
                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -161,34 +167,36 @@ export default function PublicNavbar({ onPricingClick, activeFeature }) {
               <NavDropdown item={item} open={openMenu === item} onFeatureClick={handleFeatureClick} />
             </div>
           ))}
-          <button className="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors">
+          <button className="px-3 py-1.5 rounded-lg text-sm font-medium text-[#4A6670] hover:text-[#0C2530] hover:bg-[#E2F8FA] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#22C4D2]/60 transition-colors">
             Enterprise
           </button>
           <button onClick={handlePricing}
-            className="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors">
+            className="px-3 py-1.5 rounded-lg text-sm font-medium text-[#4A6670] hover:text-[#0C2530] hover:bg-[#E2F8FA] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#22C4D2]/60 transition-colors">
             Pricing
           </button>
         </nav>
 
         {/* Desktop actions */}
         <div className="hidden md:flex items-center gap-1 ml-auto shrink-0">
-          <div className="w-px h-4 bg-gray-200 mx-1" />
-          <button className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+          <div className="w-px h-4 bg-[#CBE8EC] mx-1" />
+          <button className="px-3 py-1.5 rounded-lg text-sm font-medium text-[#4A6670] hover:text-[#0C2530] hover:bg-[#E2F8FA] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#22C4D2]/60 transition-colors">
             Contact Sales
           </button>
           <button onClick={() => navigate('/login')}
-            className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
+            className="px-3 py-1.5 rounded-lg text-sm font-medium text-[#4A6670] hover:text-[#0C2530] hover:bg-[#E2F8FA] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#22C4D2]/60 transition-colors">
             Sign In
           </button>
           <button onClick={() => navigate('/get-started')}
-            className="px-4 py-1.5 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-800 transition-colors">
+            className="ml-1 px-4 py-1.5 text-white text-sm font-semibold rounded-lg shadow-[0_8px_20px_rgba(21,151,208,0.35)]
+                       hover:shadow-[0_10px_26px_rgba(21,151,208,0.45)] hover:-translate-y-px transition-all"
+            style={{ backgroundImage: 'linear-gradient(120deg,#2F5BF0 0%,#1597D0 55%,#22C4D2 100%)' }}>
             Get Started
           </button>
         </div>
 
         {/* Mobile hamburger */}
         <button onClick={() => setMobileOpen(v => !v)}
-          className="md:hidden ml-auto p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors">
+          className="md:hidden ml-auto p-2 rounded-lg text-[#4A6670] hover:bg-[#E2F8FA] transition-colors">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             {mobileOpen
               ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
@@ -200,24 +208,24 @@ export default function PublicNavbar({ onPricingClick, activeFeature }) {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="md:hidden bg-white border-t border-gray-100 px-6 py-4 space-y-1">
+        <div className="md:hidden bg-white/95 backdrop-blur-xl border-t border-[#D6F1F4] px-6 py-4 space-y-1">
           {[...Object.keys(DROPDOWNS), 'Enterprise', 'Pricing'].map(item => (
             <button key={item}
               onClick={() => {
                 if (item === 'Pricing') handlePricing()
                 else setOpenMenu(p => p === item ? null : item)
               }}
-              className="w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+              className="w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium text-[#33505A] hover:bg-[#F0FBFC] transition-colors">
               {item}
             </button>
           ))}
           {/* Mobile feature links (shown when Features is tapped) */}
           {openMenu === 'Features' && (
-            <div className="pl-4 space-y-1 border-l-2 border-brand-100 ml-3">
+            <div className="pl-4 space-y-1 border-l-2 border-[#B3EAF0] ml-3">
               {DROPDOWNS.Features.links.map(l => (
                 <button key={l.label}
                   onClick={() => { setMobileOpen(false); setOpenMenu(null); navigate(`/features/${l.slug}`) }}
-                  className="w-full text-left px-3 py-2 rounded-lg text-sm text-gray-600 hover:text-brand-600 hover:bg-brand-50 transition-colors">
+                  className="w-full text-left px-3 py-2 rounded-lg text-sm text-[#4A6670] hover:text-[#0B8E9E] hover:bg-[#F0FBFC] transition-colors">
                   {l.label}
                 </button>
               ))}
@@ -225,11 +233,12 @@ export default function PublicNavbar({ onPricingClick, activeFeature }) {
           )}
           <div className="pt-3 flex gap-2">
             <button onClick={() => navigate('/login')}
-              className="flex-1 py-2 text-sm font-semibold text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+              className="flex-1 py-2 text-sm font-semibold text-[#33505A] border border-[#B3EAF0] rounded-lg hover:bg-[#F0FBFC] transition-colors">
               Sign In
             </button>
             <button onClick={() => navigate('/get-started')}
-              className="flex-1 py-2 text-sm font-semibold text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors">
+              className="flex-1 py-2 text-sm font-semibold text-white rounded-lg shadow-[0_8px_20px_rgba(21,151,208,0.30)]"
+              style={{ backgroundImage: 'linear-gradient(120deg,#2F5BF0 0%,#1597D0 55%,#22C4D2 100%)' }}>
               Get Started
             </button>
           </div>
