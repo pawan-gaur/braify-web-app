@@ -91,10 +91,11 @@ function NavDropdown({ item, open, onFeatureClick }) {
 
 /* ═══ PUBLIC NAVBAR ════════════════════════════════════════════════════════
    Props:
+     tone            — 'dark' renders the bar as dark glass (used over the landing page's dark hero)
      onPricingClick  — called when user clicks "Pricing". If omitted, navigates to /#pricing via query param.
      activeFeature   — slug of the current feature page (highlights nothing on landing page)
 */
-export default function PublicNavbar({ onPricingClick, activeFeature }) {
+export default function PublicNavbar({ onPricingClick, activeFeature, tone = 'light' }) {
   const navigate    = useNavigate()
   const [scrolled,    setScrolled]   = useState(false)
   const [openMenu,    setOpenMenu]   = useState(null)
@@ -134,8 +135,9 @@ export default function PublicNavbar({ onPricingClick, activeFeature }) {
 
   return (
     <header ref={navRef}
-      className={`fixed top-0 inset-x-0 z-50 transition-all duration-200 bg-white
-                  ${scrolled ? 'shadow-sm' : 'shadow-none'}`}>
+      className={`fixed top-0 inset-x-0 z-50 transition-all duration-200 bg-white/80 backdrop-blur-md border-b
+                  ${scrolled ? 'shadow-sm border-black/[0.06]' : 'shadow-none border-transparent'}
+                  ${tone === 'dark' ? 'lp-nav-dark' : ''}`}>
       <div className="max-w-7xl mx-auto px-6 h-14 flex items-center gap-4">
 
         {/* Logo */}

@@ -1,0 +1,25 @@
+# Marketing pages are public; the signed-in app, auth flows and signing links are not for search.
+User-agent: *
+Allow: /
+Allow: /features/
+Allow: /get-started
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /templates
+Disallow: /builder
+Disallow: /email-builder
+Disallow: /email-templates
+Disallow: /esign
+Disallow: /sign/
+Disallow: /verify/
+Disallow: /files
+Disallow: /settings
+Disallow: /admin
+Disallow: /users
+Disallow: /profile
+Disallow: /login
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /accept-invite
+
+Sitemap: https://braify.com/sitemap.xml

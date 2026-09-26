@@ -13,7 +13,7 @@ const APP = 'Braify'
  */
 const TITLE_MAP = [
   // ── Public ──────────────────────────────────────────────────────────
-  { exact:  '/',                        title: 'Document Automation Platform' },
+  { exact:  '/',                        title: 'E-Signature, PDF & Email Template Builder' },
   { exact:  '/login',                   title: 'Sign In' },
   { exact:  '/get-started',             title: 'Get Started' },
   { prefix: '/features/',               title: 'Features' },

@@ -7,7 +7,7 @@
  */
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { esignGetDocument, esignGetAudit, esignDownloadSigned, esignListAttachments, esignDownloadAttachment, esignResendSignatory, esignResendCopy, esignResendCopyTo, esignResendDocument, esignReactivateDocument, esignRemindNow, esignSetReminders } from '../services/api'
+import { esignGetDocument, esignGetAudit, esignDownloadSigned, esignListAttachments, esignDownloadAttachment, esignResendSignatory, esignResendCopy, esignResendCopyTo, esignResendDocument, esignReactivateDocument, esignRemindNow, esignSetReminders, esignFinalizeDocument } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import { IconCheck } from '../components/ui/icons'
@@ -155,6 +155,25 @@ export default function ESignDetailPage() {
       setReactivateOpen(false)
     } catch (e) {
       showToast(e?.response?.data?.message || e.message || 'Failed to reactivate', 'error')
+    } finally {
+      setDocBusy(false)
+    }
+  }
+
+  async function handleFinalize() {
+    setDocBusy(true)
+    try {
+      const updated = await esignFinalizeDocument(id)
+      setDoc(prev => ({ ...prev, ...updated }))
+      if (updated.status === 'COMPLETED') {
+        showToast('Document finalized — signed copy generated and emailed', 'success')
+      } else {
+        showToast(updated.finalizeError
+          ? `Finalization failed again: ${updated.finalizeError}`
+          : 'Finalization did not complete — please try again shortly', 'error')
+      }
+    } catch (e) {
+      showToast(e?.response?.data?.message || e.message || 'Failed to finalize', 'error')
     } finally {
       setDocBusy(false)
     }
@@ -366,6 +385,24 @@ export default function ESignDetailPage() {
                 Reactivate
               </button>
             )}
+            {/* Finalize — signed by everyone but finalization (PDF + emails) hasn't completed */}
+            {doc.status === 'SIGNED' && (
+              <button
+                onClick={handleFinalize}
+                disabled={docBusy}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold
+                           border border-green-300 text-green-700 bg-green-50 dark:bg-green-900/20
+                           hover:bg-green-100 transition-colors disabled:opacity-50"
+                title="Generate the signed PDF and send completion emails"
+              >
+                {docBusy
+                  ? <div className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin"/>
+                  : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/>
+                    </svg>}
+                Finalize now
+              </button>
+            )}
             {/* Edit — only while the client hasn't signed yet (DRAFT / PENDING / IN_REVIEW) */}
             {['DRAFT', 'PENDING', 'IN_REVIEW'].includes(doc.status) && (
               <button
@@ -410,6 +447,26 @@ export default function ESignDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Finalization pending — everyone signed but the signed PDF / completion emails haven't gone out */}
+      {doc.status === 'SIGNED' && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-5 mb-5">
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M12 3a9 9 0 100 18 9 9 0 000-18z"/>
+            </svg>
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold text-amber-800 dark:text-amber-200">Signed — finalization pending</h3>
+              <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                All parties have signed, but the signed PDF and completion emails haven’t been generated yet.
+                {doc.finalizeError
+                  ? <> The last attempt failed: <span className="font-mono text-xs">{doc.finalizeError}</span>. It will retry automatically — or use <strong>Finalize now</strong> above.</>
+                  : <> It should complete automatically within a few minutes — or use <strong>Finalize now</strong> above to complete it immediately.</>}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Reminders — while awaiting signatures */}
       {['PENDING', 'IN_REVIEW', 'PARTIALLY_SIGNED'].includes(doc.status) && (
