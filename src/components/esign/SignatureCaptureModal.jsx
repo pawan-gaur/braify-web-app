@@ -5,6 +5,7 @@
  * string for TYPE; method is DRAW | TYPE | UPLOAD (matches the signing flow).
  */
 import { useEffect, useRef, useState } from 'react'
+import FileDropZone from '../ui/FileDropZone'
 
 function canvasPoint(e, canvas) {
   const rect = canvas.getBoundingClientRect()
@@ -71,8 +72,7 @@ export default function SignatureCaptureModal({ open, kind = 'SIGNATURE', upload
     hasDrawn.current = false
   }
 
-  function handleUpload(e) {
-    const file = e.target.files?.[0]
+  function handleUpload(file) {
     if (!file) return
     const reader = new FileReader()
     reader.onload = () => setUploaded(reader.result)
@@ -149,8 +149,13 @@ export default function SignatureCaptureModal({ open, kind = 'SIGNATURE', upload
           )}
           {tab === 'UPLOAD' && (
             <div>
-              <input type="file" accept="image/*" onChange={handleUpload}
-                className="block w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 hover:file:bg-accent-100" />
+              <FileDropZone
+                size="sm"
+                accept="image/*"
+                hint="Image (PNG, JPG)"
+                selected={uploaded ? { title: 'Image selected' } : null}
+                onFiles={([f]) => handleUpload(f)}
+              />
               {uploaded && (
                 <div className="mt-3 h-28 rounded-xl border border-gray-100 dark:border-gray-700 flex items-center justify-center overflow-hidden">
                   <img src={uploaded} alt="preview" className="max-h-full max-w-full object-contain" />

@@ -9,6 +9,7 @@
  *   onCreated(created)                        // e.g. navigate to the builder
  */
 import { useEffect, useState } from 'react'
+import FileDropZone from '../ui/FileDropZone'
 
 export default function TemplateUploadModal({ open, kind = 'PDF', onClose, onCreate, onCreated }) {
   const [file, setFile]       = useState(null)
@@ -67,8 +68,13 @@ export default function TemplateUploadModal({ open, kind = 'PDF', onClose, onCre
         <div className="px-5 py-4 space-y-3">
           <div>
             <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">HTML file</label>
-            <input type="file" accept=".html,.htm,text/html" onChange={e => pickFile(e.target.files?.[0])}
-              className="block w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-accent-50 file:text-accent-700 hover:file:bg-accent-100" />
+            <FileDropZone
+              size="sm"
+              accept=".html,.htm,text/html"
+              hint="HTML file (.html, .htm)"
+              selected={file ? { title: file.name } : null}
+              onFiles={([f]) => pickFile(f)}
+            />
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Name</label>

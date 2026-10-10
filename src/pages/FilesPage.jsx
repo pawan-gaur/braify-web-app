@@ -5,6 +5,7 @@ import {
   listFiles, listAllFiles, uploadFile, getFileDownloadUrl, deleteFile, getOrganizations,
 } from '../services/api'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
+import FileDropZone from '../components/ui/FileDropZone'
 import ViewToggle, { useView } from '../components/ui/ViewToggle'
 import { IconX, IconArrowLeft, IconArrowRight } from '../components/ui/icons'
 
@@ -149,13 +150,6 @@ function UploadModal({ orgId, onClose, onUploaded }) {
   const [meta,     setMeta]     = useState({ folder: '', documentType: 'OTHER', description: '', tags: '' })
   const [loading,  setLoading]  = useState(false)
   const [uploaded, setUploaded] = useState(null)
-  const inputRef = useRef()
-
-  const handleDrop = useCallback(e => {
-    e.preventDefault()
-    const f = e.dataTransfer?.files?.[0]
-    if (f) setFile(f)
-  }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -191,30 +185,21 @@ function UploadModal({ orgId, onClose, onUploaded }) {
           <UploadSuccess result={uploaded} onDone={onClose} />
         ) : (
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
-            <div onDragOver={e => e.preventDefault()} onDrop={handleDrop}
-              onClick={() => inputRef.current?.click()}
-              className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 cursor-pointer hover:border-accent-400 dark:hover:border-accent-500 transition-colors">
-              <input ref={inputRef} type="file" className="hidden"
-                onChange={e => setFile(e.target.files?.[0] ?? null)} />
+            <FileDropZone
+              hint="Any file type · max size set by your cloud config"
+              onFiles={([f]) => setFile(f)}
+            >
               {file ? (
                 <div className="text-center">
                   <FileIcon filename={file.name} className="w-10 h-10 mx-auto mb-2" />
                   <p className="font-medium text-gray-800 dark:text-white text-sm">{file.name}</p>
                   <p className="text-xs text-gray-500 mt-1">{fmtBytes(file.size)}</p>
+                  <p className="text-xs text-gray-400 mt-1">Drop a new file or click to replace</p>
                   <button type="button" onClick={e => { e.stopPropagation(); setFile(null) }}
                     className="mt-2 text-xs text-red-500 hover:text-red-700">Remove</button>
                 </div>
-              ) : (
-                <>
-                  <svg className="w-10 h-10 text-gray-300 dark:text-gray-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                  </svg>
-                  <p className="text-sm text-gray-600 dark:text-gray-300 font-medium">Drag &amp; drop or click to select</p>
-                  <p className="text-xs text-gray-400 mt-1">Any file type · max size set by your cloud config</p>
-                </>
-              )}
-            </div>
+              ) : undefined}
+            </FileDropZone>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Document Type</label>
               <select value={meta.documentType} onChange={e => setMeta(m => ({ ...m, documentType: e.target.value }))}

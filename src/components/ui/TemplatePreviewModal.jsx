@@ -51,6 +51,13 @@ export default function TemplatePreviewModal({ template, onClose }) {
     }
   }, [template.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  /* Close on Escape */
+  useEffect(() => {
+    const handler = e => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
   /* Open the PDF in a new tab */
   const handleOpenTab = () => { if (pdfUrl) window.open(pdfUrl, '_blank') }
 

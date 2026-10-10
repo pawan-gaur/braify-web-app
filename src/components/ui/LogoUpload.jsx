@@ -95,7 +95,7 @@ export default function LogoUpload({ logoBase64, logoUrl, onChange, label = 'Org
               </div>
               <div>
                 <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                  {dragging ? 'Drop to upload' : 'Drag & drop your logo here'}
+                  {dragging ? 'Drop to upload' : 'Drop your logo here'}
                 </p>
                 <p className="text-xs text-ink-4 mt-0.5">or click to browse — PNG, JPG, SVG · max 2 MB</p>
               </div>

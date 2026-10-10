@@ -11,7 +11,7 @@
  *
  * Route: /bulk-email/send
  */
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 import {
@@ -20,6 +20,8 @@ import {
 } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
+import FileDropZone from '../components/ui/FileDropZone'
+import TemplatePreviewButton from '../components/ui/TemplatePreviewButton'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const MAX_ROWS = 25000   // keep in sync with bulkemail.max-rows on the server
@@ -131,8 +133,6 @@ export default function BulkEmailSendPage() {
   const [nameColumn,   setNameColumn]   = useState('')
   const [ccColumns,    setCcColumns]    = useState([])   // column names whose values become CC addresses
   const [xlsxFileName, setXlsxFileName] = useState('')
-  const [xlsxDragOver, setXlsxDragOver] = useState(false)
-  const xlsxRef = useRef()
 
   /* Step 1 — Email template */
   const [emailTemplates,     setEmailTemplates]     = useState([])
@@ -155,7 +155,6 @@ export default function BulkEmailSendPage() {
   const [extApiMethod,          setExtApiMethod]          = useState('GET')
   const [extApiHeaders,         setExtApiHeaders]         = useState('')
   const [extApiBody,            setExtApiBody]            = useState('')
-  const pdfRef = useRef()
 
   /* Step 2 — Sheet 2 (EXCEL_SHEET or secondary attachment) */
   const [sheet2Rows,            setSheet2Rows]            = useState([])
@@ -398,39 +397,16 @@ export default function BulkEmailSendPage() {
         </div>
 
         {/* Drop zone */}
-        <button
-          type="button"
-          onClick={() => xlsxRef.current?.click()}
-          className={`w-full border-2 border-dashed rounded-xl p-10 text-center transition-colors group
-            ${xlsxDragOver   ? 'border-accent-400 bg-accent-50 dark:bg-accent-900/10'
-              : xlsxRows.length ? 'border-green-400 bg-green-50 dark:bg-green-900/10'
-              : 'border-gray-300 dark:border-gray-600 hover:border-accent-400 dark:hover:border-accent-500'}`}
-          onDragOver={e  => { e.preventDefault(); setXlsxDragOver(true) }}
-          onDragLeave={() => setXlsxDragOver(false)}
-          onDrop={e      => { e.preventDefault(); setXlsxDragOver(false); handleXlsxFile(e.dataTransfer.files[0]) }}
-        >
-          {xlsxRows.length > 0 ? (
-            <>
-              <svg className="w-10 h-10 mx-auto mb-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-              <p className="text-sm font-medium text-green-700 dark:text-green-400">{xlsxFileName} — click to replace</p>
-              <p className="text-xs text-gray-500 mt-1">{xlsxRows.length} rows · {xlsxColumns.length} columns</p>
-            </>
-          ) : (
-            <>
-              <svg className="w-10 h-10 mx-auto mb-3 text-gray-300 group-hover:text-accent-400 transition-colors"
-                fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                  d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-              </svg>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Click to upload Excel or CSV</p>
-              <p className="text-xs text-gray-400 mt-1">.xlsx · .xls</p>
-            </>
-          )}
-        </button>
-        <input ref={xlsxRef} type="file" accept=".xlsx,.xls" className="hidden"
-          onChange={e => { handleXlsxFile(e.target.files[0]); e.target.value = '' }}/>
+        <FileDropZone
+          size="lg"
+          accept=".xlsx,.xls"
+          hint={`Excel (.xlsx, .xls) · up to ${MAX_ROWS.toLocaleString()} rows`}
+          selected={xlsxRows.length > 0 ? {
+            title: xlsxFileName,
+            subtitle: `${xlsxRows.length} rows · ${xlsxColumns.length} columns`,
+          } : null}
+          onFiles={([f]) => handleXlsxFile(f)}
+        />
 
         {xlsxColumns.length > 0 && (
           <div className="space-y-4">
@@ -591,8 +567,9 @@ export default function BulkEmailSendPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {emailTemplates.map(t => (
-              <button key={t.id} type="button" onClick={() => setSelectedTemplateId(t.id)}
-                className={`text-left p-4 rounded-xl border-2 transition-all
+              <div key={t.id} className="relative">
+              <button type="button" onClick={() => setSelectedTemplateId(t.id)}
+                className={`w-full h-full text-left p-4 pr-12 rounded-xl border-2 transition-all
                   ${selectedTemplateId === t.id
                     ? 'border-accent-500 bg-accent-50 dark:bg-accent-900/20'
                     : 'border-gray-200 dark:border-gray-600 hover:border-accent-300 bg-white dark:bg-gray-700/40'}`}>
@@ -613,6 +590,8 @@ export default function BulkEmailSendPage() {
                   </div>
                 </div>
               </button>
+              <TemplatePreviewButton kind="email" template={t} compact className="absolute top-3 right-3" />
+              </div>
             ))}
           </div>
         )}
@@ -813,25 +792,13 @@ export default function BulkEmailSendPage() {
               <p className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">Upload PDF (max 10 MB)</p>
             </div>
             <div className="p-4">
-              <button type="button" onClick={() => pdfRef.current?.click()}
-                className={`w-full flex items-center gap-4 border-2 border-dashed rounded-xl p-4 transition-colors text-left
-                  ${uploadedPdfFile
-                    ? 'border-green-400 bg-green-50 dark:bg-green-900/10'
-                    : 'border-gray-300 dark:border-gray-600 hover:border-accent-400'}`}>
-                <svg className="w-8 h-8 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                </svg>
-                <div>
-                  {uploadedPdfFile
-                    ? <><p className="text-sm font-medium text-green-700 dark:text-green-400">{uploadedPdfFile.name}</p>
-                       <p className="text-xs text-gray-500">{fmtBytes(uploadedPdfFile.size)}</p></>
-                    : <p className="text-sm text-gray-500 dark:text-gray-400">Click to choose a PDF file</p>
-                  }
-                </div>
-              </button>
-              <input ref={pdfRef} type="file" accept=".pdf,application/pdf" className="hidden"
-                onChange={e => { handlePdfFile(e.target.files[0]); e.target.value = '' }}/>
+              <FileDropZone
+                size="sm"
+                accept=".pdf,application/pdf"
+                hint="PDF · max 10 MB"
+                selected={uploadedPdfFile ? { title: uploadedPdfFile.name, subtitle: fmtBytes(uploadedPdfFile.size) } : null}
+                onFiles={([f]) => handlePdfFile(f)}
+              />
             </div>
           </div>
         )}
@@ -850,10 +817,13 @@ export default function BulkEmailSendPage() {
               ) : pdfTemplates.length === 0 ? (
                 <p className="text-sm text-gray-500">No PDF templates found. Create one in PDF Templates.</p>
               ) : (
-                <select value={selectedPdfTemplateId} onChange={e => setSelectedPdfTemplateId(e.target.value)} className={INPUT}>
-                  <option value="">Select template…</option>
-                  {pdfTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
+                <div className="flex items-stretch gap-2">
+                  <select value={selectedPdfTemplateId} onChange={e => setSelectedPdfTemplateId(e.target.value)} className={`${INPUT} flex-1 min-w-0`}>
+                    <option value="">Select template…</option>
+                    {pdfTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
+                  <TemplatePreviewButton kind="pdf" template={selectedPdfTemplate} />
+                </div>
               )}
 
               {selectedPdfTemplate?.placeholders?.length > 0 && (
