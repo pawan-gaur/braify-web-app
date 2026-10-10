@@ -395,6 +395,11 @@ export const bulkEmailListJobs    = ({ page = 0, size = 20 } = {}) =>
   http.get(`/bulk-email/jobs?page=${page}&size=${size}`).then(r => r.data)
 export const bulkEmailGetJob      = (id)                   => http.get(`/bulk-email/jobs/${id}`).then(r => r.data)
 export const bulkEmailGetStatus   = (id)                   => http.get(`/bulk-email/jobs/${id}/status`).then(r => r.data)
+/** One page of a campaign's recipients: { content, page, size, totalElements, totalPages, counts }. */
+export const bulkEmailGetRecipients = (id, { filter = 'ALL', search = '', page = 0, size = 100 } = {}) =>
+  http.get(`/bulk-email/jobs/${id}/recipients`, {
+    params: { filter, page, size, ...(search?.trim() ? { search: search.trim() } : {}) },
+  }).then(r => r.data)
 export const bulkEmailResend       = (id)                  => http.post(`/bulk-email/jobs/${id}/resend`).then(r => r.data)
 export const bulkEmailRetryPending = (id)                  => http.post(`/bulk-email/jobs/${id}/retry-pending`).then(r => r.data)
 export const bulkEmailCancelJob    = (id)                  => http.post(`/bulk-email/jobs/${id}/cancel`).then(r => r.data)

@@ -22,7 +22,7 @@ import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
-const MAX_ROWS = 10000
+const MAX_ROWS = 25000   // keep in sync with bulkemail.max-rows on the server
 
 const STEPS = ['Upload XLSX', 'Email Template', 'Attachment', 'Review & Send']
 
@@ -242,19 +242,21 @@ export default function BulkEmailSendPage() {
 
         // ── Sanitise Sheet 1 rows ──────────────────────────────────────────────
         // 1. Stringify all values; strip "mailto:" prefixes from email-like cells
-        // 2. Drop rows that have fewer than 2 populated (non-empty) cells — these
-        //    are blank spacer rows or Excel hyperlink artifacts
+        // 2. Drop rows with no populated cell at all (blank spacer rows / Excel
+        //    formatting artifacts). A single populated cell is a real row — a sheet
+        //    may legitimately contain just an "Email" column. Invalid addresses are
+        //    filtered (and reported) by the server.
         const allRows = parsed.map(r => {
           const out = {}
           Object.keys(r).forEach(c => {
-            let v = cellStr(r[c])
+            let v = cellStr(r[c]).trim()
             if (v.toLowerCase().startsWith('mailto:')) v = v.slice(7)
             out[c] = v
           })
           return out
         })
         const validRows = allRows.filter(r =>
-          Object.values(r).filter(v => v !== '' && v !== 'null' && v !== 'undefined').length >= 2
+          Object.values(r).some(v => v !== '' && v !== 'null' && v !== 'undefined')
         )
         const skipped = allRows.length - validRows.length
 
