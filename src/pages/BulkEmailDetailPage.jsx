@@ -14,6 +14,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import {
   bulkEmailGetJob,
   bulkEmailGetStatus,
+  bulkEmailGetRecipients,
   bulkEmailGetAudit,
   bulkEmailGetAnalytics,
   bulkEmailResend,
@@ -78,8 +79,12 @@ export default function BulkEmailDetailPage() {
   const [analyticsLoaded, setAnalyticsLoaded] = useState(false)
   const [loading,      setLoading]      = useState(true)
   const [tab,          setTab]          = useState('overview')
-  const [recipPage,    setRecipPage]    = useState(0)   // recipients tab pagination
-  const [recipFilter,  setRecipFilter]  = useState('all') // all | opened | clicked | unopened | unsubscribed
+  const [recipPage,    setRecipPage]    = useState(0)     // recipients tab pagination (server-side)
+  const [recipFilter,  setRecipFilter]  = useState('ALL') // ALL | SENT | FAILED | PENDING | OPENED | CLICKED | UNOPENED | UNSUBSCRIBED
+  const [recipSearch,  setRecipSearch]  = useState('')    // raw input
+  const [recipQuery,   setRecipQuery]   = useState('')    // debounced search sent to the server
+  const [recipData,    setRecipData]    = useState(null)  // { content, totalElements, totalPages, counts }
+  const [recipLoading, setRecipLoading] = useState(false)
   const pollRef = useRef(null)
 
   const TERMINAL = ['COMPLETED', 'PARTIAL', 'FAILED', 'CANCELLED']
@@ -145,6 +150,25 @@ export default function BulkEmailDetailPage() {
 
     return () => clearInterval(pollRef.current)
   }, [job?.status, id])
+
+  // ── Recipients — server-side paging / filtering / search ───────────────
+  // Debounce the search box so we don't query on every keystroke.
+  useEffect(() => {
+    const t = setTimeout(() => { setRecipQuery(recipSearch.trim()); setRecipPage(0) }, 350)
+    return () => clearTimeout(t)
+  }, [recipSearch])
+
+  // Fetch the visible page. Also re-runs as send counters move, so the table stays live.
+  useEffect(() => {
+    if (tab !== 'recipients') return
+    let cancelled = false
+    setRecipLoading(true)
+    bulkEmailGetRecipients(id, { filter: recipFilter, search: recipQuery, page: recipPage, size: RECIP_PAGE_SIZE })
+      .then(d => { if (!cancelled) setRecipData(d) })
+      .catch(e => { if (!cancelled) toast.error(e.message) })
+      .finally(() => { if (!cancelled) setRecipLoading(false) })
+    return () => { cancelled = true }
+  }, [tab, id, recipFilter, recipQuery, recipPage, job?.sentCount, job?.failedCount, job?.status])
 
   // ── Lazy audit load — only fetch when Audit tab is first opened ────────
   useEffect(() => {
@@ -628,34 +652,27 @@ export default function BulkEmailDetailPage() {
 
       {/* ── RECIPIENTS ── */}
       {tab === 'recipients' && (() => {
-        const rows = job.rows || []
-        const counts = {
-          all:          rows.length,
-          opened:       rows.filter(r => r.openCount  > 0).length,
-          clicked:      rows.filter(r => r.clickCount > 0).length,
-          unopened:     rows.filter(r => r.status === 'SENT' && !(r.openCount > 0)).length,
-          unsubscribed: rows.filter(r => r.unsubscribed).length,
-        }
+        // Paged, filtered and searched server-side — campaigns can have tens of thousands of rows.
+        const counts   = recipData?.counts || {}
+        const pageRows = recipData?.content || []
+        const matched  = recipData?.totalElements ?? 0
+        const totalAll = counts.all ?? 0
         const FILTERS = [
-          { key: 'all',          label: 'All'          },
-          { key: 'opened',       label: 'Opened'       },
-          { key: 'clicked',      label: 'Clicked'      },
-          { key: 'unopened',     label: 'Not opened'   },
-          { key: 'unsubscribed', label: 'Unsubscribed' },
+          { key: 'ALL',          label: 'All',          count: 'all'          },
+          { key: 'SENT',         label: 'Sent',         count: 'sent'         },
+          { key: 'FAILED',       label: 'Failed',       count: 'failed'       },
+          { key: 'PENDING',      label: 'Pending',      count: 'pending'      },
+          { key: 'OPENED',       label: 'Opened',       count: 'opened'       },
+          { key: 'CLICKED',      label: 'Clicked',      count: 'clicked'      },
+          { key: 'UNOPENED',     label: 'Not opened',   count: 'unopened'     },
+          { key: 'UNSUBSCRIBED', label: 'Unsubscribed', count: 'unsubscribed' },
         ]
-        const filtered = rows.filter(r =>
-          recipFilter === 'opened'       ? r.openCount  > 0 :
-          recipFilter === 'clicked'      ? r.clickCount > 0 :
-          recipFilter === 'unopened'     ? (r.status === 'SENT' && !(r.openCount > 0)) :
-          recipFilter === 'unsubscribed' ? r.unsubscribed :
-          true)
-        const pageRows = filtered.slice(recipPage * RECIP_PAGE_SIZE, (recipPage + 1) * RECIP_PAGE_SIZE)
         return (
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-          {/* Engagement filter toolbar */}
-          {rows.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 px-5 py-3 border-b border-gray-100 dark:border-gray-700">
-              {FILTERS.map(f => (
+          {/* Filter chips + search */}
+          {totalAll > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 px-5 py-3 border-b border-gray-100 dark:border-gray-700">
+              {FILTERS.filter(f => f.key === 'ALL' || (counts[f.count] ?? 0) > 0 || recipFilter === f.key).map(f => (
                 <button
                   key={f.key}
                   onClick={() => { setRecipFilter(f.key); setRecipPage(0) }}
@@ -664,13 +681,21 @@ export default function BulkEmailDetailPage() {
                       ? 'bg-accent-600 text-white'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}
                 >
-                  {f.label} <span className="opacity-70">{(counts[f.key] ?? 0).toLocaleString()}</span>
+                  {f.label} <span className="opacity-70">{(counts[f.count] ?? 0).toLocaleString()}</span>
                 </button>
               ))}
+              <input
+                value={recipSearch}
+                onChange={e => setRecipSearch(e.target.value)}
+                placeholder="Search email or name…"
+                className="ml-auto w-full sm:w-56 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-xs text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-400"
+              />
             </div>
           )}
 
-          {rows.length === 0 ? (
+          {recipData === null ? (
+            <div className="p-12 flex justify-center"><Spinner /></div>
+          ) : totalAll === 0 ? (
             <div className="p-12 text-center text-gray-400">
               <div className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600">
                 <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -748,11 +773,12 @@ export default function BulkEmailDetailPage() {
                   )}
                 </tbody>
               </table>
-              {filtered.length > RECIP_PAGE_SIZE && (
+              {matched > RECIP_PAGE_SIZE && (
                 <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 dark:border-gray-700 text-xs text-gray-500">
                   <span>
                     {(recipPage * RECIP_PAGE_SIZE + 1).toLocaleString()}–
-                    {Math.min((recipPage + 1) * RECIP_PAGE_SIZE, filtered.length).toLocaleString()} of {filtered.length.toLocaleString()}
+                    {Math.min((recipPage + 1) * RECIP_PAGE_SIZE, matched).toLocaleString()} of {matched.toLocaleString()}
+                    {recipLoading && <span className="ml-2 opacity-60">loading…</span>}
                   </span>
                   <div className="flex gap-2">
                     <button
@@ -762,7 +788,7 @@ export default function BulkEmailDetailPage() {
                     >Prev</button>
                     <button
                       className="px-3 py-1 rounded-lg border border-gray-200 dark:border-gray-600 disabled:opacity-40 hover:border-primary"
-                      disabled={(recipPage + 1) * RECIP_PAGE_SIZE >= filtered.length}
+                      disabled={(recipPage + 1) * RECIP_PAGE_SIZE >= matched}
                       onClick={() => setRecipPage(p => p + 1)}
                     >Next</button>
                   </div>
