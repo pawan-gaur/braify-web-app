@@ -1,9 +1,9 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { useApp } from '../../context/AppContext'
 import { useAuth, ROLES } from '../../context/AuthContext'
 import { FEATURES } from '../../config/features'
-import { getPendingOnboardingCount } from '../../services/api'
+import { getPendingOnboardingCount, signerGetCounts } from '../../services/api'
 import CommandPalette, { useCommandPalette } from '../ui/CommandPalette'
 import { BraiLogo } from './PublicNavbar'
 
@@ -16,8 +16,13 @@ const NAV_SECTIONS = [
     section: null,
     links: [
       {
-        to: '/dashboard', end: true, label: 'Dashboard',
+        to: '/dashboard', end: true, label: 'Dashboard', signer: true,
         icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',
+      },
+      {
+        // Documents other people sent to MY email for signature (any org) — not feature-gated.
+        to: '/my-documents', label: 'My signatures', signaturesBadge: true, signer: true,
+        icon: 'M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z',
       },
     ],
   },
@@ -161,9 +166,11 @@ const ROLE_RANK = { PLATFORM_ADMIN: 4, ORG_ADMIN: 3, ADMIN: 2, USER: 1 }
 
 export default function Sidebar() {
   const { collapsed, setCollapsed } = useApp()
-  const { user, hasFeature } = useAuth()
+  const { user, hasFeature, isSigner } = useAuth()
   const navigate = useNavigate()
   const [pendingOnboarding, setPendingOnboarding] = useState(0)
+  const [pendingSignatures, setPendingSignatures] = useState(0)
+  const { pathname } = useLocation()
   const palette = useCommandPalette()
 
   // Poll pending onboarding count for PLATFORM_ADMIN
@@ -178,14 +185,30 @@ export default function Sidebar() {
     return () => clearInterval(interval)
   }, [user?.role])
 
+  // Documents awaiting MY signature — refreshed every minute and on navigation
+  // (e.g. coming back from signing).
+  useEffect(() => {
+    if (!user) return
+    let cancelled = false
+    const fetch = () =>
+      signerGetCounts()
+        .then(c => { if (!cancelled) setPendingSignatures(c?.ACTION ?? 0) })
+        .catch(() => {})
+    fetch()
+    const interval = setInterval(fetch, 60_000)
+    return () => { cancelled = true; clearInterval(interval) }
+  }, [user, pathname])
+
   const visibleSections = NAV_SECTIONS
+    // Signer-portal sessions only see the links flagged `signer`
+    .map(s => isSigner ? { ...s, links: s.links.filter(l => l.signer) } : s)
     // Gate section by role
     .filter(s => !s.minRole || (ROLE_RANK[user?.role] ?? 0) >= (ROLE_RANK[s.minRole] ?? 0))
     .map(s => ({
       ...s,
       links: s.links
         // Gate link by role
-        .filter(l => !l.minRole || (ROLE_RANK[user?.role] ?? 0) >= (ROLE_RANK[l.minRole] ?? 0))
+        .filter(l => isSigner || !l.minRole || (ROLE_RANK[user?.role] ?? 0) >= (ROLE_RANK[l.minRole] ?? 0))
         // Gate link by feature
         .filter(l => !l.feature || hasFeature(l.feature)),
     }))
@@ -313,7 +336,8 @@ export default function Sidebar() {
                     key={link.to}
                     link={link}
                     collapsed={collapsed}
-                    badge={link.pendingBadge ? pendingOnboarding : 0}
+                    badge={link.pendingBadge ? pendingOnboarding
+                         : link.signaturesBadge ? pendingSignatures : 0}
                   />
                 ))}
               </ul>
@@ -324,22 +348,23 @@ export default function Sidebar() {
         {/* ── Footer — Profile pinned to bottom ── */}
         <div className="border-t border-ink-7 dark:border-sidebar-border shrink-0">
           <button
-            onClick={() => navigate('/profile')}
+            onClick={() => navigate(isSigner ? '/my-documents/account' : '/profile')}
             className={`group w-full flex items-center gap-2.5 px-3 py-3
                         hover:bg-ink-9 dark:hover:bg-sidebar-hover transition-colors
                         ${collapsed ? 'justify-center' : ''}`}
           >
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center shrink-0
                             text-white text-xs font-bold shadow-soft">
-              {(user?.firstName?.[0] ?? '') + (user?.lastName?.[0] ?? '')}
+              {((user?.firstName?.[0] ?? '') + (user?.lastName?.[0] ?? '')).toUpperCase()
+                || (user?.email?.[0] ?? '').toUpperCase()}
             </div>
             {!collapsed && (
               <div className="flex-1 min-w-0 text-left">
                 <p className="text-[13px] font-semibold text-ink dark:text-white truncate leading-tight">
-                  {user?.firstName} {user?.lastName}
+                  {[user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.email}
                 </p>
                 <p className="text-[11px] text-ink-4 dark:text-sidebar-muted truncate">
-                  {user?.role?.toLowerCase().replace('_', ' ')}
+                  {isSigner ? 'signer' : user?.role?.toLowerCase().replace('_', ' ')}
                 </p>
               </div>
             )}

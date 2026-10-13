@@ -12,6 +12,7 @@ import { useParams } from 'react-router-dom'
 import { esignOpenView, esignViewPdf } from '../services/api'
 import PdfPageCanvas from '../components/esign/PdfPageCanvas'
 import PdfZoomControl from '../components/esign/PdfZoomControl'
+import InboxLink from '../components/esign/InboxLink'
 
 const STATUS_LABELS = {
   DRAFT: 'Draft', PENDING: 'Pending', IN_REVIEW: 'In review',
@@ -106,6 +107,7 @@ export default function ESignViewPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <InboxLink variant="header" />
           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full
             ${completed ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
             {STATUS_LABELS[doc?.status] || doc?.status}
