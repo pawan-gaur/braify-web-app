@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { AppProvider, useApp }  from './context/AppContext'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ToastProvider } from './context/ToastContext'
@@ -63,6 +63,9 @@ const PlatformUserAccessPage       = lazy(() => import('./pages/PlatformUserAcce
 const TrustPage              = lazy(() => import('./pages/TrustPage'))
 const PrivacyPage            = lazy(() => import('./pages/PrivacyPage'))
 const TermsPage              = lazy(() => import('./pages/TermsPage'))
+const MyDocumentsPage        = lazy(() => import('./pages/MyDocumentsPage'))
+const SignerAccountPage      = lazy(() => import('./pages/SignerAccountPage'))
+const SignerDashboardPage    = lazy(() => import('./pages/SignerDashboardPage'))
 
 /* Centered spinner shown while a lazy route chunk loads. */
 function RouteFallback() {
@@ -115,8 +118,8 @@ function FeatureRoute({ feature, children }) {
   return children
 }
 
-/* ── Authenticated shell with sidebar + navbar ─────────────────────────── */
-function Shell() {
+/* ── Authenticated layout: sidebar + navbar + page area ────────────────── */
+function AppLayout({ children }) {
   const { collapsed } = useApp()
   const sideW = collapsed ? 'ml-16' : 'ml-60'
 
@@ -127,6 +130,18 @@ function Shell() {
       <main className={`flex-1 ${sideW} pt-14 app-wash transition-[margin-left] duration-300 ease-spring min-w-0`}>
         <PageTransition>
         <Suspense fallback={<RouteFallback />}>
+          {children}
+        </Suspense>
+        </PageTransition>
+      </main>
+    </div>
+  )
+}
+
+/* ── Braify user app ───────────────────────────────────────────────────── */
+function Shell() {
+  return (
+    <AppLayout>
         <Routes>
           <Route path="/"        element={<DashboardPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
@@ -169,6 +184,10 @@ function Shell() {
           <Route path="/users"                 element={<UsersPage />} />
           <Route path="/sessions"              element={<SessionsPage />} />
 
+          {/* ── Signer inbox (documents sent to my email for signature) ── */}
+          <Route path="/my-documents"         element={<MyDocumentsPage />} />
+          <Route path="/my-documents/account" element={<Navigate to="/profile" replace />} />
+
           {/* ── Profile ── */}
           <Route path="/profile" element={<ProfilePage />} />
 
@@ -186,16 +205,40 @@ function Shell() {
           {/* Catch-all inside shell */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-        </Suspense>
-        </PageTransition>
-      </main>
-    </div>
+    </AppLayout>
   )
+}
+
+/* ── Signer-portal app: same layout, but only the dashboard, inbox and account ── */
+function SignerApp() {
+  return (
+    <AppLayout>
+      <Routes>
+        <Route path="/dashboard"            element={<SignerDashboardPage />} />
+        <Route path="/my-documents"         element={<MyDocumentsPage />} />
+        <Route path="/my-documents/account" element={<SignerAccountPage />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </AppLayout>
+  )
+}
+
+/**
+ * Where an already-signed-in visitor of / or /login goes: signers to their inbox,
+ * Braify users to ?next= (links from signing emails) or the dashboard.
+ */
+function HomeRedirect() {
+  const { isSigner } = useAuth()
+  const [params] = useSearchParams()
+  const next = params.get('next')
+  const safeNext = next && next.startsWith('/') && !next.startsWith('//') && !next.includes('\\') ? next : null
+  const signerNext = safeNext === '/my-documents' ? safeNext : '/dashboard'
+  return <Navigate to={isSigner ? signerNext : (safeNext || '/dashboard')} replace />
 }
 
 /* ── Root router ───────────────────────────────────────────────────────── */
 function AppRoutes() {
-  const { isAuthenticated, loading } = useAuth()
+  const { isAuthenticated, isSigner, loading } = useAuth()
 
   return (
     <Suspense fallback={<RouteFallback />}>
@@ -205,7 +248,7 @@ function AppRoutes() {
         path="/"
         element={
           !loading && isAuthenticated
-            ? <Navigate to="/dashboard" replace />
+            ? <HomeRedirect />
             : <LandingPage />
         }
       />
@@ -215,7 +258,7 @@ function AppRoutes() {
         path="/login"
         element={
           !loading && isAuthenticated
-            ? <Navigate to="/dashboard" replace />
+            ? <HomeRedirect />
             : <LoginPage />
         }
       />
@@ -241,7 +284,7 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <AppProvider>
-              <Shell />
+              {isSigner ? <SignerApp /> : <Shell />}
             </AppProvider>
           </ProtectedRoute>
         }

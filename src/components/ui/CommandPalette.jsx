@@ -5,13 +5,24 @@ import { FEATURES } from '../../config/features'
 
 /* ─── Command catalog ────────────────────────────────────────────────────── */
 function buildCommands(navigate, ctx) {
-  const { isOrgAdmin, isPlatformAdmin, hasFeature } = ctx
+  const { isOrgAdmin, isPlatformAdmin, hasFeature, isSigner } = ctx
 
   const cmds = []
   const add = (cmd) => cmds.push(cmd)
 
+  const signaturesCmd = { id: 'nav-signatures', group: 'Navigate', label: 'My signatures', action: () => navigate('/my-documents'), icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' }
+
+  // Signer-portal sessions can only reach their dashboard, inbox and account.
+  if (isSigner) {
+    add({ id: 'nav-dashboard', group: 'Navigate', label: 'Dashboard', hint: 'Home', action: () => navigate('/dashboard'), icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3' })
+    add(signaturesCmd)
+    add({ id: 'nav-account', group: 'Personal', label: 'Password & sign-in', action: () => navigate('/my-documents/account'), icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' })
+    return cmds
+  }
+
   // Navigation
   add({ id: 'nav-dashboard',  group: 'Navigate', label: 'Dashboard',       hint: 'Home',   action: () => navigate('/dashboard'), icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3' })
+  add(signaturesCmd)
 
   if (hasFeature(FEATURES.PDF_TEMPLATES)) {
     add({ id: 'nav-templates',  group: 'Navigate', label: 'PDF Templates',    action: () => navigate('/templates'),  icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9v11a2 2 0 01-2 2z' })
@@ -69,7 +80,7 @@ function score(cmd, q) {
 /* ─── Main palette ───────────────────────────────────────────────────────── */
 export default function CommandPalette({ open, onClose }) {
   const navigate = useNavigate()
-  const { user, hasFeature } = useAuth()
+  const { user, hasFeature, isSigner } = useAuth()
   const isPlatformAdmin = user?.role === ROLES.PLATFORM_ADMIN
   const isOrgAdmin = user?.role === ROLES.ORG_ADMIN || isPlatformAdmin
 
@@ -79,8 +90,8 @@ export default function CommandPalette({ open, onClose }) {
   const listRef  = useRef(null)
 
   const allCmds = useMemo(
-    () => buildCommands(navigate, { isOrgAdmin, isPlatformAdmin, hasFeature }),
-    [navigate, isOrgAdmin, isPlatformAdmin, hasFeature]
+    () => buildCommands(navigate, { isOrgAdmin, isPlatformAdmin, hasFeature, isSigner }),
+    [navigate, isOrgAdmin, isPlatformAdmin, hasFeature, isSigner]
   )
 
   const results = useMemo(() => {

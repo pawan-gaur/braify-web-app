@@ -62,6 +62,8 @@ const TITLE_MAP = [
   { exact:  '/shared-templates',        title: 'Shared Templates' },
   { exact:  '/api-docs',                title: 'API Docs' },
   { exact:  '/profile',                 title: 'Profile' },
+  { exact:  '/my-documents',            title: 'My signatures' },
+  { exact:  '/my-documents/account',    title: 'Account' },
 ]
 
 function resolveTitle(pathname) {

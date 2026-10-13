@@ -23,6 +23,7 @@ import { IconCheck } from '../components/ui/icons'
 import { useToast } from '../context/ToastContext'
 import { fmtFieldDate } from '../utils/date'
 import PdfPageCanvas from '../components/esign/PdfPageCanvas'
+import InboxLink from '../components/esign/InboxLink'
 
 const FIELD_COLORS = {
   SIGNATURE: { border: '#6D52E8', bg: 'rgba(109,82,232,0.12)' },
@@ -557,6 +558,7 @@ export default function ESignSigningPage() {
           <h1 className="text-xl font-bold text-gray-800 mb-2">{info.title}</h1>
           <p className="text-gray-500 text-sm">{info.body}</p>
           <p className="text-gray-400 text-xs mt-3">{info.hint}</p>
+          <InboxLink />
         </div>
       </Center>
     )
@@ -661,6 +663,8 @@ export default function ESignSigningPage() {
             </ul>
           )}
         </div>}
+
+        <InboxLink email={mySignatory?.email || doc?.clientEmail} />
 
         <p className="text-center text-xs text-gray-400 mt-6">
           You can close this page at any time. Your signature has been recorded.
@@ -937,6 +941,7 @@ export default function ESignSigningPage() {
           </div>
         </div>
         <div className="flex items-center gap-4">
+          <InboxLink variant="header" />
           <span className="text-sm text-gray-500">{signedCount}/{myFields.length} signed</span>
           <button
             onClick={handleSubmit}

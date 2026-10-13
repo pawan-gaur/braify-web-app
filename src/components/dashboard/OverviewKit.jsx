@@ -139,7 +139,7 @@ export function PipelineBand({ stats, esignSent, can, onNavigate }) {
 }
 
 /* ── Needs attention ───────────────────────────────────────────────────── */
-export function AttentionPanel({ stats, isOrgAdmin, can, onNavigate }) {
+export function AttentionPanel({ stats, isOrgAdmin, can, onNavigate, mySignatures = 0 }) {
   const items = []
   const overdue = stats?.esignOverdue ?? 0
   const pending = Math.max((stats?.esignPending ?? 0) - overdue, 0)
@@ -147,6 +147,9 @@ export function AttentionPanel({ stats, isOrgAdmin, can, onNavigate }) {
   const quota = stats?.docsQuotaPercent ?? null
   const denied = (stats?.recentActivity ?? []).filter(l => String(l.action ?? '').includes('DENIED')).length
 
+  // Documents sent to the user's own email for signature (from any org).
+  if (mySignatures > 0)
+    items.push({ tone: 'rose', title: `${mySignatures} ${mySignatures === 1 ? 'document needs' : 'documents need'} your signature`, action: 'Sign', to: '/my-documents' })
   if (can.esign && overdue > 0)
     items.push({ tone: 'rose', title: `${overdue} e-sign ${overdue === 1 ? 'document is' : 'documents are'} overdue`, action: 'Review', to: '/esign' })
   if (can.esign && pending > 0)
@@ -200,11 +203,12 @@ export function AttentionPanel({ stats, isOrgAdmin, can, onNavigate }) {
 }
 
 /** Count of attention items, for the greeting subtitle. */
-export function attentionCount(stats, isOrgAdmin, can) {
+export function attentionCount(stats, isOrgAdmin, can, mySignatures = 0) {
   const overdue = stats?.esignOverdue ?? 0
   const pending = Math.max((stats?.esignPending ?? 0) - overdue, 0)
   const denied = (stats?.recentActivity ?? []).some(l => String(l.action ?? '').includes('DENIED'))
   return [
+    mySignatures > 0,
     can.esign && overdue > 0, can.esign && pending > 0,
     isOrgAdmin && (stats?.pendingInvites ?? 0) > 0,
     (stats?.docsQuotaPercent ?? 0) >= 80, denied,
