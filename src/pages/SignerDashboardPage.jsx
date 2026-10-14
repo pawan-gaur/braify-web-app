@@ -3,9 +3,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import EmptyState from '../components/ui/EmptyState'
 import SignerDocumentRow, { useSignerDocActions } from '../components/signer/SignerDocumentRow'
+import VerifyEmailCard from '../components/signer/VerifyEmailCard'
 import { useAuth } from '../context/AuthContext'
 import useDocumentTitle from '../hooks/useDocumentTitle'
-import { signerListDocuments } from '../services/api'
+import { signerListDocuments, needsEmailVerification } from '../services/api'
 
 const CRUMBS = [{ label: 'Dashboard' }]
 const PREVIEW = 5
@@ -35,6 +36,7 @@ export default function SignerDashboardPage() {
   const [action,  setAction]  = useState(null)   // ACTION page (also carries all counts)
   const [signed,  setSigned]  = useState(null)
   const [error,   setError]   = useState(null)
+  const [mustVerify, setMustVerify] = useState(false)
 
   const load = useCallback(() => {
     setError(null)
@@ -42,8 +44,8 @@ export default function SignerDashboardPage() {
       signerListDocuments({ tab: 'ACTION', size: PREVIEW }),
       signerListDocuments({ tab: 'SIGNED', size: PREVIEW }),
     ])
-      .then(([a, s]) => { setAction(a); setSigned(s) })
-      .catch(e => setError(e.message))
+      .then(([a, s]) => { setAction(a); setSigned(s); setMustVerify(false) })
+      .catch(e => needsEmailVerification(e) ? setMustVerify(true) : setError(e.message))
   }, [])
 
   useEffect(() => { load() }, [load])
@@ -69,12 +71,15 @@ export default function SignerDashboardPage() {
           {greeting()}, <span className="text-gradient">{name}</span>
         </h1>
         <p className="text-sm text-ink-3 mt-1.5">
-          {date} · {action == null ? '…'
+          {date} · {mustVerify ? 'Confirm your email to see your documents' : action == null ? '…'
             : pending ? `${pending} ${pending === 1 ? 'document needs' : 'documents need'} your signature`
             : 'You’re all caught up'}
         </p>
       </div>
 
+      {mustVerify ? (
+        <VerifyEmailCard email={user?.email} onVerified={load} />
+      ) : (<>
       {error && (
         <div className="alert-error border rounded-xl px-4 py-3 mb-6 text-sm flex items-center justify-between gap-3">
           <span>{error}</span>
@@ -110,6 +115,7 @@ export default function SignerDashboardPage() {
                 secondaryAction={pending ? { label: 'Sign your first document', onClick: () => navigate('/my-documents') } : undefined} /></div>
             : <ul className="space-y-3">{signed.items.map(row)}</ul>}
       </Section>
+      </>)}
     </div>
   )
 }
