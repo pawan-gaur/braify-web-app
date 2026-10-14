@@ -102,10 +102,16 @@ export function AuthProvider({ children }) {
       .then(r => {
         setUser(isSignerSession
           ? { ...r.data, id: r.data.userId, accountType: ACCOUNT_TYPES.SIGNER }
-          : { ...r.data, accountType: ACCOUNT_TYPES.USER })
+          : { ...r.data, accountType: ACCOUNT_TYPES.USER, hasPassword: true })
         setFeatures(extractFeatures(r.data))
         setFeatureRoleAccess(extractFeatureRoleAccess(r.data))
         applyTheme(r.data.primaryColor, r.data.accentColor)
+        // SIGNER-role Braify accounts: /auth/me doesn't say whether a password exists.
+        if (!isSignerSession && r.data.role === 'SIGNER') {
+          http.get('/signer/me')
+            .then(m => setUser(u => u && ({ ...u, hasPassword: m.data.hasPassword })))
+            .catch(() => {})
+        }
       })
       .catch(() => {
         localStorage.removeItem(TOKEN_KEY)
@@ -146,7 +152,8 @@ export function AuthProvider({ children }) {
       primaryColor:       data.primaryColor ?? null,
       accentColor:        data.accentColor  ?? null,
       accountType:        data.accountType ?? ACCOUNT_TYPES.USER,
-      hasPassword:        data.hasPassword ?? null,
+      // Braify accounts always have a password; signer accounts report whether they set one.
+      hasPassword:        data.hasPassword ?? (data.accountType !== ACCOUNT_TYPES.SIGNER),
     }
     setUser(userObj)
     setFeatures(extractFeatures({ ...data, role: data.role }))
@@ -261,8 +268,11 @@ export function AuthProvider({ children }) {
     setFeatureRoleAccess,  // expose so BrandingPage can refresh after saving access rules
     loading,
     isAuthenticated: !!user,
-    /** True for a signer-portal session (external e-sign recipient — inbox only). */
-    isSigner: user?.accountType === ACCOUNT_TYPES.SIGNER,
+    /**
+     * True for anyone limited to the signer inbox: a signer-portal session, or a Braify
+     * account with role SIGNER (the backend denies that role everywhere outside the inbox).
+     */
+    isSigner: user?.accountType === ACCOUNT_TYPES.SIGNER || user?.role === 'SIGNER',
     lastUser,
     forgetLastUser,
     login,

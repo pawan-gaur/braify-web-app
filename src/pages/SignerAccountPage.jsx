@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import useDocumentTitle from '../hooks/useDocumentTitle'
-import { signerSetPassword } from '../services/api'
+import { signerGetMe, signerSetPassword } from '../services/api'
 
 /**
  * Signer-portal account settings: optionally set (or change) a password so the signer can
@@ -14,6 +14,18 @@ export default function SignerAccountPage() {
   const { user, setUser } = useAuth()
   const toast = useToast()
   const hasPassword = !!user?.hasPassword
+
+  // Whether the backend wants the current password: not when there is none yet, or when this
+  // sign-in used an email code (that already proves the mailbox, like a reset link).
+  const [needsCurrent, setNeedsCurrent] = useState(null)
+  const refreshMe = () =>
+    signerGetMe()
+      .then(me => {
+        setNeedsCurrent(!!me.passwordNeedsCurrent)
+        setUser(u => u && ({ ...u, hasPassword: !!me.hasPassword }))
+      })
+      .catch(() => setNeedsCurrent(hasPassword))
+  useEffect(() => { refreshMe() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const [current, setCurrent] = useState('')
   const [next,    setNext]    = useState('')
@@ -28,8 +40,9 @@ export default function SignerAccountPage() {
     if (next !== confirm) { setError('The passwords don’t match.'); return }
     setSaving(true)
     try {
-      const res = await signerSetPassword({ currentPassword: hasPassword ? current : null, newPassword: next })
+      const res = await signerSetPassword({ currentPassword: needsCurrent ? current : null, newPassword: next })
       setUser(u => ({ ...u, hasPassword: true }))
+      refreshMe()
       setCurrent(''); setNext(''); setConfirm('')
       toast.success(res?.message || 'Password saved.')
     } catch (err) {
@@ -59,7 +72,7 @@ export default function SignerAccountPage() {
           <label className="form-label">Email</label>
           <input className="form-input" value={user?.email || ''} disabled readOnly />
         </div>
-        {hasPassword && (
+        {needsCurrent && (
           <div>
             <label className="form-label">Current password</label>
             <input type="password" autoComplete="current-password" className="form-input"
