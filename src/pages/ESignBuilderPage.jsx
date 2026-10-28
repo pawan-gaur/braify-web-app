@@ -405,7 +405,8 @@ export default function ESignBuilderPage({ initialDocStatus }) {
         } else if (src === 'template') {
           if (!selectedTemplateId) throw new Error('No template selected')
           const previewB64 = await generatePdfAsBase64(selectedTemplateId, {})
-          return { sourceType: 'TEMPLATE', templateId: selectedTemplateId, previewBase64: previewB64 }
+          // Send the rendered PDF too — the backend stores it as the signing source.
+          return { sourceType: 'TEMPLATE', templateId: selectedTemplateId, pdfBase64: previewB64, previewBase64: previewB64 }
         } else {
           if (!fileApi.url) throw new Error('No API URL configured')
           const b64 = await fetchFileAsBase64(fileApi.url, buildAuthHeaders(fileApi))

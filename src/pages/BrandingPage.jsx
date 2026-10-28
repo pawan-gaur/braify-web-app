@@ -53,6 +53,7 @@ export default function OrgSettingsPage() {
   const [loading,   setLoading]   = useState(true)
   const [saving,    setSaving]    = useState(false)
   const [savingCloud, setSavingCloud] = useState(false)
+  const [managedStorage, setManagedStorage] = useState(false)
   const [savingReminders, setSavingReminders] = useState(false)
   const [orgFeatures, setOrgFeatures] = useState([])   // which features org has enabled
 
@@ -130,6 +131,7 @@ export default function OrgSettingsPage() {
       }
 
       // Cloud config
+      setManagedStorage(cloudResult.status === 'fulfilled' && !!cloudResult.value?.managedStorage)
       if (cloudResult.status === 'fulfilled' && cloudResult.value?.configured) {
         const c = cloudResult.value
         setCloudForm({
@@ -312,6 +314,7 @@ export default function OrgSettingsPage() {
       {/* ── Tab: Cloud Storage ── */}
       {activeTab === 'cloud' && (
         <CloudStorageTab
+          managed={managedStorage}
           form={cloudForm}
           set={setCloud}
           saving={savingCloud}
@@ -961,7 +964,7 @@ const CLOUD_PROVIDERS = [
 
 const COMMON_FILE_TYPES = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'zip']
 
-function CloudStorageTab({ form, set, saving, onSave }) {
+function CloudStorageTab({ managed, form, set, saving, onSave }) {
   const [fileTypeInput, setFileTypeInput] = useState('')
 
   const addFileType = (type) => {
@@ -984,6 +987,14 @@ function CloudStorageTab({ form, set, saving, onSave }) {
 
   return (
     <div className="space-y-6">
+
+      {/* Managed storage — no setup needed */}
+      {managed && (
+        <div className="alert-success border rounded-xl px-5 py-4 text-sm">
+          <p className="font-semibold">Using Braify managed storage — no setup needed.</p>
+          <p className="mt-1">Your files, e-sign documents and logo are stored securely by Braify. Configure your own bucket below only if you need data in your own cloud account; new files then go there, and existing files stay readable.</p>
+        </div>
+      )}
 
       {/* Info banner */}
       <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl px-5 py-4">

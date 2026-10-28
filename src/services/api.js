@@ -45,7 +45,7 @@ const flushWaiters = (newToken) => {
 const NO_REFRESH = [
   '/auth/refresh', '/auth/login', '/auth/forgot-password',
   '/auth/reset-password', '/auth/accept-invite', '/auth/validate-token',
-  '/auth/otp/', '/esign/sign/', '/esign/view/', '/esign/verify/',
+  '/auth/otp/', '/auth/signup/', '/esign/sign/', '/esign/view/', '/esign/verify/',
 ]
 
 // Bare axios call (bypasses these interceptors) so the refresh request can't recurse.
@@ -172,6 +172,14 @@ http.interceptors.response.use(
       message = 'Unable to reach the server. Please try again in a moment.'
     } else {
       message = err.message || `Request failed${status ? ` (${status})` : ''}`
+    }
+
+    // Plan limit hit / paid-only feature → let the app shell show an upgrade prompt.
+    // (The caller still gets the error and shows its own message as before.)
+    const upgradeNeeded = (status === 403 && data?.reason === 'UPGRADE_REQUIRED')
+      || (status === 429 && /quota|limit/i.test(message) && !original?.url?.includes('/auth/'))
+    if (upgradeNeeded) {
+      window.dispatchEvent(new CustomEvent('braify:upgrade-required', { detail: { message } }))
     }
 
     const normalised         = new Error(message)
@@ -387,6 +395,12 @@ export const esignDownloadClientAttachment = (token, attachmentId) =>
   http.get(`/esign/sign/${token}/attachments/${attachmentId}`, { headers: { Authorization: `Bearer ${token}` }, responseType: 'blob' }).then(r => r.data)
 export const esignDownloadSignSource = (token) =>
   http.get(`/esign/sign/${token}/source-pdf`, { headers: { Authorization: `Bearer ${token}` }, responseType: 'blob' }).then(r => r.data)
+
+// ── Billing (plan, trial, Stripe checkout / portal) ────────────────────────
+export const getEntitlements   = ()                 => http.get('/billing/entitlements').then(r => r.data)
+export const getBillingSummary = ()                 => http.get('/billing').then(r => r.data)
+export const startCheckout     = (interval = 'MONTH') => http.post('/billing/checkout', { interval }).then(r => r.data.url)
+export const openBillingPortal = ()                 => http.post('/billing/portal').then(r => r.data.url)
 
 // ── Signer inbox (documents addressed to the signed-in email, across orgs) ──
 export const signerGetMe            = ()          => http.get('/signer/me').then(r => r.data)

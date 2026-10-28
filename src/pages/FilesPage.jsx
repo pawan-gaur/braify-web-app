@@ -145,7 +145,7 @@ function UploadSuccess({ result, onDone }) {
 // ── Upload Modal ──────────────────────────────────────────────────────────────
 
 function UploadModal({ orgId, onClose, onUploaded }) {
-  const { addToast } = useToast()
+  const toast = useToast()
   const [file,     setFile]     = useState(null)
   const [meta,     setMeta]     = useState({ folder: '', documentType: 'OTHER', description: '', tags: '' })
   const [loading,  setLoading]  = useState(false)
@@ -153,7 +153,7 @@ function UploadModal({ orgId, onClose, onUploaded }) {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!file) return addToast({ type: 'error', message: 'Please select a file.' })
+    if (!file) return toast.error('Please select a file.')
     setLoading(true)
     try {
       const tags = meta.tags ? meta.tags.split(',').map(t => t.trim()).filter(Boolean) : []
@@ -161,7 +161,7 @@ function UploadModal({ orgId, onClose, onUploaded }) {
       setUploaded(result)
       onUploaded()
     } catch (err) {
-      addToast({ type: 'error', message: err.message })
+      toast.error(err.message)
     } finally {
       setLoading(false)
     }
@@ -611,7 +611,7 @@ function FileContent({ data, view, onDownload, onDelete, showOrg, orgNames, sort
 // ══════════════════════════════════════════════════════════════════════════════
 
 function AdminFilesView() {
-  const { addToast } = useToast()
+  const toast = useToast()
   const [view, setView]           = useView('files-view-admin', 'table')
   const [data, setData]           = useState(null)
   const [loading, setLoading]     = useState(true)
@@ -663,7 +663,7 @@ function AdminFilesView() {
       setData(result)
       setPage(pg)
     } catch (err) {
-      addToast({ type: 'error', message: err.message })
+      toast.error(err.message)
       setData(null)
     } finally {
       setLoading(false)
@@ -843,7 +843,7 @@ function AdminFilesView() {
 
 function OrgFilesView() {
   const { user } = useAuth()
-  const { addToast } = useToast()
+  const toast = useToast()
   const orgId = user?.organizationId
 
   const [view, setView]             = useView('files-view', 'table')
@@ -881,9 +881,9 @@ function OrgFilesView() {
       setPage(pg)
     } catch (err) {
       if (err.message?.includes('Cloud setup not exists')) {
-        addToast({ type: 'warning', message: 'Cloud storage is not configured yet. Go to Settings → Cloud Storage.' })
+        toast.warning('Cloud storage is not configured yet. Go to Settings → Cloud Storage.')
       } else {
-        addToast({ type: 'error', message: err.message })
+        toast.error(err.message)
       }
       setData(null)
     } finally {
@@ -897,19 +897,19 @@ function OrgFilesView() {
     try {
       const res = await getFileDownloadUrl(fileOrgId ?? orgId, fileId)
       window.open(res.downloadUrl, '_blank', 'noopener')
-      addToast({ type: 'success', message: `Download link valid for ${Math.floor(res.expiresInSeconds / 60)} min` })
+      toast.success(`Download link valid for ${Math.floor(res.expiresInSeconds / 60)} min`)
     } catch (err) {
-      addToast({ type: 'error', message: err.message })
+      toast.error(err.message)
     }
   }
 
   async function handleDelete(fileId, fileOrgId) {
     try {
       await deleteFile(fileOrgId ?? orgId, fileId)
-      addToast({ type: 'success', message: 'File deleted successfully.' })
+      toast.success('File deleted successfully.')
       fetchFiles(page)
     } catch (err) {
-      addToast({ type: 'error', message: err.message })
+      toast.error(err.message)
     }
   }
 

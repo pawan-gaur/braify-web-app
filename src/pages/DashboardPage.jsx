@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import GettingStartedChecklist from '../components/dashboard/GettingStartedChecklist'
 import { getDashboardStats, getDashboardAnalytics, signerGetCounts } from '../services/api'
 import { useAuth, ROLES } from '../context/AuthContext'
 import useDocumentTitle from '../hooks/useDocumentTitle'
@@ -341,8 +342,10 @@ function ScheduledReportsPanel({ orgId }) {
 
   return (
     <div className="card">
-      <SectionHeader title="Scheduled Reports" sub="Receive analytics summaries by email automatically"/>
-      <div className="space-y-5">
+      {/* Not built on the backend yet — nothing is emailed. Shown disabled so it isn't mistaken for a live feature. */}
+      <SectionHeader title="Scheduled Reports" sub="Receive analytics summaries by email automatically"
+        action={<span className="badge badge-warning">Coming soon</span>}/>
+      <fieldset disabled aria-disabled="true" className="space-y-5 opacity-60 cursor-not-allowed">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Enable scheduled reports</p>
@@ -428,7 +431,7 @@ function ScheduledReportsPanel({ orgId }) {
           )}
           <span className="text-[11px] text-gray-400">Settings saved locally — backend scheduling coming soon.</span>
         </div>
-      </div>
+      </fieldset>
     </div>
   )
 }
@@ -448,6 +451,8 @@ export default function DashboardPage() {
 
   const isPlatformAdmin = user?.role === ROLES.PLATFORM_ADMIN
   const isOrgAdmin      = user?.role === ROLES.ORG_ADMIN || isPlatformAdmin
+  const [searchParams]  = useSearchParams()
+  const welcome         = searchParams.get('welcome') === '1'
 
   const [stats,   setStats]   = useState(null)
   const [loading, setLoading] = useState(true)
@@ -632,6 +637,13 @@ export default function DashboardPage() {
       ════════════════════════════════════════ */}
       {tab === 'overview' && (
         <div className="space-y-5 animate-fade-in-up">
+
+          {/* ─── First-run checklist (new workspaces; hides itself when done/dismissed) ─── */}
+          {!isPlatformAdmin && (
+            <GettingStartedChecklist stats={stats} isOrgAdmin={isOrgAdmin} orgId={user?.organizationId}
+              welcome={welcome} onNavigate={navigate}
+              can={{ ...can, files: hasFeature(FEATURES.FILE_STORAGE) }}/>
+          )}
 
           {/* ─── Pipeline band: the same Design → Sign → Track story as the landing page ─── */}
           <PipelineBand stats={stats} esignSent={esignSent} can={can} onNavigate={navigate}/>

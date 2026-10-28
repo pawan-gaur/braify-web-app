@@ -16,6 +16,8 @@ const TITLE_MAP = [
   { exact:  '/',                        title: 'E-Signature, PDF & Email Template Builder' },
   { exact:  '/login',                   title: 'Sign In' },
   { exact:  '/get-started',             title: 'Get Started' },
+  { exact:  '/contact-sales',           title: 'Contact Sales' },
+  { exact:  '/settings/billing',        title: 'Plan & Billing' },
   { prefix: '/features/',               title: 'Features' },
   { prefix: '/accept-invite',           title: 'Accept Invite' },
   { prefix: '/forgot-password',         title: 'Forgot Password' },

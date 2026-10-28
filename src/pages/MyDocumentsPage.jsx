@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import EmptyState from '../components/ui/EmptyState'
@@ -58,13 +58,17 @@ export default function MyDocumentsPage() {
     setPage(0)
   }
 
+  // Only the latest request may update the list (typing / switching tabs fires overlapping calls).
+  const requestSeq = useRef(0)
   const load = useCallback(() => {
+    const seq = ++requestSeq.current
+    const isLatest = () => seq === requestSeq.current
     setLoading(true)
     setError(null)
     signerListDocuments({ tab, orgId: orgId || undefined, search: query || undefined, page, size: PAGE_SIZE })
-      .then(setData)
-      .catch(e => needsEmailVerification(e) ? setMustVerify(true) : setError(e.message))
-      .finally(() => setLoading(false))
+      .then(d => { if (isLatest()) setData(d) })
+      .catch(e => { if (isLatest()) needsEmailVerification(e) ? setMustVerify(true) : setError(e.message) })
+      .finally(() => { if (isLatest()) setLoading(false) })
   }, [tab, orgId, query, page])
 
   useEffect(() => { load() }, [load])

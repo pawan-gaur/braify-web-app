@@ -51,7 +51,7 @@ function ComplexityChip({ active, onClick, children }) {
 export default function PlatformSecurityPoliciesPage() {
   useDocumentTitle('Security policies')
   const { user } = useAuth()
-  const { addToast } = useToast()
+  const toast = useToast()
 
   const [settings, setSettings] = useState(null)
   const [baseline, setBaseline] = useState('')
@@ -87,9 +87,9 @@ export default function PlatformSecurityPoliciesPage() {
       const saved = await savePlatformSettings(settings)
       setSettings(saved)
       setBaseline(JSON.stringify(saved))
-      addToast({ type: 'success', message: 'Security policies saved — applied platform-wide.' })
+      toast.success('Security policies saved — applied platform-wide.')
     } catch {
-      addToast({ type: 'error', message: 'Could not save security policies.' })
+      toast.error('Could not save security policies.')
     } finally {
       setSaving(false)
     }
