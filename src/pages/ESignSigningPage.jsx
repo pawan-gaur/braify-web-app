@@ -16,12 +16,14 @@
  */
 import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react'
 import BrandLogo from '../components/ui/BrandLogo'
+import FileDropZone from '../components/ui/FileDropZone'
 import { useParams } from 'react-router-dom'
 import { esignOpenDocument, esignSignField, esignSubmitDocument, esignUploadAttachment, esignDownloadSignSource, esignConsent } from '../services/api'
 import { IconCheck } from '../components/ui/icons'
 import { useToast } from '../context/ToastContext'
 import { fmtFieldDate } from '../utils/date'
 import PdfPageCanvas from '../components/esign/PdfPageCanvas'
+import InboxLink from '../components/esign/InboxLink'
 
 const FIELD_COLORS = {
   SIGNATURE: { border: '#6D52E8', bg: 'rgba(109,82,232,0.12)' },
@@ -156,7 +158,6 @@ export default function ESignSigningPage() {
   const [attachments,  setAttachments]  = useState([])
   const [uploading,    setUploading]    = useState(false)
   const [attachError,  setAttachError]  = useState('')
-  const [dragOver,     setDragOver]     = useState(false)
 
   /* canvas refs */
   const canvasRef  = useRef(null)
@@ -257,8 +258,7 @@ export default function ESignSigningPage() {
 
   function stopDraw() { drawingRef.current = false; lastPt.current = null }
 
-  function handleUpload(e) {
-    const file = e.target.files[0]
+  function handleUpload(file) {
     if (!file) return
     const reader = new FileReader()
     reader.onload = ev => {
@@ -558,6 +558,7 @@ export default function ESignSigningPage() {
           <h1 className="text-xl font-bold text-gray-800 mb-2">{info.title}</h1>
           <p className="text-gray-500 text-sm">{info.body}</p>
           <p className="text-gray-400 text-xs mt-3">{info.hint}</p>
+          <InboxLink />
         </div>
       </Center>
     )
@@ -611,34 +612,16 @@ export default function ESignSigningPage() {
 
           {/* Drop zone */}
           {attachments.length < 5 && (
-            <label
-              className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl p-6 cursor-pointer transition-colors
-                          ${dragOver
-                            ? 'border-accent-400 bg-accent-50'
-                            : 'border-gray-200 bg-gray-50 hover:border-accent-300 hover:bg-accent-50/50'}`}
-              onDragOver={e  => { e.preventDefault(); setDragOver(true) }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={e      => { e.preventDefault(); setDragOver(false); handleAttachFiles(e.dataTransfer.files) }}
-            >
-              <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-              </svg>
-              <p className="text-sm text-gray-500">
-                Drag &amp; drop files here, or{' '}
-                <span className="text-accent font-semibold">browse</span>
-              </p>
-              <p className="text-xs text-gray-400">
-                {doc?.allowedClientUploadFileTypes?.length > 0
-                  ? doc.allowedClientUploadFileTypes.map(t => '.' + t.toUpperCase()).join(', ')
-                  : 'Any file type'} · Max 10 MB each
-              </p>
-              <input type="file" className="hidden" multiple
-                accept={doc?.allowedClientUploadFileTypes?.length > 0
-                  ? doc.allowedClientUploadFileTypes.map(t => '.' + t).join(',')
-                  : undefined}
-                onChange={e => { handleAttachFiles(e.target.files); e.target.value = '' }}/>
-            </label>
+            <FileDropZone
+              multiple
+              accept={doc?.allowedClientUploadFileTypes?.length > 0
+                ? doc.allowedClientUploadFileTypes.map(t => '.' + t).join(',')
+                : undefined}
+              hint={`${doc?.allowedClientUploadFileTypes?.length > 0
+                ? doc.allowedClientUploadFileTypes.map(t => '.' + t.toUpperCase()).join(', ')
+                : 'Any file type'} · Max 10 MB each`}
+              onFiles={files => handleAttachFiles(files)}
+            />
           )}
 
           {attachments.length >= 5 && (
@@ -680,6 +663,8 @@ export default function ESignSigningPage() {
             </ul>
           )}
         </div>}
+
+        <InboxLink email={mySignatory?.email || doc?.clientEmail} />
 
         <p className="text-center text-xs text-gray-400 mt-6">
           You can close this page at any time. Your signature has been recorded.
@@ -956,6 +941,7 @@ export default function ESignSigningPage() {
           </div>
         </div>
         <div className="flex items-center gap-4">
+          <InboxLink variant="header" />
           <span className="text-sm text-gray-500">{signedCount}/{myFields.length} signed</span>
           <button
             onClick={handleSubmit}
@@ -1244,14 +1230,13 @@ export default function ESignSigningPage() {
                       </button>
                     )}
                     {modalTab === 'UPLOAD' && (
-                      <label className="mt-3 flex items-center gap-2 cursor-pointer text-sm text-accent hover:text-accent-700">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                        </svg>
-                        Choose image file
-                        <input type="file" accept="image/*" className="hidden" onChange={handleUpload}/>
-                      </label>
+                      <FileDropZone
+                        size="sm"
+                        className="mt-3"
+                        accept="image/*"
+                        hint="Image (PNG, JPG)"
+                        onFiles={([f]) => handleUpload(f)}
+                      />
                     )}
                   </>
                 )}
@@ -1314,14 +1299,13 @@ export default function ESignSigningPage() {
                   className="border-2 border-dashed border-gray-300 rounded-xl w-full"
                   style={{ background: '#f8fafc' }}
                 />
-                <label className="mt-3 flex items-center gap-2 cursor-pointer text-sm text-accent hover:text-accent-700">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                  </svg>
-                  Choose stamp image (PNG or JPG)
-                  <input type="file" accept="image/*" className="hidden" onChange={handleUpload}/>
-                </label>
+                <FileDropZone
+                  size="sm"
+                  className="mt-3"
+                  accept="image/*"
+                  hint="Stamp image (PNG or JPG)"
+                  onFiles={([f]) => handleUpload(f)}
+                />
                 <p className="text-xs text-gray-400 mt-2">The stamp is placed with its aspect ratio preserved — it won't be stretched.</p>
               </div>
             )}

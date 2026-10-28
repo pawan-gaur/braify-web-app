@@ -6,6 +6,8 @@ import PdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?worker'
 import { esignBulkCreate, getTemplates, generatePdfAsBase64, getEmailTemplates } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
+import FileDropZone from '../components/ui/FileDropZone'
+import TemplatePreviewButton from '../components/ui/TemplatePreviewButton'
 import { IconCheck, IconX, IconChevronRight } from '../components/ui/icons'
 
 // Bundle the pdf.js worker via Vite's ?worker (a .js chunk) rather than ?url (a .mjs file),
@@ -388,7 +390,6 @@ export default function ESignBulkPage() {
   const [batchName,          setBatchName]          = useState('')   // user-editable; defaults to filename
   const [allowClientUpload, setAllowClientUpload] = useState(false) // whether clients may upload after signing
   const [allowedFileTypes,  setAllowedFileTypes]  = useState([])    // empty = all types; e.g. ['pdf','jpg']
-  const excelRef = useRef()
 
   /* ── Step 1 — PDF Source ─────────────────────────────────────────── */
   // Any combination of the 3 sources can be enabled simultaneously
@@ -399,7 +400,6 @@ export default function ESignBulkPage() {
   // Single PDF upload
   const [singlePdfBase64,   setSinglePdfBase64]   = useState(null)
   const [singlePdfFileName, setSinglePdfFileName] = useState('')
-  const pdfRef = useRef()
 
   // PDF Template mode
   const [templates,         setTemplates]         = useState([])
@@ -646,8 +646,7 @@ export default function ESignBulkPage() {
   /* ────────────────────────────────────────────────────────────────── */
   /* Step 0 handlers                                                     */
   /* ────────────────────────────────────────────────────────────────── */
-  async function onExcelFile(e) {
-    const file = e.target.files?.[0]
+  async function onExcelFile(file) {
     if (!file) return
     setExcelError('')
     setExcelLoading(true)
@@ -684,8 +683,7 @@ export default function ESignBulkPage() {
   /* ────────────────────────────────────────────────────────────────── */
   /* Step 1 handlers                                                     */
   /* ────────────────────────────────────────────────────────────────── */
-  function onSinglePdfFile(e) {
-    const file = e.target.files?.[0]
+  function onSinglePdfFile(file) {
     if (!file) return
     setSinglePdfFileName(file.name)
     const reader = new FileReader()
@@ -984,22 +982,13 @@ export default function ESignBulkPage() {
         </div>
 
         {/* ── File upload ── */}
-        <button type="button" onClick={() => excelRef.current?.click()}
-          className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-10
-                     text-center hover:border-accent-400 dark:hover:border-accent transition-colors group">
-          <svg className="w-10 h-10 mx-auto mb-3 text-gray-300 group-hover:text-accent-400 transition-colors"
-               fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-              d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414
-                 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-          </svg>
-          {excelFileName
-            ? <p className="text-sm font-medium text-accent-600 dark:text-accent-400">{excelFileName} — click to replace</p>
-            : <><p className="text-sm font-medium text-gray-600 dark:text-gray-400">Click to upload Excel or CSV</p>
-                <p className="text-xs text-gray-400 mt-1">.xlsx · .xls · .csv</p></>
-          }
-        </button>
-        <input ref={excelRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={onExcelFile} />
+        <FileDropZone
+          size="lg"
+          accept=".xlsx,.xls,.csv"
+          hint="Excel or CSV (.xlsx, .xls, .csv)"
+          selected={excelFileName ? { title: excelFileName } : null}
+          onFiles={([f]) => onExcelFile(f)}
+        />
 
         {excelLoading && <p className="text-sm text-accent-600 text-center animate-pulse">Parsing file…</p>}
         {excelError   && <p className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg px-4 py-2">{excelError}</p>}
@@ -1101,23 +1090,12 @@ export default function ESignBulkPage() {
                   {/* ── Single PDF ── */}
                   {src === 'single' && (
                     <>
-                      <button type="button" onClick={() => pdfRef.current?.click()}
-                        className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600
-                                   rounded-xl p-8 text-center hover:border-accent-400 transition-colors group">
-                        <svg className="w-8 h-8 mx-auto mb-2 text-gray-300 group-hover:text-accent-400 transition-colors"
-                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                            d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414
-                               5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-                        {singlePdfFileName
-                          ? <p className="text-sm font-medium text-accent-600 dark:text-accent-400">{singlePdfFileName} — click to replace</p>
-                          : <><p className="text-sm font-medium text-gray-600 dark:text-gray-400">Click to upload PDF</p>
-                              <p className="text-xs text-gray-400 mt-1">.pdf only</p></>
-                        }
-                      </button>
-                      <input ref={pdfRef} type="file" accept=".pdf,application/pdf"
-                             className="hidden" onChange={onSinglePdfFile} />
+                      <FileDropZone
+                        accept=".pdf,application/pdf"
+                        hint="PDF only"
+                        selected={singlePdfFileName ? { title: singlePdfFileName } : null}
+                        onFiles={([f]) => onSinglePdfFile(f)}
+                      />
                     </>
                   )}
 
@@ -1154,8 +1132,9 @@ export default function ESignBulkPage() {
                             {templates
                               .filter(t => !templateSearch || t.name?.toLowerCase().includes(templateSearch.toLowerCase()))
                               .map(tpl => (
-                                <button key={tpl.id} type="button" onClick={() => onTemplateSelect(tpl)}
-                                  className={`p-3 rounded-lg border-2 text-left transition-colors
+                                <div key={tpl.id} className="relative">
+                                <button type="button" onClick={() => onTemplateSelect(tpl)}
+                                  className={`w-full h-full p-3 pb-9 rounded-lg border-2 text-left transition-colors
                                     ${selectedTemplateId === tpl.id
                                       ? 'border-accent bg-accent-50 dark:bg-accent-900/20'
                                       : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}`}>
@@ -1176,6 +1155,8 @@ export default function ESignBulkPage() {
                                     )}
                                   </div>
                                 </button>
+                                <TemplatePreviewButton kind="pdf" template={tpl} compact className="absolute bottom-2 right-2" />
+                              </div>
                               ))}
                           </div>
 
@@ -1705,9 +1686,10 @@ export default function ESignBulkPage() {
                     {emailTemplates
                       .filter(t => !emailTemplateSearch || t.name?.toLowerCase().includes(emailTemplateSearch.toLowerCase()))
                       .map(tpl => (
-                        <button key={tpl.id} type="button"
+                        <div key={tpl.id} className="relative">
+                        <button type="button"
                           onClick={() => { setSelectedEmailTemplateId(tpl.id); setSelectedEmailTemplate(tpl) }}
-                          className={`p-3 rounded-lg border-2 text-left transition-colors
+                          className={`w-full h-full p-3 pb-9 rounded-lg border-2 text-left transition-colors
                             ${selectedEmailTemplateId === tpl.id
                               ? 'border-accent bg-accent-50 dark:bg-accent-900/20'
                               : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}`}>
@@ -1725,6 +1707,8 @@ export default function ESignBulkPage() {
                             )}
                           </div>
                         </button>
+                        <TemplatePreviewButton kind="email" template={tpl} compact className="absolute bottom-2 right-2" />
+                      </div>
                       ))}
                   </div>
 

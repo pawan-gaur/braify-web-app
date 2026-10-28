@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getDashboardStats, getDashboardAnalytics } from '../services/api'
+import { getDashboardStats, getDashboardAnalytics, signerGetCounts } from '../services/api'
 import { useAuth, ROLES } from '../context/AuthContext'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
@@ -463,10 +463,16 @@ export default function DashboardPage() {
   const chartRef2 = useRef(null)
   const chartRef3 = useRef(null)
 
+  // Documents awaiting the user's OWN signature (sent to their email by any org).
+  const [mySignatures, setMySignatures] = useState(0)
+
   const loadStats = useCallback(() => {
     getDashboardStats()
       .then(s => { setStats(s); setLoading(false) })
       .catch(() => setLoading(false))
+    signerGetCounts()
+      .then(c => setMySignatures(c?.ACTION ?? 0))
+      .catch(() => {})
   }, [])
 
   useEffect(() => { loadStats() }, [loadStats])
@@ -586,7 +592,7 @@ export default function DashboardPage() {
               ? 'Platform overview across all organisations'
               : (() => {
                   const date = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })
-                  const n = attentionCount(stats, isOrgAdmin, can)
+                  const n = attentionCount(stats, isOrgAdmin, can, mySignatures)
                   return n ? `${date} · ${n} ${n === 1 ? 'thing needs' : 'things need'} you` : `${date} · You’re all caught up`
                 })()
             }
@@ -654,7 +660,7 @@ export default function DashboardPage() {
           {/* ─── Needs attention + activity  |  Quick create ─── */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2 dash-card p-5 space-y-6">
-              <AttentionPanel stats={stats} isOrgAdmin={isOrgAdmin} can={can} onNavigate={navigate}/>
+              <AttentionPanel stats={stats} isOrgAdmin={isOrgAdmin} can={can} onNavigate={navigate} mySignatures={mySignatures}/>
               <ActivityFeed stats={stats} onNavigate={navigate} onRefresh={loadStats}/>
             </div>
             <div className="dash-card p-5">

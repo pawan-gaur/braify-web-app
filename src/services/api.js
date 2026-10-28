@@ -11,11 +11,13 @@ export const http = axios.create({
 
 /**
  * Request interceptor — attach the JWT token stored in localStorage to every
- * outgoing request so authenticated endpoints work automatically.
+ * outgoing request so authenticated endpoints work automatically. A request that
+ * sets its own Authorization header (e-sign signing / view links carry their own
+ * token) keeps it — the session token must not replace it.
  */
 http.interceptors.request.use(config => {
   const token = localStorage.getItem(TOKEN_KEY)
-  if (token) config.headers.Authorization = `Bearer ${token}`
+  if (token && !config.headers.Authorization) config.headers.Authorization = `Bearer ${token}`
   return config
 })
 
@@ -38,9 +40,12 @@ const flushWaiters = (newToken) => {
 }
 
 // Endpoints that must NEVER trigger a refresh attempt (pre-auth flows + refresh itself).
+// Public e-sign links carry their own token: a 401 there means the LINK is invalid, not
+// the session — never refresh-and-redirect an external signer to /login.
 const NO_REFRESH = [
   '/auth/refresh', '/auth/login', '/auth/forgot-password',
   '/auth/reset-password', '/auth/accept-invite', '/auth/validate-token',
+  '/auth/otp/', '/esign/sign/', '/esign/view/', '/esign/verify/',
 ]
 
 // Bare axios call (bypasses these interceptors) so the refresh request can't recurse.
@@ -135,8 +140,9 @@ http.interceptors.response.use(
       try {
         const newToken = await requestRefresh()
         if (!newToken) throw new Error('No token returned from refresh')
-        localStorage.setItem(TOKEN_KEY, newToken)   // request interceptor picks this up on replay
+        localStorage.setItem(TOKEN_KEY, newToken)
         flushWaiters(newToken)
+        original.headers.Authorization = `Bearer ${newToken}`
         return http(original)                       // replay the original request
       } catch {
         flushWaiters(null)                          // release queued callers as failed
@@ -381,6 +387,20 @@ export const esignDownloadClientAttachment = (token, attachmentId) =>
   http.get(`/esign/sign/${token}/attachments/${attachmentId}`, { headers: { Authorization: `Bearer ${token}` }, responseType: 'blob' }).then(r => r.data)
 export const esignDownloadSignSource = (token) =>
   http.get(`/esign/sign/${token}/source-pdf`, { headers: { Authorization: `Bearer ${token}` }, responseType: 'blob' }).then(r => r.data)
+
+// ── Signer inbox (documents addressed to the signed-in email, across orgs) ──
+export const signerGetMe            = ()          => http.get('/signer/me').then(r => r.data)
+export const signerSetPassword      = (body)      => http.put('/signer/me/password', body).then(r => r.data)
+export const signerListDocuments    = (params)    => http.get('/signer/documents', { params }).then(r => r.data)
+export const signerGetCounts        = ()          => http.get('/signer/documents/counts').then(r => r.data)
+export const signerStartSigning     = (id)        => http.post(`/signer/documents/${id}/sign-session`).then(r => r.data.token)
+export const signerStartViewing     = (id)        => http.post(`/signer/documents/${id}/view-session`).then(r => r.data.token)
+export const signerDownloadSignedPdf = (id)       => http.get(`/signer/documents/${id}/signed-pdf`, { responseType: 'blob' }).then(r => r.data)
+// Braify users confirm their mailbox once per session before the inbox opens.
+export const signerRequestEmailCode = ()          => http.post('/signer/verify-email/request').then(r => r.data)
+export const signerConfirmEmailCode = (code)      => http.post('/signer/verify-email/confirm', { code }).then(r => r.data)
+/** True when an inbox call was refused because this session hasn't confirmed the mailbox. */
+export const needsEmailVerification = (err) => err?.status === 403 && err?.rawData?.reason === 'EMAIL_VERIFICATION_REQUIRED'
 
 // ── E-Sign View (read-only, CC recipients — uses VIEW token) ──
 export const esignOpenView        = (token)                => http.get(`/esign/view/${token}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data)

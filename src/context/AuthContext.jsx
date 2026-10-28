@@ -57,6 +57,20 @@ function readLastUser() {
   } catch { return null }
 }
 
+/** Account types returned by the backend on every session payload. */
+export const ACCOUNT_TYPES = { USER: 'USER', SIGNER: 'SIGNER' }
+
+/**
+ * Reads the `type` claim of a stored access token without verifying it (display/routing
+ * only — the backend is the authority). Signer-portal sessions carry `type: "SIGNER"`.
+ */
+function tokenType(token) {
+  try {
+    const payload = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+    return JSON.parse(atob(payload)).type ?? null
+  } catch { return null }
+}
+
 /** Apply org theme CSS variables to :root so buttons/UI reflect brand colors */
 function applyTheme(primaryColor, accentColor) {
   const root = document.documentElement
@@ -82,14 +96,22 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!token) { setLoading(false); return }
 
-    http.get('/auth/me', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    // Signer-portal sessions can only call /api/signer/** — restore them from /signer/me.
+    const isSignerSession = tokenType(token) === ACCOUNT_TYPES.SIGNER
+    http.get(isSignerSession ? '/signer/me' : '/auth/me')
       .then(r => {
-        setUser(r.data)
+        setUser(isSignerSession
+          ? { ...r.data, id: r.data.userId, accountType: ACCOUNT_TYPES.SIGNER }
+          : { ...r.data, accountType: ACCOUNT_TYPES.USER, hasPassword: true })
         setFeatures(extractFeatures(r.data))
         setFeatureRoleAccess(extractFeatureRoleAccess(r.data))
         applyTheme(r.data.primaryColor, r.data.accentColor)
+        // SIGNER-role Braify accounts: /auth/me doesn't say whether a password exists.
+        if (!isSignerSession && r.data.role === 'SIGNER') {
+          http.get('/signer/me')
+            .then(m => setUser(u => u && ({ ...u, hasPassword: m.data.hasPassword })))
+            .catch(() => {})
+        }
       })
       .catch(() => {
         localStorage.removeItem(TOKEN_KEY)
@@ -129,6 +151,9 @@ export function AuthProvider({ children }) {
       features:           data.features ?? [],
       primaryColor:       data.primaryColor ?? null,
       accentColor:        data.accentColor  ?? null,
+      accountType:        data.accountType ?? ACCOUNT_TYPES.USER,
+      // Braify accounts always have a password; signer accounts report whether they set one.
+      hasPassword:        data.hasPassword ?? (data.accountType !== ACCOUNT_TYPES.SIGNER),
     }
     setUser(userObj)
     setFeatures(extractFeatures({ ...data, role: data.role }))
@@ -155,6 +180,20 @@ export function AuthProvider({ children }) {
     const res  = await http.post('/auth/login', { email, password, deviceInfo: deviceInfo() })
     const data = res.data
     // MFA required: no session yet — caller (LoginPage) collects the code and calls verifyMfa().
+    if (data.mfaRequired) return { mfaRequired: true, mfaToken: data.mfaToken }
+    return applySession(data)
+  }, [applySession])
+
+  /* ── Email one-time code sign-in ── */
+  const requestLoginCode = useCallback(async (email) => {
+    const res = await http.post('/auth/otp/request', { email })
+    return res.data   // { message, resendAfterSeconds, ttlMinutes }
+  }, [])
+
+  const loginWithCode = useCallback(async (email, code) => {
+    const res  = await http.post('/auth/otp/verify', { email, code, deviceInfo: deviceInfo() })
+    const data = res.data
+    // A Braify user whose MFA policy applies still has to pass the TOTP step.
     if (data.mfaRequired) return { mfaRequired: true, mfaToken: data.mfaToken }
     return applySession(data)
   }, [applySession])
@@ -229,9 +268,16 @@ export function AuthProvider({ children }) {
     setFeatureRoleAccess,  // expose so BrandingPage can refresh after saving access rules
     loading,
     isAuthenticated: !!user,
+    /**
+     * True for anyone limited to the signer inbox: a signer-portal session, or a Braify
+     * account with role SIGNER (the backend denies that role everywhere outside the inbox).
+     */
+    isSigner: user?.accountType === ACCOUNT_TYPES.SIGNER || user?.role === 'SIGNER',
     lastUser,
     forgetLastUser,
     login,
+    requestLoginCode,
+    loginWithCode,
     verifyMfa,
     logout,
     can,

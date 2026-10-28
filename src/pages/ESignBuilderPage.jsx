@@ -12,6 +12,8 @@ import {
 } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
+import FileDropZone from '../components/ui/FileDropZone'
+import TemplatePreviewButton from '../components/ui/TemplatePreviewButton'
 import { IconX, IconCheck, IconArrowRight, IconArrowLeft } from '../components/ui/icons'
 import PdfPageCanvas from '../components/esign/PdfPageCanvas'
 import SignatureCaptureModal from '../components/esign/SignatureCaptureModal'
@@ -134,7 +136,6 @@ export default function ESignBuilderPage({ initialDocStatus }) {
   // Upload PDF
   const [pdfBase64,   setPdfBase64]   = useState(null)
   const [pdfFileName, setPdfFileName] = useState('')
-  const fileRef = useRef()
 
   // PDF Template
   const [templates,          setTemplates]          = useState([])
@@ -356,8 +357,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
     })
   }
 
-  function onPdfFile(e) {
-    const file = e.target.files?.[0]
+  function onPdfFile(file) {
     if (!file) return
     setPdfFileName(file.name)
     setFormErrors(fe => ({ ...fe, pdf: undefined }))
@@ -760,18 +760,15 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                   {/* ── Upload PDF ── */}
                   {src === 'single' && (
                     <>
-                      <label className={`mt-3 flex items-center gap-3 border-2 border-dashed rounded-xl p-3
-                                         cursor-pointer hover:border-accent-400 transition-colors
-                                         ${formErrors.pdf ? 'border-red-400' : 'border-gray-300 dark:border-gray-600'}`}>
-                        <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                        </svg>
-                        <span className={`text-sm ${pdfFileName ? 'text-gray-800 dark:text-white font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
-                          {pdfFileName || 'Click to upload PDF…'}
-                        </span>
-                        <input ref={fileRef} type="file" accept="application/pdf" className="hidden" onChange={onPdfFile}/>
-                      </label>
+                      <FileDropZone
+                        size="sm"
+                        className="mt-3"
+                        accept="application/pdf,.pdf"
+                        hint="PDF only"
+                        invalid={!!formErrors.pdf}
+                        selected={pdfFileName ? { title: pdfFileName } : null}
+                        onFiles={([f]) => onPdfFile(f)}
+                      />
                       {pdfFileName && (
                         <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -817,8 +814,9 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                             {templates
                               .filter(t => !templateSearch || t.name?.toLowerCase().includes(templateSearch.toLowerCase()))
                               .map(tpl => (
-                                <button key={tpl.id} type="button" onClick={() => onTemplateSelect(tpl)}
-                                  className={`p-2.5 rounded-lg border-2 text-left transition-colors
+                                <div key={tpl.id} className="relative">
+                                <button type="button" onClick={() => onTemplateSelect(tpl)}
+                                  className={`w-full h-full p-2.5 pb-9 rounded-lg border-2 text-left transition-colors
                                     ${selectedTemplateId === tpl.id
                                       ? 'border-accent-500 bg-accent-50 dark:bg-accent-700/20'
                                       : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}`}>
@@ -837,6 +835,8 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                                     )}
                                   </div>
                                 </button>
+                                <TemplatePreviewButton kind="pdf" template={tpl} compact className="absolute bottom-2 right-2" />
+                              </div>
                               ))}
                           </div>
                           {selectedTemplate && (
@@ -1183,9 +1183,10 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                         {emailTemplates
                           .filter(t => !emailTemplateSearch || t.name?.toLowerCase().includes(emailTemplateSearch.toLowerCase()))
                           .map(tpl => (
-                            <button key={tpl.id} type="button"
+                            <div key={tpl.id} className="relative">
+                            <button type="button"
                               onClick={() => { setSelectedEmailTemplateId(tpl.id); setSelectedEmailTemplate(tpl) }}
-                              className={`p-2.5 rounded-lg border-2 text-left transition-colors
+                              className={`w-full h-full p-2.5 pb-9 rounded-lg border-2 text-left transition-colors
                                 ${selectedEmailTemplateId === tpl.id
                                   ? 'border-accent-500 bg-accent-50 dark:bg-accent-700/20'
                                   : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}`}>
@@ -1203,6 +1204,8 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                                 )}
                               </div>
                             </button>
+                            <TemplatePreviewButton kind="email" template={tpl} compact className="absolute bottom-2 right-2" />
+                          </div>
                           ))}
                       </div>
 

@@ -9,7 +9,8 @@ function UserAvatar({ user, size = 'sm' }) {
   if (user?.profilePicture) {
     return <img src={user.profilePicture} alt="" className={`${s} rounded-full object-cover shrink-0`} />
   }
-  const init = `${(user?.firstName?.[0] ?? '').toUpperCase()}${(user?.lastName?.[0] ?? '').toUpperCase()}` || 'U'
+  const init = `${(user?.firstName?.[0] ?? '').toUpperCase()}${(user?.lastName?.[0] ?? '').toUpperCase()}`
+    || (user?.email?.[0] ?? 'U').toUpperCase()
   return (
     <div className={`${s} rounded-full flex items-center justify-center text-white font-bold shrink-0`}
       style={{ background: 'linear-gradient(135deg, #2F5BF0 0%, #6D52E8 100%)' }}>
@@ -24,6 +25,7 @@ const ROLE_META = {
   ORG_ADMIN:      { label: 'Org Admin',      cls: 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400' },
   ADMIN:          { label: 'Admin',          cls: 'bg-sky-100    text-sky-700    dark:bg-sky-900/30    dark:text-sky-400'    },
   USER:           { label: 'User',           cls: 'bg-gray-100   text-gray-600   dark:bg-gray-700      dark:text-gray-300'   },
+  SIGNER:         { label: 'Signer',         cls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
 }
 
 /* ── Notification items (demo) ─────────────────────────────────────────── */
@@ -36,7 +38,7 @@ const DEMO_NOTIFS = [
 
 export default function Navbar() {
   const { collapsed, darkMode, setDarkMode } = useApp()
-  const { user, logout }                     = useAuth()
+  const { user, logout, isSigner }           = useAuth()
   const navigate                             = useNavigate()
 
   const [search,      setSearch]      = useState('')
@@ -51,8 +53,8 @@ export default function Navbar() {
   const unread    = notifs.filter(n => !n.read).length
   const leftCls   = collapsed ? 'left-16' : 'left-60'
   const roleMeta  = ROLE_META[user?.role] ?? ROLE_META.USER
-  const fullName  = user ? `${user.firstName} ${user.lastName}`.trim() : 'User'
-  const shortName = user?.firstName || 'User'
+  const fullName  = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.email || 'User'
+  const shortName = user?.firstName || user?.email?.split('@')[0] || 'User'
 
   /* Close dropdowns on outside click */
   useEffect(() => {
@@ -243,7 +245,9 @@ export default function Navbar() {
               {/* Menu items */}
               <ul className="py-1">
                 {[
-                  { label: 'My Profile',  to: '/profile', icon: 'M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z' },
+                  isSigner
+                    ? { label: user?.hasPassword ? 'Change password' : 'Set a password', to: '/my-documents/account', icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' }
+                    : { label: 'My Profile',  to: '/profile', icon: 'M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z' },
                   { label: 'Help & Support', icon: 'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
                 ].map(({ label, icon, to }) => (
                   <li key={label}>
