@@ -2,9 +2,8 @@ import * as pdfjsLib from 'pdfjs-dist'
 import PdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?worker'
 
 /**
- * Largest PDF we send as base64 JSON. Base64 adds ~33%, and both nginx
- * (client_max_body_size 20M) and Jackson (20M-char string limit) reject
- * anything much over ~15 MB, so stay well below that.
+ * Largest PDF we upload: the backend's multipart limit (spring.servlet.multipart.max-file-size)
+ * and the ESIGN_SOURCE storage purpose both allow 10 MB.
  */
 export const MAX_PDF_BYTES = 10 * 1024 * 1024
 

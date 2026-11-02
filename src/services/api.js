@@ -317,7 +317,7 @@ export const setOrgMfaPolicy = (id, policy) => http.put(`/organizations/${id}/mf
 export const getMyProfile    = ()        => http.get('/profile/me').then(r => r.data)
 export const updateProfile   = (payload) => http.put('/profile/me', payload).then(r => r.data)
 export const changePassword  = (payload) => http.put('/profile/me/password', payload).then(r => r.data)
-export const uploadAvatar    = (avatar)  => http.post('/profile/me/avatar', { avatar }).then(r => r.data)
+export const uploadAvatar    = (fileId)  => http.post('/profile/me/avatar', { fileId }).then(r => r.data)   // fileId from uploadToStorage(…, 'AVATAR'); null removes
 export const getMyAuditLog   = ()        => http.get('/profile/me/audit').then(r => r.data)
 
 // ── E-Sign (Creator) ───────────────────────────────────────
@@ -576,6 +576,43 @@ export const getApiKeyUsage = (orgId)          => http.get(`/organizations/${org
 // ── Org users (admin view via /users/search with orgId filter) ─
 export const getUsersByOrg = (orgId) =>
   http.get('/users/search', { params: { q: '', orgId } }).then(r => r.data)
+
+// ── Storage (every uploaded file; addressed by id) ─────────────
+/**
+ * Upload a file to the caller's organisation storage and get its id back.
+ * Pass the id to the feature that uses it (e.g. `sourceFileId` on e-sign create).
+ * @param {File|Blob} file
+ * @param {'ESIGN_SOURCE'|'BRANDING_LOGO'|'AVATAR'|'TEMPLATE_IMAGE'|'BULK_EMAIL_ATTACHMENT'} purpose
+ * @param {string} [filename] - name to use when `file` is a Blob
+ * @param {string} [orgId]    - Platform Admin acting for an organisation (e.g. its logo)
+ * @returns {Promise<{id, purpose, filename, contentType, sizeBytes, publicUrl}>}
+ *          publicUrl is a stable login-free link for public purposes (logo, avatar, template image).
+ */
+export const uploadToStorage = (file, purpose, filename, orgId) => {
+  const form = new FormData()
+  form.append('file', file, filename || file.name || 'file')
+  const params = new URLSearchParams({ purpose })
+  if (orgId) params.set('orgId', orgId)
+  return http.post(`/storage/upload?${params}`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then(r => r.data)
+}
+
+/** Short-lived pre-signed download URL for a stored file: `{ url, expiresInSeconds }`. */
+export const getStorageUrl = (fileId) => http.get(`/storage/${fileId}/url`).then(r => r.data)
+
+/**
+ * A base64 data URL as a Blob (for uploading PDFs the app built or fetched in the browser).
+ * `type` overrides the data URL's own type (fetched files often say application/octet-stream).
+ */
+export const dataUrlToBlob = (dataUrl, type) => {
+  const [meta, b64] = dataUrl.split(',')
+  type = type || meta.match(/^data:([^;]+)/)?.[1] || 'application/octet-stream'
+  const bin = atob(b64)
+  const bytes = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+  return new Blob([bytes], { type })
+}
 
 // ── File Storage ───────────────────────────────────────────────
 /**

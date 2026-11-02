@@ -3,14 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 import * as pdfjsLib from 'pdfjs-dist'
 import PdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?worker'
-import { esignBulkCreate, getTemplates, generatePdfAsBase64, getEmailTemplates } from '../services/api'
+import { esignBulkCreate, getTemplates, generatePdfAsBase64, getEmailTemplates, uploadToStorage, dataUrlToBlob } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import FileDropZone from '../components/ui/FileDropZone'
 import TemplatePreviewButton from '../components/ui/TemplatePreviewButton'
 import { IconCheck, IconX, IconChevronRight } from '../components/ui/icons'
 import { listUrl } from '../hooks/useUrlState'
-import { compressPdfIfLarge, MAX_PDF_BYTES, fmtMb } from '../utils/compressPdf'
+import { compressPdfIfLarge } from '../utils/compressPdf'
 
 // Bundle the pdf.js worker via Vite's ?worker (a .js chunk) rather than ?url (a .mjs file),
 // which some prod static hosts serve with a non-JS MIME type and refuse to load.
@@ -815,55 +815,46 @@ export default function ESignBulkPage() {
     const fieldPayload  = bulkFields.map(({ id: _id, ...rest }) => rest)
     const resolvedDocs  = []
 
-    // Every row's PDF goes in ONE request, so they share the size budget: each PDF
-    // is compressed (only if needed) to fit its share. See utils/compressPdf.
-    const perDocBytes = Math.floor(MAX_PDF_BYTES / validRows.length)
-    const shrink = async (dataUrl, i) => {
-      try {
-        const r = await compressPdfIfLarge(dataUrl, {
-          maxBytes:   perDocBytes,
-          onProgress: (page, pages) => setProcessProgress({
-            current: i, total: validRows.length, note: `Compressing PDF… page ${page} of ${pages}`,
-          }),
-        })
-        return r.dataUrl
-      } catch {
-        throw new Error(
-          `The PDFs are too large to send ${validRows.length} in one batch ` +
-          `(each must fit in ${fmtMb(perDocBytes)}). Use a smaller PDF or split the spreadsheet into smaller batches.`)
-      } finally {
-        setProcessProgress({ current: i, total: validRows.length })
-      }
+    // Each PDF is compressed if it's too large to upload, then uploaded to storage; the bulk
+    // request only carries file ids. See utils/compressPdf.
+    const toStoredPdf = async (dataUrl, i, name) => {
+      const r = await compressPdfIfLarge(dataUrl, {
+        onProgress: (page, pages) => setProcessProgress({
+          current: i, total: validRows.length, note: `Compressing PDF… page ${page} of ${pages}`,
+        }),
+      }).finally(() => setProcessProgress({ current: i, total: validRows.length }))
+      const stored = await uploadToStorage(dataUrlToBlob(r.dataUrl, 'application/pdf'), 'ESIGN_SOURCE', name)
+      return stored.id
     }
-    let singlePdf = null   // the shared single PDF, compressed once for every row
+    let singleFileId = null   // the shared single PDF, uploaded once; the server copies it per document
 
     // ── Phase 1: Resolve PDFs browser-side with progress ──────────────
     for (let i = 0; i < validRows.length; i++) {
       const row = validRows[i]
       setProcessProgress({ current: i, total: validRows.length })
 
-      let pdfBase64 = null, lastErr = null
+      let sourceFileId = null, lastErr = null
       for (const src of activeSources) {
         try {
           if (src === 'single') {
-            singlePdf ??= await shrink(singlePdfBase64, i)
-            pdfBase64 = singlePdf
+            singleFileId ??= await toStoredPdf(singlePdfBase64, i, singlePdfFileName || 'document.pdf')
+            sourceFileId = singleFileId
           } else if (src === 'template') {
             const data = {}
             ;(selectedTemplate?.placeholders || []).forEach(p => {
               const col = placeholderMapping[p]
               data[p] = col ? (row.rawRow[col] || '') : ''
             })
-            pdfBase64 = await shrink(await generatePdfAsBase64(selectedTemplateId, data), i)
+            sourceFileId = await toStoredPdf(await generatePdfAsBase64(selectedTemplateId, data), i, `${row.title || 'document'}.pdf`)
           } else {
             const url = buildApiUrl(fileApi.url, row.rawRow)
-            pdfBase64 = await shrink(await fetchFileAsBase64(url, buildAuthHeaders(fileApi)), i)
+            sourceFileId = await toStoredPdf(await fetchFileAsBase64(url, buildAuthHeaders(fileApi)), i, `${row.title || 'document'}.pdf`)
           }
-          if (pdfBase64) break
+          if (sourceFileId) break
         } catch (e) { lastErr = e }
       }
 
-      if (!pdfBase64) {
+      if (!sourceFileId) {
         setProcessing(false)
         setProcessError(`Row ${i + 1} (${row.clientEmail}): PDF resolution failed — ${lastErr?.message || 'No PDF source returned data'}`)
         return
@@ -875,7 +866,8 @@ export default function ESignBulkPage() {
         clientName:      row.clientName,
         ccEmails:        row.ccEmails?.length ? row.ccEmails : undefined,
         tokenValidDays:  parseInt(row.tokenValidDays) || 7,
-        pdfBase64,
+        sourceType:      'UPLOAD',
+        sourceFileId,
         fields:          fieldPayload.length ? fieldPayload : undefined,
         emailTemplateId: selectedEmailTemplateId || undefined,
       })

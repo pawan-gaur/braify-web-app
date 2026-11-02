@@ -1,36 +1,45 @@
 import { useRef, useState } from 'react'
+import { uploadToStorage } from '../../services/api'
 
 /**
  * Logo picker supporting two sources:
- *  - Upload: reads a file as a base64 data-URL (backend offloads it to cloud storage).
+ *  - Upload: the file is uploaded to storage right away; the form keeps its file id.
  *  - Image URL: a direct https link to an already-hosted image.
  *
- * @param {string|null} logoBase64 - data-URL of a freshly picked file (or null)
- * @param {string|null} logoUrl    - saved logo URL (app-served for uploads, or an external URL)
- * @param {Function}    onChange   - called with { base64, url } (either/both null)
- * @param {string}      label      - field label
+ * @param {string|null} logoPreview - preview URL of a freshly uploaded file (or null)
+ * @param {string|null} logoUrl     - saved logo URL (app-served for uploads, or an external URL)
+ * @param {Function}    onChange    - called with { fileId, preview, url } (any may be null)
+ * @param {string}      label       - field label
+ * @param {string}      [orgId]     - organisation the logo is for (lets a Platform Admin upload for it)
  */
-export default function LogoUpload({ logoBase64, logoUrl, onChange, label = 'Organisation Logo' }) {
+export default function LogoUpload({ logoPreview, logoUrl, onChange, label = 'Organisation Logo', orgId }) {
   const inputRef = useRef(null)
   const [dragging, setDragging] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState(null)
 
   // An uploaded logo is served from our own endpoint; anything else in logoUrl is a user URL.
-  const isExternalUrl = !!logoUrl && !logoBase64 && !logoUrl.includes('/api/public/branding/')
+  const isExternalUrl = !!logoUrl && !logoPreview && !logoUrl.includes('/api/public/branding/')
   const [mode, setMode] = useState(isExternalUrl ? 'url' : 'upload')
   const [urlInput, setUrlInput] = useState(isExternalUrl ? logoUrl : '')
 
-  const preview = logoBase64 || logoUrl
+  const preview = logoPreview || logoUrl
 
-  const readFile = (file) => {
+  const readFile = async (file) => {
     setError(null)
     if (!file) return
     const ok = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/gif', 'image/webp']
     if (!ok.includes(file.type)) { setError('Unsupported format. Use PNG, JPG, SVG, GIF or WebP.'); return }
     if (file.size > 2 * 1024 * 1024) { setError('Logo must be smaller than 2 MB.'); return }
-    const reader = new FileReader()
-    reader.onload = (ev) => onChange({ base64: ev.target.result, url: null })
-    reader.readAsDataURL(file)
+    setUploading(true)
+    try {
+      const stored = await uploadToStorage(file, 'BRANDING_LOGO', undefined, orgId)
+      onChange({ fileId: stored.id, preview: stored.publicUrl, url: null })
+    } catch (err) {
+      setError(err.message || 'Logo upload failed.')
+    } finally {
+      setUploading(false)
+    }
   }
 
   const handleFile = (e) => readFile(e.target.files?.[0])
@@ -39,13 +48,13 @@ export default function LogoUpload({ logoBase64, logoUrl, onChange, label = 'Org
   const commitUrl = (value) => {
     setUrlInput(value)
     const v = value.trim()
-    if (!v) { setError(null); onChange({ base64: null, url: null }); return }
+    if (!v) { setError(null); onChange({ fileId: null, preview: null, url: null }); return }
     if (!/^https?:\/\//i.test(v)) { setError('Enter a valid URL starting with http:// or https://'); return }
     setError(null)
-    onChange({ base64: null, url: v })
+    onChange({ fileId: null, preview: null, url: v })
   }
 
-  const removeLogo = () => { setError(null); setUrlInput(''); onChange({ base64: null, url: null }) }
+  const removeLogo = () => { setError(null); setUrlInput(''); onChange({ fileId: null, preview: null, url: null }) }
 
   const tab = (key, text) => (
     <button type="button" onClick={() => setMode(key)}
@@ -77,7 +86,9 @@ export default function LogoUpload({ logoBase64, logoUrl, onChange, label = 'Org
               : 'border-ink-7 dark:border-gray-700 bg-ink-8 dark:bg-gray-800/50 hover:border-brand-300 hover:bg-brand-50/50 dark:hover:bg-brand-900/10'}
             ${preview ? 'py-4' : 'py-10'}`}
         >
-          {preview ? (
+          {uploading ? (
+            <p className="text-sm text-ink-4">Uploading…</p>
+          ) : preview ? (
             <div className="flex flex-col items-center gap-2">
               <img src={preview} alt="Logo preview" className="max-h-20 max-w-[240px] object-contain rounded-lg"
                 onClick={e => e.stopPropagation()} />

@@ -95,8 +95,6 @@ function UploadSuccess({ result, onDone }) {
     { label: 'Size',        value: fmtBytes(result.fileSizeBytes)                   },
     { label: 'Type',        value: titleCase(result.documentType)                   },
     { label: 'Cloud',       value: result.cloudProvider                             },
-    { label: 'Bucket',      value: result.bucket                                    },
-    { label: 'Storage key', value: result.storageKey, mono: true, truncate: true   },
     { label: 'Folder',      value: result.folder || '—'                             },
     { label: 'Status',      value: result.status                                    },
     { label: 'Uploaded',    value: fmtDate(result.createdAt)                        },

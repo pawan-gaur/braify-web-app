@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useMemo } from 'react'
+﻿import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getEmailTemplates, getInternalEmailTemplates, deleteEmailTemplate, sendEmailTemplate, getGlobalPlaceholders, cloneEmailTemplate, createEmailTemplate } from '../services/api'
 import TemplateUploadModal from '../components/templates/TemplateUploadModal'
@@ -11,9 +11,11 @@ import Breadcrumbs from '../components/ui/Breadcrumbs'
 import ViewToggle, { useView } from '../components/ui/ViewToggle'
 import VersionHistoryModal from '../components/ui/VersionHistoryModal'
 import EmailPreviewModal from '../components/ui/EmailPreviewModal'
-import EmailLibraryModal from '../components/ui/EmailLibraryModal'
 import { IconArrowRight } from '../components/ui/icons'
 import { fmtDate } from '../utils/date'
+
+// ~80 kB of library template HTML — only fetched when the library modal is opened.
+const EmailLibraryModal = lazy(() => import('../components/ui/EmailLibraryModal'))
 
 const CRUMBS = [
   { label: 'Dashboard',       to: '/' },
@@ -516,10 +518,12 @@ export default function EmailTemplatesPage() {
 
       {/* Library modal */}
       {showLibrary && (
-        <EmailLibraryModal
-          onClose={() => setShowLibrary(false)}
-          onSelect={handleLibrarySelect}
-        />
+        <Suspense fallback={null}>
+          <EmailLibraryModal
+            onClose={() => setShowLibrary(false)}
+            onSelect={handleLibrarySelect}
+          />
+        </Suspense>
       )}
 
       {/* Version history modal */}

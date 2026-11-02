@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import * as XLSX from 'xlsx'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import FileDropZone from '../components/ui/FileDropZone'
 import { useToast } from '../context/ToastContext'
@@ -24,7 +23,9 @@ function cellStr(v) {
   return String(v)
 }
 
-function parseSheet(file) {
+async function parseSheet(file) {
+  // xlsx (~325 kB) is only needed once a sheet is dropped, not to render the page.
+  const XLSX = await import('xlsx')
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = e => {

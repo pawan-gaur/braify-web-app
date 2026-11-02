@@ -9,6 +9,8 @@ import {
   getTemplates,
   generatePdfAsBase64,
   getEmailTemplates,
+  uploadToStorage,
+  dataUrlToBlob,
 } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import { useAuth } from '../context/AuthContext'
@@ -415,6 +417,12 @@ export default function ESignBuilderPage({ initialDocStatus }) {
     }
   }
 
+  /** Upload the PDF to storage first; the create call then only carries its id. */
+  async function uploadSourcePdf(dataUrl, name) {
+    const stored = await uploadToStorage(dataUrlToBlob(dataUrl, 'application/pdf'), 'ESIGN_SOURCE', name || 'document.pdf')
+    return stored.id
+  }
+
   /** Try each active source in priority order, return first that succeeds. */
   async function resolvePdfSource() {
     let lastErr = null
@@ -423,7 +431,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
         if (src === 'single') {
           if (!pdfBase64) throw new Error('No PDF uploaded')
           const b64 = await shrinkPdf(pdfBase64)
-          return { sourceType: 'UPLOAD', pdfBase64: b64, previewBase64: b64 }
+          return { sourceType: 'UPLOAD', sourceFileId: await uploadSourcePdf(b64, pdfFileName), previewBase64: b64 }
         } else if (src === 'template') {
           if (!selectedTemplateId) throw new Error('No template selected')
           const previewB64 = await generatePdfAsBase64(selectedTemplateId, {})
@@ -432,7 +440,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
         } else {
           if (!fileApi.url) throw new Error('No API URL configured')
           const b64 = await shrinkPdf(await fetchFileAsBase64(fileApi.url, buildAuthHeaders(fileApi)))
-          return { sourceType: 'UPLOAD', pdfBase64: b64, previewBase64: b64 }
+          return { sourceType: 'UPLOAD', sourceFileId: await uploadSourcePdf(b64, 'document.pdf'), previewBase64: b64 }
         }
       } catch (e) {
         lastErr = e
@@ -533,6 +541,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
         title:           form.title,
         sourceType:      resolved.sourceType,
         pdfBase64:       resolved.pdfBase64,
+        sourceFileId:    resolved.sourceFileId,
         templateId:      resolved.templateId,
         signatories:     signatories.map((s, i) => ({
                             name: s.name.trim(), email: s.email.trim(), signingOrder: i + 1,
