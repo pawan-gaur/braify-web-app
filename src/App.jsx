@@ -72,6 +72,10 @@ const MyDocumentsPage        = lazy(() => import('./pages/MyDocumentsPage'))
 const SignerAccountPage      = lazy(() => import('./pages/SignerAccountPage'))
 const SignerDashboardPage    = lazy(() => import('./pages/SignerDashboardPage'))
 const BillingPage            = lazy(() => import('./pages/BillingPage'))
+const WebhooksPage           = lazy(() => import('./pages/WebhooksPage'))
+const BulkPdfPage            = lazy(() => import('./pages/BulkPdfPage'))
+const ShortLinkPage          = lazy(() => import('./pages/ShortLinkPage'))
+const PlatformMessagingPage  = lazy(() => import('./pages/PlatformMessagingPage'))
 
 /* Centered spinner shown while a lazy route chunk loads. */
 function RouteFallback() {
@@ -192,6 +196,7 @@ function Shell() {
           {/* ── E-Sign (feature-gated) ── */}
           <Route path="/esign"          element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignDocumentsPage /></FeatureRoute>} />
           <Route path="/esign/new"      element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignBuilderPage /></FeatureRoute>} />
+          <Route path="/bulk-pdf"       element={<FeatureRoute feature={FEATURES.PDF_TEMPLATES}><BulkGate title="Bulk PDF generation"><BulkPdfPage /></BulkGate></FeatureRoute>} />
           <Route path="/esign/bulk"     element={<FeatureRoute feature={FEATURES.E_SIGN}><BulkGate title="Bulk e-signature"><ESignBulkPage /></BulkGate></FeatureRoute>} />
           <Route path="/esign/:id"      element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignDocumentRouter /></FeatureRoute>} />
           <Route path="/esign/:id/edit" element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignBuilderPage /></FeatureRoute>} />
@@ -224,9 +229,11 @@ function Shell() {
           <Route path="/settings/platform"          element={<PlatformSettingsPage />} />
           <Route path="/settings/platform/security" element={<PlatformSecurityPoliciesPage />} />
           <Route path="/settings/platform/access"   element={<PlatformUserAccessPage />} />
+          <Route path="/settings/platform/messaging" element={<PlatformMessagingPage />} />
           <Route path="/settings/org-settings" element={<RoleRoute min={ROLES.ADMIN}><OrgSettingsPage /></RoleRoute>} />
           <Route path="/settings/api-keys"   element={<RoleRoute min={ROLES.ORG_ADMIN}><ApiKeysPage /></RoleRoute>} />
           <Route path="/settings/billing"    element={<RoleRoute min={ROLES.ORG_ADMIN}><BillingPage /></RoleRoute>} />
+          <Route path="/settings/webhooks"   element={<RoleRoute min={ROLES.ORG_ADMIN}><WebhooksPage /></RoleRoute>} />
           <Route path="/settings/placeholders" element={<RoleRoute min={ROLES.ADMIN}><GlobalPlaceholdersPage /></RoleRoute>} />
           <Route path="/usage"              element={<RoleRoute min={ROLES.ORG_ADMIN}><UsagePage /></RoleRoute>} />
           <Route path="/shared-templates"   element={<RoleRoute min={ROLES.ADMIN}><SharedTemplatesPage /></RoleRoute>} />
@@ -308,6 +315,7 @@ function AppRoutes() {
       <Route path="/esign/view/:token"  element={<ESignViewPage />} />
       <Route path="/esign/unsubscribe/:token" element={<ESignUnsubscribePage />} />
       <Route path="/verify/:id"         element={<ESignVerifyPage />} />
+      <Route path="/s/:code"            element={<ShortLinkPage />} />
 
       {/* Everything else is protected */}
       <Route

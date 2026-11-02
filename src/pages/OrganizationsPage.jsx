@@ -12,6 +12,7 @@ import useDocumentTitle from '../hooks/useDocumentTitle'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import ViewToggle, { useView } from '../components/ui/ViewToggle'
+import useUrlState from '../hooks/useUrlState'
 import { ALL_FEATURES, FEATURE_META } from '../config/features'
 import PlanBadge from '../components/ui/PlanBadge'
 import QuotaProgressBar from '../components/ui/QuotaProgressBar'
@@ -50,7 +51,9 @@ export default function OrganizationsPage() {
 
   const [orgs,        setOrgs]        = useState([])
   const [loading,     setLoading]     = useState(true)
-  const [query,       setQuery]       = useState('')
+  // Search keyword lives in the URL (?search=) so Back from an org returns to the same results
+  const [q, setQ]                     = useUrlState({ search: '' })
+  const [query,       setQuery]       = useState(q.search)   // input text; debounced into the URL
   const [showForm,    setShowForm]    = useState(false)
   const [editOrg,     setEditOrg]     = useState(null)
   const [saving,      setSaving]      = useState(false)
@@ -77,6 +80,12 @@ export default function OrganizationsPage() {
     const t = setTimeout(() => load(query), 350)
     return () => clearTimeout(t)
   }, [query, load])
+
+  useEffect(() => {
+    if (query.trim() === q.search) return
+    const t = setTimeout(() => setQ({ search: query.trim() }), 350)
+    return () => clearTimeout(t)
+  }, [query, q.search]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const openCreate = () => {
     setEditOrg(null)

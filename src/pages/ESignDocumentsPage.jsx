@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import ESignTemplatesTab from '../components/esign/ESignTemplatesTab'
+import useUrlState from '../hooks/useUrlState'
 import {
   esignListDocuments,
   esignCancelDocument,
@@ -7,6 +9,7 @@ import {
   esignReactivateDocument,
   esignListBatches,
   esignGetBatchDocuments,
+  esignGetBatch,
 } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
@@ -179,13 +182,12 @@ function DocumentsTab() {
   const [view, setView]             = useView('braify-view-esign', 'table')
   const [data, setData]             = useState(null)          // PageResponse
   const [loading, setLoading]       = useState(true)
-  const [search, setSearch]         = useState('')
-  const [debouncedSearch, setDebouncedSearch] = useState('')  // sent to the backend
-  const [statusFilter, setStatusFilter] = useState('')
-  const [dateFrom, setDateFrom]     = useState('')
-  const [dateTo, setDateTo]         = useState('')
-  const [page, setPage]             = useState(0)
-  const [size, setSize]             = useState(20)
+  // Page / filters live in the URL so Back from a document returns to the same page.
+  const [q, setQ]                   = useUrlState({ page: 0, size: 20, status: '', search: '', from: '', to: '' })
+  const { page, size }              = q
+  const statusFilter = q.status, debouncedSearch = q.search, dateFrom = q.from, dateTo = q.to
+  const [search, setSearch]         = useState(q.search)      // input text; debounced into the URL
+  const setPage = p => setQ(prev => ({ page: typeof p === 'function' ? p(prev.page) : p }))
   const [resending, setResending]   = useState(null)
   const [reactivateId, setReactivateId] = useState(null)   // doc awaiting the reactivate modal
   const navigate                    = useNavigate()
@@ -193,9 +195,10 @@ function DocumentsTab() {
 
   // Debounce the search box → backend query (also resets to page 0 on change).
   useEffect(() => {
-    const t = setTimeout(() => { setDebouncedSearch(search.trim()); setPage(0) }, 350)
+    if (search.trim() === q.search) return   // unchanged (incl. first render) — keep the restored page
+    const t = setTimeout(() => setQ({ search: search.trim(), page: 0 }), 350)
     return () => clearTimeout(t)
-  }, [search])
+  }, [search]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchDocs = useCallback(() => {
     setLoading(true)
@@ -214,11 +217,11 @@ function DocumentsTab() {
   useEffect(() => { fetchDocs() }, [fetchDocs])
 
   // Reset to page 0 when a filter/size changes
-  function applyStatusFilter(v) { setStatusFilter(v); setPage(0) }
-  function applySize(v)         { setSize(v);          setPage(0) }
-  function applyDateFrom(v)     { setDateFrom(v);      setPage(0) }
-  function applyDateTo(v)       { setDateTo(v);        setPage(0) }
-  function clearFilters()       { setSearch(''); setStatusFilter(''); setDateFrom(''); setDateTo(''); setPage(0) }
+  function applyStatusFilter(v) { setQ({ status: v, page: 0 }) }
+  function applySize(v)         { setQ({ size: Number(v), page: 0 }) }
+  function applyDateFrom(v)     { setQ({ from: v, page: 0 }) }
+  function applyDateTo(v)       { setQ({ to: v, page: 0 }) }
+  function clearFilters()       { setSearch(''); setQ({ search: '', status: '', from: '', to: '', page: 0 }) }
 
   const docs = data?.content ?? []
   const hasFilters = !!(search || statusFilter || dateFrom || dateTo)
@@ -619,9 +622,11 @@ function DocumentsTab() {
 function BatchDocumentsView({ batch, onBack }) {
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
-  const [page, setPage]       = useState(0)
-  const [size, setSize]       = useState(20)
-  const [search, setSearch]   = useState('')
+  const [bq, setBq]           = useUrlState({ page: 0, size: 20, search: '' }, { prefix: 'bd' })
+  const { page, size }        = bq
+  const setPage   = p => setBq(prev => ({ page: typeof p === 'function' ? p(prev.page) : p }))
+  const search    = bq.search
+  const setSearch = v => setBq({ search: v })
   const [resending, setResending] = useState(null)   // docId currently being resent
   const [reactivateId, setReactivateId] = useState(null)
   const navigate              = useNavigate()
@@ -637,7 +642,7 @@ function BatchDocumentsView({ batch, onBack }) {
 
   useEffect(() => { fetchDocs() }, [fetchDocs])
 
-  function applySize(v) { setSize(v); setPage(0) }
+  function applySize(v) { setBq({ size: Number(v), page: 0 }) }
 
   async function handleResend(id, e) {
     e.stopPropagation()
@@ -866,11 +871,30 @@ function BatchDocumentsView({ batch, onBack }) {
 function BulkBatchesTab() {
   const [data, setData]         = useState(null)
   const [loading, setLoading]   = useState(true)
-  const [page, setPage]         = useState(0)
-  const [size, setSize]         = useState(20)
-  const [search, setSearch]     = useState('')
-  const [selectedBatch, setSelectedBatch] = useState(null)  // drill-down
+  const [q, setQ]               = useUrlState({ page: 0, size: 20, search: '' }, { prefix: 'b' })
+  const { page, size, search }  = q
+  const setPage   = p => setQ(prev => ({ page: typeof p === 'function' ? p(prev.page) : p }))
+  const setSearch = v => setQ({ search: v })
   const { showToast }           = useToast()
+
+  // Drill-down batch in the URL (?batch=<id>) as its own history entry: Back returns to the list.
+  const [params, setParams]     = useSearchParams()
+  const batchId                 = params.get('batch')
+  const [selectedBatch, setSelectedBatchObj] = useState(null)
+  const setSelectedBatch = b => {
+    if (b) setSelectedBatchObj(b)
+    setParams(prev => {
+      const next = new URLSearchParams(prev)
+      ;['batch', 'bd_page', 'bd_size', 'bd_search'].forEach(k => next.delete(k))
+      if (b) next.set('batch', b.id)
+      return next
+    })
+  }
+  useEffect(() => {
+    if (!batchId) { setSelectedBatchObj(null); return }
+    if (selectedBatch?.id === batchId) return
+    esignGetBatch(batchId).then(setSelectedBatchObj).catch(e => showToast(e.message, 'error'))
+  }, [batchId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchBatches = useCallback(() => {
     setLoading(true)
@@ -881,10 +905,11 @@ function BulkBatchesTab() {
   }, [page, size])
 
   useEffect(() => { fetchBatches() }, [fetchBatches])
-  function applySize(v) { setSize(v); setPage(0) }
+  function applySize(v) { setQ({ size: Number(v), page: 0 }) }
 
   // If a batch is selected, show its documents
-  if (selectedBatch) {
+  if (batchId && !selectedBatch) return <div className="skeleton h-40 rounded-card" />
+  if (batchId && selectedBatch) {
     return <BatchDocumentsView batch={selectedBatch} onBack={() => setSelectedBatch(null)} />
   }
 
@@ -997,10 +1022,19 @@ function BulkBatchesTab() {
 const TABS = [
   { key: 'docs',    label: 'Documents' },
   { key: 'batches', label: 'Bulk Batches' },
+  { key: 'templates', label: 'Templates' },
 ]
 
 export default function ESignDocumentsPage() {
-  const [activeTab, setActiveTab] = useState('docs')
+  const [params, setParams] = useSearchParams()
+  const activeTab = TABS.some(t => t.key === params.get('tab')) ? params.get('tab') : 'docs'
+  // Switching tabs keeps each tab's own page/filters (namespaced keys); only an open batch is closed.
+  const setActiveTab = key => setParams(prev => {
+    const next = new URLSearchParams(prev)
+    if (key === 'docs') next.delete('tab'); else next.set('tab', key)
+    next.delete('batch')
+    return next
+  }, { replace: true })
   const navigate = useNavigate()
 
   return (
@@ -1062,6 +1096,7 @@ export default function ESignDocumentsPage() {
       {/* Tab content */}
       {activeTab === 'docs'    && <DocumentsTab />}
       {activeTab === 'batches' && <BulkBatchesTab />}
+      {activeTab === 'templates' && <ESignTemplatesTab />}
     </div>
   )
 }

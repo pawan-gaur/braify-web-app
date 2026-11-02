@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import { IconArrowLeft } from '../components/ui/icons'
 import { buildStandardEmail } from '../data/standardEmailTemplate'
+import { listUrl } from '../hooks/useUrlState'
 
 export default function EmailBuilderPage() {
   const { id }       = useParams()
@@ -118,7 +119,7 @@ export default function EmailBuilderPage() {
           </svg>
           {fatalError}
         </div>
-        <button className="btn btn-secondary mt-3 inline-flex items-center gap-1.5" onClick={() => navigate('/email-templates')}>
+        <button className="btn btn-secondary mt-3 inline-flex items-center gap-1.5" onClick={() => navigate(listUrl('/email-templates'))}>
           <IconArrowLeft />
           Back to Email Templates
         </button>

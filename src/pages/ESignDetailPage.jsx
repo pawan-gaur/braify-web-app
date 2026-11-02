@@ -7,6 +7,7 @@
  */
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import SaveAsTemplateModal from '../components/esign/SaveAsTemplateModal'
 import { esignGetDocument, esignGetAudit, esignDownloadSigned, esignListAttachments, esignDownloadAttachment, esignResendSignatory, esignResendCopy, esignResendCopyTo, esignResendDocument, esignReactivateDocument, esignRemindNow, esignSetReminders, esignFinalizeDocument } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
@@ -42,6 +43,7 @@ const EVENT_ICONS = {
 }
 
 import { fmtDateTimeGB as fmtDateTime } from '../utils/date'
+import { listUrl } from '../hooks/useUrlState'
 
 /** Human "time left until the signing window closes" (e.g. "2 days left", "5 hours left", "Expired"). */
 function expiresInLabel(iso) {
@@ -72,6 +74,7 @@ export default function ESignDetailPage() {
   const [resendingSig, setResendingSig] = useState(null)     // signatoryId currently being resent
   const [resendingCopy, setResendingCopy] = useState(false)  // resending the final signed copy (all)
   const [resendingEmail, setResendingEmail] = useState(null) // recipient email currently being resent
+  const [savingTemplate, setSavingTemplate] = useState(false)  // Save-as-template modal open
   const [docBusy, setDocBusy] = useState(false)              // document-level resend / reactivate in flight
   const [reactivateOpen, setReactivateOpen] = useState(false)
   const [remindBusy, setRemindBusy] = useState(false)        // "send reminder now" in flight
@@ -272,7 +275,7 @@ export default function ESignDetailPage() {
       ]} />
 
       {/* Back */}
-      <button onClick={() => navigate('/esign')}
+      <button onClick={() => navigate(listUrl('/esign'))}
         className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 dark:hover:text-white mt-4 mb-5">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/>
@@ -430,6 +433,20 @@ export default function ESignDetailPage() {
                     d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                 </svg>
                 Download Signed PDF
+              </button>
+            )}
+            {doc.canViewPdf !== false && doc.fields?.length > 0 && (
+              <button
+                onClick={() => setSavingTemplate(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold
+                           border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300
+                           hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/>
+                </svg>
+                Save as template
               </button>
             )}
             <button
@@ -875,6 +892,7 @@ export default function ESignDetailPage() {
         onClose={() => setReactivateOpen(false)}
         onConfirm={doReactivate}
       />
+      {savingTemplate && <SaveAsTemplateModal doc={doc} onClose={() => setSavingTemplate(false)} />}
     </div>
   )
 }

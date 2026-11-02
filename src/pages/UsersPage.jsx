@@ -1,11 +1,11 @@
 ﻿import { useState, useEffect, useCallback } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import { getUsers, searchUsers, getOrganizations, createUser, updateUser, enableUser, disableUser, resendInvite } from '../services/api'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import { useToast } from '../context/ToastContext'
 import { useAuth, ROLES } from '../context/AuthContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import ViewToggle, { useView } from '../components/ui/ViewToggle'
+import useUrlState from '../hooks/useUrlState'
 
 const CRUMBS = [
   { label: 'Dashboard', to: '/' },
@@ -46,14 +46,16 @@ export default function UsersPage() {
   useDocumentTitle('Users')
   const toast      = useToast()
   const { user: me } = useAuth()
-  const [searchParams, setSearchParams] = useSearchParams()
   const isPlatformAdmin = me?.role === ROLES.PLATFORM_ADMIN
 
   const [users,    setUsers]    = useState([])
   const [orgs,     setOrgs]     = useState([])
   const [loading,  setLoading]  = useState(true)
-  const [query,    setQuery]    = useState('')
-  const [orgFilter, setOrgFilter] = useState(searchParams.get('orgId') || '')
+  // List filters live in the URL (?search=&orgId=&status=) so Back from a record restores them
+  const [q, setQ]                 = useUrlState({ search: '', orgId: '', status: 'all' })
+  const orgFilter    = q.orgId
+  const statusFilter = q.status    // 'all' | 'active' | 'inactive'
+  const [query,    setQuery]    = useState(q.search)   // input text; debounced into the URL
   const [showForm, setShowForm] = useState(false)
   const [editUser, setEditUser] = useState(null)
   const [saving,   setSaving]   = useState(false)
@@ -71,7 +73,6 @@ export default function UsersPage() {
     }
   }, [isPlatformAdmin])
 
-  const [statusFilter, setStatusFilter] = useState('all')  // 'all' | 'active' | 'inactive'
   const [view, setView] = useView('braify-users-view')
 
   const load = useCallback((q = '', orgId = '') => {
@@ -100,6 +101,12 @@ export default function UsersPage() {
     const t = setTimeout(() => load(query, orgFilter), 350)
     return () => clearTimeout(t)
   }, [query, orgFilter, load])
+
+  useEffect(() => {
+    if (query.trim() === q.search) return
+    const t = setTimeout(() => setQ({ search: query.trim() }), 350)
+    return () => clearTimeout(t)
+  }, [query, q.search]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const openCreate = () => {
     setEditUser(null)
@@ -208,12 +215,12 @@ export default function UsersPage() {
         </div>
         {isPlatformAdmin && (
           <select className="form-select w-auto" value={orgFilter}
-            onChange={e => { setOrgFilter(e.target.value); setSearchParams(e.target.value ? { orgId: e.target.value } : {}) }}>
+            onChange={e => setQ({ orgId: e.target.value })}>
             <option value="">All Organizations</option>
             {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
           </select>
         )}
-        <select className="form-select w-auto" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+        <select className="form-select w-auto" value={statusFilter} onChange={e => setQ({ status: e.target.value })}>
           <option value="all">All Status</option>
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>

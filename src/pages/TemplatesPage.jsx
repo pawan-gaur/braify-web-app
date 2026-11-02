@@ -4,6 +4,7 @@ import { getTemplates, deleteTemplate, cloneTemplate, createTemplate } from '../
 import TemplateUploadModal from '../components/templates/TemplateUploadModal'
 import TemplateCloneModal from '../components/templates/TemplateCloneModal'
 import useDocumentTitle from '../hooks/useDocumentTitle'
+import useUrlState from '../hooks/useUrlState'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
@@ -83,7 +84,10 @@ export default function TemplatesPage() {
   const { can }  = useAuth()
   const toast    = useToast()
   const [view,     setView]     = useView('braify-view-templates')
-  const [pageTab,  setPageTab]  = useState('mine')
+  // Tab / search / filter / sort live in the URL so Back from a template restores them.
+  const [q, setQ] = useUrlState({ tab: 'mine', search: '', paper: '', sort: 'updatedAt_desc' })
+  const pageTab    = PAGE_TABS.some(t => t.id === q.tab) ? q.tab : 'mine'
+  const setPageTab = t => setQ({ tab: t })
   const [templates,        setTemplates]        = useState([])
   const [versionTemplate,  setVersionTemplate]  = useState(null)
   const [previewTemplate,  setPreviewTemplate]  = useState(null)
@@ -91,9 +95,10 @@ export default function TemplatesPage() {
   const [cloneSource, setCloneSource] = useState(null)
   const [loading,   setLoading]   = useState(true)
 
-  const [tableSearch,    setTableSearch]    = useState('')
-  const [pageSizeFilter, setPageSizeFilter] = useState('')
-  const [tableSortKey,   setTableSortKey]   = useState('updatedAt_desc')
+  const tableSearch    = q.search, pageSizeFilter = q.paper, tableSortKey = q.sort
+  const setTableSearch    = v => setQ({ search: v })
+  const setPageSizeFilter = v => setQ({ paper: v })
+  const setTableSortKey   = v => setQ({ sort: v })
 
   const tableVisible = useMemo(() => {
     let list = [...templates]

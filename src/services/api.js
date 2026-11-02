@@ -168,6 +168,9 @@ http.interceptors.response.use(
       message = backendMsg
     } else if (!navigator.onLine) {
       message = 'No network connection. Check your internet and try again.'
+    } else if (status === 413) {
+      // Rejected by the proxy (nginx client_max_body_size) before reaching the backend.
+      message = 'The file is too large to upload. Please use a smaller file and try again.'
     } else if (isUnreachable(err) || (status && status >= 500)) {
       message = 'Unable to reach the server. Please try again in a moment.'
     } else {
@@ -360,6 +363,32 @@ export const emailLogsList = ({ page = 0, size = 20, orgId, category, status, re
 export const getEsignReminderPolicy    = (orgId)         => http.get(`/organizations/${orgId}/esign-reminder-policy`).then(r => r.data)
 export const updateEsignReminderPolicy = (orgId, policy) => http.put(`/organizations/${orgId}/esign-reminder-policy`, policy).then(r => r.data)
 
+// ── SMS provider config (org override + platform default) ───────────────────
+export const getOrgSmsConfig        = (orgId)       => http.get(`/organizations/${orgId}/sms-config`).then(r => r.data)
+export const updateOrgSmsConfig     = (orgId, body) => http.put(`/organizations/${orgId}/sms-config`, body).then(r => r.data)
+export const testOrgSmsConfig       = (orgId, to)   => http.post(`/organizations/${orgId}/sms-config/test`, { testRecipient: to }).then(r => r.data)
+export const getPlatformSmsConfig   = ()            => http.get('/platform/sms-config').then(r => r.data)
+export const updatePlatformSmsConfig = (body)       => http.put('/platform/sms-config', body).then(r => r.data)
+export const testPlatformSmsConfig  = (to)          => http.post('/platform/sms-config/test', { testRecipient: to }).then(r => r.data)
+
+// ── Short links (SMS) — public ───────────────────────────────────────────────
+export const resolveShortLink = (code) => http.get(`/s/${encodeURIComponent(code)}`).then(r => r.data)
+
+// ── Bulk PDF generation ─────────────────────────────────────────────────────
+export const createPdfBulkJob   = (body)              => http.post('/pdf/bulk-jobs', body).then(r => r.data)
+export const listPdfBulkJobs    = (page = 0, size = 20) => http.get('/pdf/bulk-jobs', { params: { page, size } }).then(r => r.data)
+export const getPdfBulkJob      = (id)                => http.get(`/pdf/bulk-jobs/${id}`).then(r => r.data)
+export const getPdfBulkDownload = (id)                => http.get(`/pdf/bulk-jobs/${id}/download`).then(r => r.data)
+export const fetchPdfBulkZip    = (id)                => http.get(`/pdf/bulk-jobs/${id}/zip`, { responseType: 'blob' }).then(r => r.data)
+
+// ── E-sign templates (reusable PDF + field layout) ──────────────────────────
+export const esignListTemplates   = ()                     => http.get('/esign/templates').then(r => r.data)
+export const esignGetTemplate     = (id)                   => http.get(`/esign/templates/${id}`).then(r => r.data)
+export const esignSaveAsTemplate  = (docId, body)          => http.post(`/esign/templates/from-document/${docId}`, body).then(r => r.data)
+export const esignUpdateTemplate  = (id, body)             => http.put(`/esign/templates/${id}`, body).then(r => r.data)
+export const esignDeleteTemplate  = (id)                   => http.delete(`/esign/templates/${id}`)
+export const esignUseTemplate     = (id, body)             => http.post(`/esign/templates/${id}/use`, body).then(r => r.data)
+
 export const esignRemindNow       = (id)                   => http.post(`/esign/documents/${id}/remind`).then(r => r.data)
 export const esignSetReminders    = (id, enabled)          => http.put(`/esign/documents/${id}/reminders?enabled=${enabled}`).then(r => r.data)
 export const esignGetAudit        = (id)                   => http.get(`/esign/documents/${id}/audit`).then(r => r.data)
@@ -395,6 +424,24 @@ export const esignDownloadClientAttachment = (token, attachmentId) =>
   http.get(`/esign/sign/${token}/attachments/${attachmentId}`, { headers: { Authorization: `Bearer ${token}` }, responseType: 'blob' }).then(r => r.data)
 export const esignDownloadSignSource = (token) =>
   http.get(`/esign/sign/${token}/source-pdf`, { headers: { Authorization: `Bearer ${token}` }, responseType: 'blob' }).then(r => r.data)
+
+// ── Global search + notifications ───────────────────────────────────────────
+export const searchAll                = (q)  => http.get('/search', { params: { q } }).then(r => r.data)
+export const getNotifications         = (p = {}) => http.get('/notifications', { params: p }).then(r => r.data)
+export const getUnreadNotificationCount = () => http.get('/notifications/unread-count').then(r => r.data.count)
+export const markNotificationRead     = (id) => http.post(`/notifications/${id}/read`)
+export const markAllNotificationsRead = ()   => http.post('/notifications/read-all')
+
+// ── Webhooks (outgoing) ─────────────────────────────────────────────────────
+export const getWebhookEventTypes = (orgId)          => http.get(`/organizations/${orgId}/webhooks/event-types`).then(r => r.data)
+export const listWebhooks         = (orgId)          => http.get(`/organizations/${orgId}/webhooks`).then(r => r.data)
+export const createWebhook        = (orgId, body)    => http.post(`/organizations/${orgId}/webhooks`, body).then(r => r.data)
+export const updateWebhook        = (orgId, id, b)   => http.put(`/organizations/${orgId}/webhooks/${id}`, b).then(r => r.data)
+export const deleteWebhook        = (orgId, id)      => http.delete(`/organizations/${orgId}/webhooks/${id}`)
+export const rotateWebhookSecret  = (orgId, id)      => http.post(`/organizations/${orgId}/webhooks/${id}/rotate-secret`).then(r => r.data.secret)
+export const testWebhook          = (orgId, id)      => http.post(`/organizations/${orgId}/webhooks/${id}/test`).then(r => r.data)
+export const listWebhookDeliveries = (orgId, id, page = 0) => http.get(`/organizations/${orgId}/webhooks/${id}/deliveries`, { params: { page, size: 20 } }).then(r => r.data)
+export const retryWebhookDelivery = (orgId, deliveryId) => http.post(`/organizations/${orgId}/webhooks/deliveries/${deliveryId}/retry`).then(r => r.data)
 
 // ── Billing (plan, trial, Stripe checkout / portal) ────────────────────────
 export const getEntitlements   = ()                 => http.get('/billing/entitlements').then(r => r.data)

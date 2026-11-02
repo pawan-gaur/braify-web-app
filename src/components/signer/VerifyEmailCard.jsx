@@ -34,6 +34,7 @@ export default function VerifyEmailCard({ email, onVerified }) {
     setBusy(true); setError(null)
     try {
       await signerConfirmEmailCode(code.trim())
+      window.dispatchEvent(new Event('braify:email-verified'))   // lets the sidebar badge resume
       onVerified?.()
     } catch (err) { setError(err.message) } finally { setBusy(false) }
   }

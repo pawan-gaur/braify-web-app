@@ -9,6 +9,8 @@ import Breadcrumbs from '../components/ui/Breadcrumbs'
 import FileDropZone from '../components/ui/FileDropZone'
 import TemplatePreviewButton from '../components/ui/TemplatePreviewButton'
 import { IconCheck, IconX, IconChevronRight } from '../components/ui/icons'
+import { listUrl } from '../hooks/useUrlState'
+import { compressPdfIfLarge, MAX_PDF_BYTES, fmtMb } from '../utils/compressPdf'
 
 // Bundle the pdf.js worker via Vite's ?worker (a .js chunk) rather than ?url (a .mjs file),
 // which some prod static hosts serve with a non-JS MIME type and refuse to load.
@@ -813,6 +815,28 @@ export default function ESignBulkPage() {
     const fieldPayload  = bulkFields.map(({ id: _id, ...rest }) => rest)
     const resolvedDocs  = []
 
+    // Every row's PDF goes in ONE request, so they share the size budget: each PDF
+    // is compressed (only if needed) to fit its share. See utils/compressPdf.
+    const perDocBytes = Math.floor(MAX_PDF_BYTES / validRows.length)
+    const shrink = async (dataUrl, i) => {
+      try {
+        const r = await compressPdfIfLarge(dataUrl, {
+          maxBytes:   perDocBytes,
+          onProgress: (page, pages) => setProcessProgress({
+            current: i, total: validRows.length, note: `Compressing PDF… page ${page} of ${pages}`,
+          }),
+        })
+        return r.dataUrl
+      } catch {
+        throw new Error(
+          `The PDFs are too large to send ${validRows.length} in one batch ` +
+          `(each must fit in ${fmtMb(perDocBytes)}). Use a smaller PDF or split the spreadsheet into smaller batches.`)
+      } finally {
+        setProcessProgress({ current: i, total: validRows.length })
+      }
+    }
+    let singlePdf = null   // the shared single PDF, compressed once for every row
+
     // ── Phase 1: Resolve PDFs browser-side with progress ──────────────
     for (let i = 0; i < validRows.length; i++) {
       const row = validRows[i]
@@ -822,17 +846,18 @@ export default function ESignBulkPage() {
       for (const src of activeSources) {
         try {
           if (src === 'single') {
-            pdfBase64 = singlePdfBase64
+            singlePdf ??= await shrink(singlePdfBase64, i)
+            pdfBase64 = singlePdf
           } else if (src === 'template') {
             const data = {}
             ;(selectedTemplate?.placeholders || []).forEach(p => {
               const col = placeholderMapping[p]
               data[p] = col ? (row.rawRow[col] || '') : ''
             })
-            pdfBase64 = await generatePdfAsBase64(selectedTemplateId, data)
+            pdfBase64 = await shrink(await generatePdfAsBase64(selectedTemplateId, data), i)
           } else {
             const url = buildApiUrl(fileApi.url, row.rawRow)
-            pdfBase64 = await fetchFileAsBase64(url, buildAuthHeaders(fileApi))
+            pdfBase64 = await shrink(await fetchFileAsBase64(url, buildAuthHeaders(fileApi)), i)
           }
           if (pdfBase64) break
         } catch (e) { lastErr = e }
@@ -862,7 +887,7 @@ export default function ESignBulkPage() {
     try {
       await esignBulkCreate(resolvedDocs, true, resolvedLabel, allowClientUpload, allowedFileTypes)
       showToast(`Bulk send complete — ${resolvedDocs.length} document${resolvedDocs.length !== 1 ? 's' : ''} created`, 'success')
-      navigate('/esign')
+      navigate(listUrl('/esign'))
     } catch (err) {
       setProcessError('Failed to create bulk batch: ' + err.message)
     } finally {
@@ -2153,7 +2178,7 @@ export default function ESignBulkPage() {
 
     // ── Processing: progress bar ──────────────────────────────────────
     if (processing) {
-      const { current, total } = processProgress
+      const { current, total, note } = processProgress
       const pct = total > 0 ? Math.round((current / total) * 100) : 0
       return (
         <div className="space-y-6 py-6">
@@ -2161,6 +2186,7 @@ export default function ESignBulkPage() {
             <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin shrink-0"/>
             <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
               Processing… {current} / {total}
+              {note && <span className="ml-2 font-normal text-gray-500 dark:text-gray-400">{note}</span>}
             </p>
           </div>
           <div className="space-y-1">

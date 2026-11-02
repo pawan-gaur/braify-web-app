@@ -1,7 +1,9 @@
 ﻿import { useState, useEffect } from 'react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth, ROLES as USER_ROLES } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { getBranding, updateBranding, getCloudConfig, updateCloudConfig, getEsignReminderPolicy, updateEsignReminderPolicy } from '../services/api'
+import { getBranding, updateBranding, getCloudConfig, updateCloudConfig, getEsignReminderPolicy, updateEsignReminderPolicy, getOrgSmsConfig, updateOrgSmsConfig, testOrgSmsConfig } from '../services/api'
+import SmsProviderForm from '../components/settings/SmsProviderForm'
+import { Link } from 'react-router-dom'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import LogoUpload from '../components/ui/LogoUpload'
@@ -45,7 +47,7 @@ const PRESETS = [
 /* ─────────────────────────────────────────────────────────────── */
 export default function OrgSettingsPage() {
   useDocumentTitle('Organization Settings')
-  const { user, setFeatureRoleAccess } = useAuth()
+  const { user, setFeatureRoleAccess, bulkEnabled } = useAuth()
   const toast = useToast()
   const orgId = user?.organizationId
 
@@ -63,6 +65,7 @@ export default function OrgSettingsPage() {
     firstReminderAfterHours: 24,
     repeatEveryHours: 24,
     maxReminders: 10,
+    smsEnabled: false,
   })
 
   /* Branding form state */
@@ -110,6 +113,7 @@ export default function OrgSettingsPage() {
           firstReminderAfterHours: p.firstReminderAfterHours ?? 24,
           repeatEveryHours: p.repeatEveryHours ?? 24,
           maxReminders: p.maxReminders ?? 10,
+          smsEnabled: !!p.smsEnabled,
         })
       }
 
@@ -164,6 +168,7 @@ export default function OrgSettingsPage() {
         firstReminderAfterHours: Number(reminderForm.firstReminderAfterHours) || 24,
         repeatEveryHours: Number(reminderForm.repeatEveryHours) || 24,
         maxReminders: Number(reminderForm.maxReminders) || 10,
+        smsEnabled: !!reminderForm.smsEnabled,
       }
       const saved = await updateEsignReminderPolicy(orgId, payload)
       setReminderForm({
@@ -171,6 +176,7 @@ export default function OrgSettingsPage() {
         firstReminderAfterHours: saved.firstReminderAfterHours ?? 24,
         repeatEveryHours: saved.repeatEveryHours ?? 24,
         maxReminders: saved.maxReminders ?? 10,
+        smsEnabled: !!saved.smsEnabled,
       })
       toast.success('Reminder policy saved.')
     } catch (err) {
@@ -245,6 +251,9 @@ export default function OrgSettingsPage() {
       ? [{ id: 'reminders', label: 'E-Sign Reminders', icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' }]
       : []),
     { id: 'cloud',    label: 'Cloud Storage',  icon: 'M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z' },
+    ...(orgId && [USER_ROLES.ORG_ADMIN, USER_ROLES.PLATFORM_ADMIN].includes(user?.role)
+      ? [{ id: 'sms', label: 'SMS', icon: 'M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z' }]
+      : []),
   ]
 
   return (
@@ -308,7 +317,21 @@ export default function OrgSettingsPage() {
           set={setReminder}
           saving={savingReminders}
           onSave={handleSaveReminders}
+          smsAllowed={bulkEnabled}
         />
+      )}
+
+      {/* ── Tab: SMS provider ── */}
+      {activeTab === 'sms' && (
+        <div className="max-w-2xl card p-6">
+          <h2 className="text-sm font-bold text-gray-700 dark:text-gray-200">SMS provider</h2>
+          <p className="text-xs text-ink-3 mt-1 mb-5">
+            Send SMS reminders through your own Twilio, Vonage or HTTP gateway account. Leave it on
+            “Platform default” to use the provider Braify sets up.
+          </p>
+          <SmsProviderForm noneLabel="Platform default"
+            load={() => getOrgSmsConfig(orgId)} save={body => updateOrgSmsConfig(orgId, body)} test={to => testOrgSmsConfig(orgId, to)} />
+        </div>
       )}
 
       {/* ── Tab: Cloud Storage ── */}
@@ -328,7 +351,7 @@ export default function OrgSettingsPage() {
 /* ══════════════════════════════════════════════════════════════════
    Tab: E-Sign Reminders — automatic reminder schedule for the org
 ══════════════════════════════════════════════════════════════════ */
-function RemindersTab({ form, set, saving, onSave }) {
+function RemindersTab({ form, set, saving, onSave, smsAllowed }) {
   const num = (key, val) => set(key, val === '' ? '' : Math.max(0, parseInt(val, 10) || 0))
   return (
     <div className="max-w-2xl space-y-6">
@@ -371,6 +394,29 @@ function RemindersTab({ form, set, saving, onSave }) {
             onChange={v => num('maxReminders', v)} min={1} max={50}
             hint="Stop after this many per signer." />
         </div>
+
+        <label className={`flex items-center justify-between gap-4 py-2 border-t border-ink-8 dark:border-gray-700 pt-4 ${smsAllowed ? '' : 'opacity-60'}`}>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+            Also send reminders by SMS {!smsAllowed && <span className="badge badge-brand ml-1 align-middle">Pro</span>}
+            <span className="block text-xs text-ink-3 font-normal">
+              {smsAllowed
+                ? 'Texts a short signing link to signatories who have a phone number. Uses your SMS provider (Settings → SMS) or the platform default.'
+                : <>SMS reminders are on the Pro plan. <Link to="/settings/billing" className="text-brand font-semibold">Upgrade</Link></>}
+            </span>
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={!!form.smsEnabled}
+            disabled={!smsAllowed && !form.smsEnabled}   /* after a downgrade it can still be switched off */
+            onClick={() => set('smsEnabled', !form.smsEnabled)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0
+              ${form.smsEnabled ? 'bg-gradient-accent' : 'bg-gray-300 dark:bg-gray-600'}`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+              ${form.smsEnabled ? 'translate-x-6' : 'translate-x-1'}`}/>
+          </button>
+        </label>
 
         <p className="text-xs text-ink-3">
           Reminders never extend a document’s expiry — they stop automatically once it’s signed or expires.

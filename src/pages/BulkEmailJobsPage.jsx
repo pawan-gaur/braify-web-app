@@ -19,6 +19,7 @@ import ViewToggle, { useView } from '../components/ui/ViewToggle'
 import { fmtDateTimeGB as fmtDate } from '../utils/date'
 import { IconX, IconChevronsLeft, IconChevronsRight, IconChevronLeft, IconChevronRight } from '../components/ui/icons'
 import SuppressionModal from '../components/bulkemail/SuppressionModal'
+import useUrlState from '../hooks/useUrlState'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const POLL_MS          = 5000
@@ -202,10 +203,12 @@ export default function BulkEmailJobsPage() {
   const [view, setView]         = useView('braify-view-bulk-email', 'table')
   const [jobs, setJobs]         = useState([])
   const [loading, setLoading]   = useState(true)
-  const [search, setSearch]     = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
-  const [page, setPage]         = useState(0)
-  const [size, setSize]         = useState(20)
+  // Page / filters live in the URL so Back from a campaign returns to the same page.
+  const [q, setQ]               = useUrlState({ page: 0, size: 20, status: '', search: '' })
+  const { page, size, search }  = q
+  const statusFilter            = q.status
+  const setSearch = v => setQ({ search: v })
+  const setPage   = p => setQ(prev => ({ page: typeof p === 'function' ? p(prev.page) : p }))
   const [totalPages, setTotalPages]   = useState(0)
   const [totalElements, setTotalElements] = useState(0)
   const [suppressOpen, setSuppressOpen] = useState(false)
@@ -239,8 +242,8 @@ export default function BulkEmailJobsPage() {
     return () => clearInterval(pollRef.current)
   }, [hasActiveJob, loadJobs])
 
-  function applyStatusFilter(v) { setStatusFilter(v); setPage(0) }
-  function applySize(v)         { setSize(v);          setPage(0) }
+  function applyStatusFilter(v) { setQ({ status: v, page: 0 }) }
+  function applySize(v)         { setQ({ size: Number(v), page: 0 }) }
 
   // Client-side text + status filter within current page
   const filtered = jobs.filter(j => {

@@ -260,6 +260,7 @@ export default function UsagePage() {
                   <th className="text-right py-2 px-3 text-gray-500 font-semibold">E-Sign</th>
                   <th className="text-right py-2 px-3 text-gray-500 font-semibold">Storage (MB)</th>
                   <th className="text-right py-2 px-3 text-gray-500 font-semibold">API Calls</th>
+                  <th className="text-right py-2 px-3 text-gray-500 font-semibold">SMS</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
@@ -270,6 +271,7 @@ export default function UsagePage() {
                     <td className="py-2 px-3 text-right text-gray-600 dark:text-gray-400">{(h.esignSent || 0).toLocaleString()}</td>
                     <td className="py-2 px-3 text-right text-gray-600 dark:text-gray-400">{(h.storageMb || 0).toLocaleString()}</td>
                     <td className="py-2 px-3 text-right text-gray-600 dark:text-gray-400">{(h.apiCalls || 0).toLocaleString()}</td>
+                    <td className="py-2 px-3 text-right text-gray-600 dark:text-gray-400">{(h.smsSent || 0).toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>

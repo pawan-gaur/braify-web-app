@@ -10,6 +10,8 @@ export function safeAppPath(next) {
   try {
     const u = new URL(next, window.location.origin)
     if (u.origin !== window.location.origin) return null
+    // "/.//evil.com" normalises to the pathname "//evil.com" — protocol-relative; refuse it.
+    if (u.pathname.startsWith('//')) return null
     return u.pathname + u.search + u.hash
   } catch {
     return null

@@ -4,6 +4,7 @@ import GettingStartedChecklist from '../components/dashboard/GettingStartedCheck
 import { getDashboardStats, getDashboardAnalytics, signerGetCounts } from '../services/api'
 import { useAuth, ROLES } from '../context/AuthContext'
 import useDocumentTitle from '../hooks/useDocumentTitle'
+import useUrlState from '../hooks/useUrlState'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import { FEATURES, FEATURE_META } from '../config/features'
 import { fmtDateTime as fmtDate } from '../utils/date'
@@ -456,7 +457,11 @@ export default function DashboardPage() {
 
   const [stats,   setStats]   = useState(null)
   const [loading, setLoading] = useState(true)
-  const [tab,     setTab]     = useState(isPlatformAdmin ? 'platform' : 'overview')
+  // Active tab lives in the URL (?tab=analytics) so Back returns to it; unknown ids fall back to the default
+  const [q, setQ] = useUrlState({ tab: '' })
+  const tabIds = isPlatformAdmin ? ['platform', 'tenants', 'analytics', 'activity'] : ['overview', 'analytics', 'esign', 'team']
+  const tab    = tabIds.includes(q.tab) ? q.tab : tabIds[0]
+  const setTab = id => setQ({ tab: id })
 
   // Analytics date range
   const [preset, setPreset] = useState('30d')
@@ -471,13 +476,15 @@ export default function DashboardPage() {
   // Documents awaiting the user's OWN signature (sent to their email by any org).
   const [mySignatures, setMySignatures] = useState(0)
 
+  const signerCountsBlocked = useRef(false)   // 403 = email not confirmed yet; don't re-ask every poll
   const loadStats = useCallback(() => {
     getDashboardStats()
       .then(s => { setStats(s); setLoading(false) })
       .catch(() => setLoading(false))
+    if (signerCountsBlocked.current) return
     signerGetCounts()
       .then(c => setMySignatures(c?.ACTION ?? 0))
-      .catch(() => {})
+      .catch(e => { if (e?.status === 403) signerCountsBlocked.current = true })
   }, [])
 
   useEffect(() => { loadStats() }, [loadStats])

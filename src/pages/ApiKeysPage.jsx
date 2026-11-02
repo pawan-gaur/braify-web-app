@@ -3,6 +3,7 @@ import { useAuth, ROLES } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { getApiKeys, getAllApiKeys, createApiKey, revokeApiKey, toggleApiKey } from '../services/api'
 import useDocumentTitle from '../hooks/useDocumentTitle'
+import useUrlState from '../hooks/useUrlState'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import ApiKeyCard from '../components/ui/ApiKeyCard'
 import { IconArrowRight } from '../components/ui/icons'
@@ -37,12 +38,17 @@ export default function ApiKeysPage() {
 ══════════════════════════════════════════════════════════════════ */
 function AdminApiKeysView() {
   const toast = useToast()
-  const [activeTab,   setActiveTab]   = useState('keys')
+  // Tab, search and filters live in the URL (?tab=&search=&org=&status=) so Back restores them
+  const [urlQ, setUrlQ] = useUrlState({ tab: 'keys', search: '', org: 'all', status: 'all' })
+  const activeTab      = urlQ.tab === 'reference' ? 'reference' : 'keys'
+  const filterOrg      = urlQ.org
+  const filterStatus   = urlQ.status   // 'all' | 'active' | 'inactive'
+  const setActiveTab   = tab => setUrlQ({ tab })
+  const setFilterOrg   = v => setUrlQ({ org: v })
+  const setFilterStatus = v => setUrlQ({ status: v })
   const [allKeys,     setAllKeys]     = useState([])
   const [loading,     setLoading]     = useState(true)
-  const [search,      setSearch]      = useState('')
-  const [filterOrg,   setFilterOrg]   = useState('all')
-  const [filterStatus,setFilterStatus]= useState('all')   // 'all' | 'active' | 'inactive'
+  const [search,      setSearch]      = useState(urlQ.search)   // input text; debounced into the URL
   const [toggling,    setToggling]    = useState({})
   const [revoking,    setRevoking]    = useState({})
 
@@ -55,6 +61,12 @@ function AdminApiKeysView() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    if (search.trim() === urlQ.search) return
+    const t = setTimeout(() => setUrlQ({ search: search.trim() }), 350)
+    return () => clearTimeout(t)
+  }, [search, urlQ.search]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Unique orgs from data — for filter dropdown
   const orgOptions = useMemo(() => {
@@ -323,7 +335,10 @@ function OrgApiKeysView() {
   const toast = useToast()
   const orgId = user?.organizationId
 
-  const [activeTab,   setActiveTab]   = useState('keys')
+  // Active tab lives in the URL (?tab=reference) so Back returns to it
+  const [urlQ, setUrlQ] = useUrlState({ tab: 'keys' })
+  const activeTab    = urlQ.tab === 'reference' ? 'reference' : 'keys'
+  const setActiveTab = tab => setUrlQ({ tab })
   const [keys,        setKeys]        = useState([])
   const [loading,     setLoading]     = useState(true)
   const [showCreate,  setShowCreate]  = useState(false)
