@@ -25,6 +25,7 @@ import {
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import { fmtDateTimeGB as fmtDate } from '../utils/date'
+import useUrlState, { listUrl } from '../hooks/useUrlState'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const STATUS_COLORS = {
@@ -78,11 +79,17 @@ export default function BulkEmailDetailPage() {
   const [analytics,    setAnalytics]    = useState(null)
   const [analyticsLoaded, setAnalyticsLoaded] = useState(false)
   const [loading,      setLoading]      = useState(true)
-  const [tab,          setTab]          = useState('overview')
-  const [recipPage,    setRecipPage]    = useState(0)     // recipients tab pagination (server-side)
-  const [recipFilter,  setRecipFilter]  = useState('ALL') // ALL | SENT | FAILED | PENDING | OPENED | CLICKED | UNOPENED | UNSUBSCRIBED
-  const [recipSearch,  setRecipSearch]  = useState('')    // raw input
-  const [recipQuery,   setRecipQuery]   = useState('')    // debounced search sent to the server
+  // Tab + recipients paging/filter/search live in the URL so Back/refresh restores them.
+  const [tq, setTq]                     = useUrlState({ tab: 'overview' })
+  const tab    = tq.tab
+  const setTab = t => setTq({ tab: t })
+  const [rq, setRq]                     = useUrlState({ page: 0, filter: 'ALL', search: '' }, { prefix: 'r' })
+  const recipPage   = rq.page            // recipients tab pagination (server-side)
+  const recipFilter = rq.filter          // ALL | SENT | FAILED | PENDING | OPENED | CLICKED | UNOPENED | UNSUBSCRIBED
+  const recipQuery  = rq.search          // debounced search sent to the server
+  const setRecipPage   = p => setRq(prev => ({ page: typeof p === 'function' ? p(prev.page) : p }))
+  const setRecipFilter = f => setRq({ filter: f })
+  const [recipSearch,  setRecipSearch]  = useState(rq.search)    // raw input
   const [recipData,    setRecipData]    = useState(null)  // { content, totalElements, totalPages, counts }
   const [recipLoading, setRecipLoading] = useState(false)
   const pollRef = useRef(null)
@@ -113,7 +120,7 @@ export default function BulkEmailDetailPage() {
         setAuditLoaded(true)
       } catch (e) {
         toast.error(e.message)
-        navigate('/bulk-email')
+        navigate(listUrl('/bulk-email'))
       } finally {
         setLoading(false)
       }
@@ -154,7 +161,8 @@ export default function BulkEmailDetailPage() {
   // ── Recipients — server-side paging / filtering / search ───────────────
   // Debounce the search box so we don't query on every keystroke.
   useEffect(() => {
-    const t = setTimeout(() => { setRecipQuery(recipSearch.trim()); setRecipPage(0) }, 350)
+    if (recipSearch.trim() === rq.search) return   // unchanged (incl. first render) — keep the restored page
+    const t = setTimeout(() => setRq({ search: recipSearch.trim(), page: 0 }), 350)
     return () => clearTimeout(t)
   }, [recipSearch])
 

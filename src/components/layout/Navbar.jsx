@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp }  from '../../context/AppContext'
+import GlobalSearch from './GlobalSearch'
+import NotificationBell from './NotificationBell'
 import { useAuth } from '../../context/AuthContext'
 
 /* ── Avatar component — shows profile picture or initials ─────────────── */
@@ -28,29 +30,16 @@ const ROLE_META = {
   SIGNER:         { label: 'Signer',         cls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
 }
 
-/* ── Notification items (demo) ─────────────────────────────────────────── */
-const DEMO_NOTIFS = [
-  { id: 1, text: 'Invoice Template was updated',   time: '2 min ago',  read: false },
-  { id: 2, text: 'PDF generated: Q1 Report.pdf',   time: '1 hr ago',   read: false },
-  { id: 3, text: 'New template shared with you',   time: '3 hrs ago',  read: true  },
-  { id: 4, text: 'Contract Template exported',     time: 'Yesterday',  read: true  },
-]
-
 export default function Navbar() {
   const { collapsed, darkMode, setDarkMode } = useApp()
   const { user, logout, isSigner }           = useAuth()
   const navigate                             = useNavigate()
 
-  const [search,      setSearch]      = useState('')
-  const [showNotif,   setShowNotif]   = useState(false)
   const [showProfile, setShowProfile] = useState(false)
-  const [notifs,      setNotifs]      = useState(DEMO_NOTIFS)
   const [signingOut,  setSigningOut]  = useState(false)
 
-  const notifRef   = useRef(null)
   const profileRef = useRef(null)
 
-  const unread    = notifs.filter(n => !n.read).length
   const leftCls   = collapsed ? 'left-16' : 'left-60'
   const roleMeta  = ROLE_META[user?.role] ?? ROLE_META.USER
   const fullName  = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.email || 'User'
@@ -59,14 +48,12 @@ export default function Navbar() {
   /* Close dropdowns on outside click */
   useEffect(() => {
     function onMouseDown(e) {
-      if (notifRef.current   && !notifRef.current.contains(e.target))   setShowNotif(false)
       if (profileRef.current && !profileRef.current.contains(e.target)) setShowProfile(false)
     }
     document.addEventListener('mousedown', onMouseDown)
     return () => document.removeEventListener('mousedown', onMouseDown)
   }, [])
 
-  const markAllRead = () => setNotifs(prev => prev.map(n => ({ ...n, read: true })))
 
   const handleSignOut = async () => {
     setSigningOut(true)
@@ -80,36 +67,8 @@ export default function Navbar() {
                         border-b border-ink-7 dark:border-gray-700
                         shadow-sm transition-[left] duration-300`}>
 
-      {/* ── Search bar ── */}
-      <div className="flex-1 max-w-xl relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-4 pointer-events-none">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <circle cx="11" cy="11" r="8"/>
-            <path d="M21 21l-4.35-4.35"/>
-          </svg>
-        </span>
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search templates, PDFs…"
-          className="w-full pl-9 pr-4 py-2 rounded-xl text-sm
-                     bg-ink-8 dark:bg-gray-800
-                     border border-ink-7 dark:border-gray-700
-                     text-ink-2 dark:text-gray-200
-                     placeholder-ink-4 dark:placeholder-gray-500
-                     outline-none focus:border-brand focus:ring-2 focus:ring-brand/10
-                     transition-all duration-150"
-        />
-        {search && (
-          <button onClick={() => setSearch('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2
-                       text-ink-4 hover:text-ink-2 dark:hover:text-gray-200">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-          </button>
-        )}
-      </div>
+      {/* ── Search (Braify users; signer sessions can't search the org) ── */}
+      {isSigner ? <div className="flex-1" /> : <GlobalSearch />}
 
       {/* ── Right controls ── */}
       <div className="flex items-center gap-1 ml-auto shrink-0">
@@ -135,57 +94,7 @@ export default function Navbar() {
         </button>
 
         {/* Notification bell */}
-        <div className="relative" ref={notifRef}>
-          <button
-            onClick={() => { setShowNotif(v => !v); setShowProfile(false) }}
-            className="w-9 h-9 flex items-center justify-center rounded-xl
-                       text-ink-3 dark:text-gray-400
-                       hover:bg-ink-8 dark:hover:bg-gray-800 transition-colors relative"
-            title="Notifications"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159
-                   c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-            </svg>
-            {unread > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full
-                               bg-rose-500 ring-2 ring-white dark:ring-gray-900"/>
-            )}
-          </button>
-
-          {showNotif && (
-            <div className="absolute right-0 top-full mt-2 w-80 z-50
-                            bg-white dark:bg-gray-800 rounded-2xl shadow-xl
-                            border border-ink-7 dark:border-gray-700 overflow-hidden animate-fade-in">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-ink-7 dark:border-gray-700">
-                <span className="text-sm font-bold text-ink dark:text-gray-100">Notifications</span>
-                {unread > 0 && (
-                  <button onClick={markAllRead} className="text-xs text-brand hover:underline font-medium">
-                    Mark all read
-                  </button>
-                )}
-              </div>
-              <ul className="divide-y divide-ink-8 dark:divide-gray-700 max-h-72 overflow-y-auto">
-                {notifs.map(n => (
-                  <li key={n.id} className={`flex items-start gap-3 px-4 py-3 transition-colors
-                                             ${n.read ? 'bg-white dark:bg-gray-800' : 'bg-brand-50/60 dark:bg-brand-900/20'}`}>
-                    <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${n.read ? 'bg-ink-6 dark:bg-gray-600' : 'bg-brand'}`}/>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-ink-2 dark:text-gray-200 leading-snug">{n.text}</p>
-                      <p className="text-xs text-ink-4 mt-0.5">{n.time}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              <div className="px-4 py-2.5 border-t border-ink-7 dark:border-gray-700 text-center">
-                <button className="text-xs text-brand hover:underline font-medium">
-                  View all notifications
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+        {!isSigner && <NotificationBell />}
 
         {/* Divider */}
         <div className="w-px h-6 bg-ink-7 dark:bg-gray-700 mx-1"/>
@@ -193,7 +102,7 @@ export default function Navbar() {
         {/* Profile avatar */}
         <div className="relative" ref={profileRef}>
           <button
-            onClick={() => { setShowProfile(v => !v); setShowNotif(false) }}
+            onClick={() => setShowProfile(v => !v)}
             className="flex items-center gap-2 px-2 py-1.5 rounded-xl
                        hover:bg-ink-8 dark:hover:bg-gray-800 transition-colors"
             title="Profile"

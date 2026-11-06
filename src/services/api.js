@@ -45,7 +45,7 @@ const flushWaiters = (newToken) => {
 const NO_REFRESH = [
   '/auth/refresh', '/auth/login', '/auth/forgot-password',
   '/auth/reset-password', '/auth/accept-invite', '/auth/validate-token',
-  '/auth/otp/', '/esign/sign/', '/esign/view/', '/esign/verify/',
+  '/auth/otp/', '/auth/signup/', '/esign/sign/', '/esign/view/', '/esign/verify/',
 ]
 
 // Bare axios call (bypasses these interceptors) so the refresh request can't recurse.
@@ -168,10 +168,21 @@ http.interceptors.response.use(
       message = backendMsg
     } else if (!navigator.onLine) {
       message = 'No network connection. Check your internet and try again.'
+    } else if (status === 413) {
+      // Rejected by the proxy (nginx client_max_body_size) before reaching the backend.
+      message = 'The file is too large to upload. Please use a smaller file and try again.'
     } else if (isUnreachable(err) || (status && status >= 500)) {
       message = 'Unable to reach the server. Please try again in a moment.'
     } else {
       message = err.message || `Request failed${status ? ` (${status})` : ''}`
+    }
+
+    // Plan limit hit / paid-only feature → let the app shell show an upgrade prompt.
+    // (The caller still gets the error and shows its own message as before.)
+    const upgradeNeeded = (status === 403 && data?.reason === 'UPGRADE_REQUIRED')
+      || (status === 429 && /quota|limit/i.test(message) && !original?.url?.includes('/auth/'))
+    if (upgradeNeeded) {
+      window.dispatchEvent(new CustomEvent('braify:upgrade-required', { detail: { message } }))
     }
 
     const normalised         = new Error(message)
@@ -306,7 +317,7 @@ export const setOrgMfaPolicy = (id, policy) => http.put(`/organizations/${id}/mf
 export const getMyProfile    = ()        => http.get('/profile/me').then(r => r.data)
 export const updateProfile   = (payload) => http.put('/profile/me', payload).then(r => r.data)
 export const changePassword  = (payload) => http.put('/profile/me/password', payload).then(r => r.data)
-export const uploadAvatar    = (avatar)  => http.post('/profile/me/avatar', { avatar }).then(r => r.data)
+export const uploadAvatar    = (fileId)  => http.post('/profile/me/avatar', { fileId }).then(r => r.data)   // fileId from uploadToStorage(…, 'AVATAR'); null removes
 export const getMyAuditLog   = ()        => http.get('/profile/me/audit').then(r => r.data)
 
 // ── E-Sign (Creator) ───────────────────────────────────────
@@ -352,6 +363,32 @@ export const emailLogsList = ({ page = 0, size = 20, orgId, category, status, re
 export const getEsignReminderPolicy    = (orgId)         => http.get(`/organizations/${orgId}/esign-reminder-policy`).then(r => r.data)
 export const updateEsignReminderPolicy = (orgId, policy) => http.put(`/organizations/${orgId}/esign-reminder-policy`, policy).then(r => r.data)
 
+// ── SMS provider config (org override + platform default) ───────────────────
+export const getOrgSmsConfig        = (orgId)       => http.get(`/organizations/${orgId}/sms-config`).then(r => r.data)
+export const updateOrgSmsConfig     = (orgId, body) => http.put(`/organizations/${orgId}/sms-config`, body).then(r => r.data)
+export const testOrgSmsConfig       = (orgId, to)   => http.post(`/organizations/${orgId}/sms-config/test`, { testRecipient: to }).then(r => r.data)
+export const getPlatformSmsConfig   = ()            => http.get('/platform/sms-config').then(r => r.data)
+export const updatePlatformSmsConfig = (body)       => http.put('/platform/sms-config', body).then(r => r.data)
+export const testPlatformSmsConfig  = (to)          => http.post('/platform/sms-config/test', { testRecipient: to }).then(r => r.data)
+
+// ── Short links (SMS) — public ───────────────────────────────────────────────
+export const resolveShortLink = (code) => http.get(`/s/${encodeURIComponent(code)}`).then(r => r.data)
+
+// ── Bulk PDF generation ─────────────────────────────────────────────────────
+export const createPdfBulkJob   = (body)              => http.post('/pdf/bulk-jobs', body).then(r => r.data)
+export const listPdfBulkJobs    = (page = 0, size = 20) => http.get('/pdf/bulk-jobs', { params: { page, size } }).then(r => r.data)
+export const getPdfBulkJob      = (id)                => http.get(`/pdf/bulk-jobs/${id}`).then(r => r.data)
+export const getPdfBulkDownload = (id)                => http.get(`/pdf/bulk-jobs/${id}/download`).then(r => r.data)
+export const fetchPdfBulkZip    = (id)                => http.get(`/pdf/bulk-jobs/${id}/zip`, { responseType: 'blob' }).then(r => r.data)
+
+// ── E-sign templates (reusable PDF + field layout) ──────────────────────────
+export const esignListTemplates   = ()                     => http.get('/esign/templates').then(r => r.data)
+export const esignGetTemplate     = (id)                   => http.get(`/esign/templates/${id}`).then(r => r.data)
+export const esignSaveAsTemplate  = (docId, body)          => http.post(`/esign/templates/from-document/${docId}`, body).then(r => r.data)
+export const esignUpdateTemplate  = (id, body)             => http.put(`/esign/templates/${id}`, body).then(r => r.data)
+export const esignDeleteTemplate  = (id)                   => http.delete(`/esign/templates/${id}`)
+export const esignUseTemplate     = (id, body)             => http.post(`/esign/templates/${id}/use`, body).then(r => r.data)
+
 export const esignRemindNow       = (id)                   => http.post(`/esign/documents/${id}/remind`).then(r => r.data)
 export const esignSetReminders    = (id, enabled)          => http.put(`/esign/documents/${id}/reminders?enabled=${enabled}`).then(r => r.data)
 export const esignGetAudit        = (id)                   => http.get(`/esign/documents/${id}/audit`).then(r => r.data)
@@ -387,6 +424,30 @@ export const esignDownloadClientAttachment = (token, attachmentId) =>
   http.get(`/esign/sign/${token}/attachments/${attachmentId}`, { headers: { Authorization: `Bearer ${token}` }, responseType: 'blob' }).then(r => r.data)
 export const esignDownloadSignSource = (token) =>
   http.get(`/esign/sign/${token}/source-pdf`, { headers: { Authorization: `Bearer ${token}` }, responseType: 'blob' }).then(r => r.data)
+
+// ── Global search + notifications ───────────────────────────────────────────
+export const searchAll                = (q)  => http.get('/search', { params: { q } }).then(r => r.data)
+export const getNotifications         = (p = {}) => http.get('/notifications', { params: p }).then(r => r.data)
+export const getUnreadNotificationCount = () => http.get('/notifications/unread-count').then(r => r.data.count)
+export const markNotificationRead     = (id) => http.post(`/notifications/${id}/read`)
+export const markAllNotificationsRead = ()   => http.post('/notifications/read-all')
+
+// ── Webhooks (outgoing) ─────────────────────────────────────────────────────
+export const getWebhookEventTypes = (orgId)          => http.get(`/organizations/${orgId}/webhooks/event-types`).then(r => r.data)
+export const listWebhooks         = (orgId)          => http.get(`/organizations/${orgId}/webhooks`).then(r => r.data)
+export const createWebhook        = (orgId, body)    => http.post(`/organizations/${orgId}/webhooks`, body).then(r => r.data)
+export const updateWebhook        = (orgId, id, b)   => http.put(`/organizations/${orgId}/webhooks/${id}`, b).then(r => r.data)
+export const deleteWebhook        = (orgId, id)      => http.delete(`/organizations/${orgId}/webhooks/${id}`)
+export const rotateWebhookSecret  = (orgId, id)      => http.post(`/organizations/${orgId}/webhooks/${id}/rotate-secret`).then(r => r.data.secret)
+export const testWebhook          = (orgId, id)      => http.post(`/organizations/${orgId}/webhooks/${id}/test`).then(r => r.data)
+export const listWebhookDeliveries = (orgId, id, page = 0) => http.get(`/organizations/${orgId}/webhooks/${id}/deliveries`, { params: { page, size: 20 } }).then(r => r.data)
+export const retryWebhookDelivery = (orgId, deliveryId) => http.post(`/organizations/${orgId}/webhooks/deliveries/${deliveryId}/retry`).then(r => r.data)
+
+// ── Billing (plan, trial, Stripe checkout / portal) ────────────────────────
+export const getEntitlements   = ()                 => http.get('/billing/entitlements').then(r => r.data)
+export const getBillingSummary = ()                 => http.get('/billing').then(r => r.data)
+export const startCheckout     = (interval = 'MONTH') => http.post('/billing/checkout', { interval }).then(r => r.data.url)
+export const openBillingPortal = ()                 => http.post('/billing/portal').then(r => r.data.url)
 
 // ── Signer inbox (documents addressed to the signed-in email, across orgs) ──
 export const signerGetMe            = ()          => http.get('/signer/me').then(r => r.data)
@@ -515,6 +576,43 @@ export const getApiKeyUsage = (orgId)          => http.get(`/organizations/${org
 // ── Org users (admin view via /users/search with orgId filter) ─
 export const getUsersByOrg = (orgId) =>
   http.get('/users/search', { params: { q: '', orgId } }).then(r => r.data)
+
+// ── Storage (every uploaded file; addressed by id) ─────────────
+/**
+ * Upload a file to the caller's organisation storage and get its id back.
+ * Pass the id to the feature that uses it (e.g. `sourceFileId` on e-sign create).
+ * @param {File|Blob} file
+ * @param {'ESIGN_SOURCE'|'BRANDING_LOGO'|'AVATAR'|'TEMPLATE_IMAGE'|'BULK_EMAIL_ATTACHMENT'} purpose
+ * @param {string} [filename] - name to use when `file` is a Blob
+ * @param {string} [orgId]    - Platform Admin acting for an organisation (e.g. its logo)
+ * @returns {Promise<{id, purpose, filename, contentType, sizeBytes, publicUrl}>}
+ *          publicUrl is a stable login-free link for public purposes (logo, avatar, template image).
+ */
+export const uploadToStorage = (file, purpose, filename, orgId) => {
+  const form = new FormData()
+  form.append('file', file, filename || file.name || 'file')
+  const params = new URLSearchParams({ purpose })
+  if (orgId) params.set('orgId', orgId)
+  return http.post(`/storage/upload?${params}`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then(r => r.data)
+}
+
+/** Short-lived pre-signed download URL for a stored file: `{ url, expiresInSeconds }`. */
+export const getStorageUrl = (fileId) => http.get(`/storage/${fileId}/url`).then(r => r.data)
+
+/**
+ * A base64 data URL as a Blob (for uploading PDFs the app built or fetched in the browser).
+ * `type` overrides the data URL's own type (fetched files often say application/octet-stream).
+ */
+export const dataUrlToBlob = (dataUrl, type) => {
+  const [meta, b64] = dataUrl.split(',')
+  type = type || meta.match(/^data:([^;]+)/)?.[1] || 'application/octet-stream'
+  const bin = atob(b64)
+  const bytes = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+  return new Blob([bytes], { type })
+}
 
 // ── File Storage ───────────────────────────────────────────────
 /**

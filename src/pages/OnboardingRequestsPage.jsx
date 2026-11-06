@@ -4,6 +4,7 @@ import useDocumentTitle from '../hooks/useDocumentTitle'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import ViewToggle, { useView } from '../components/ui/ViewToggle'
+import useUrlState from '../hooks/useUrlState'
 import { ALL_FEATURES, FEATURE_META } from '../config/features'
 import { IconCheck, IconX } from '../components/ui/icons'
 
@@ -321,7 +322,9 @@ export default function OnboardingRequestsPage() {
 
   const [requests,    setRequests]    = useState([])
   const [loading,     setLoading]     = useState(true)
-  const [activeTab,   setActiveTab]   = useState(null)   // null = All
+  // Status tab lives in the URL (?tab=PENDING) so Back returns to the same tab
+  const [q, setQ]                     = useUrlState({ tab: '' })
+  const activeTab = q.tab || null                         // null = All
   const [reviewing,   setReviewing]   = useState(null)   // request being reviewed
   const [pendingCount,setPendingCount] = useState(0)
   const [view, setView] = useView('braify-onboarding-requests-view')
@@ -349,7 +352,7 @@ export default function OnboardingRequestsPage() {
   }, [requests])
 
   function handleTabChange(val) {
-    setActiveTab(val)
+    setQ({ tab: val ?? '' })
   }
 
   function handleDone() {

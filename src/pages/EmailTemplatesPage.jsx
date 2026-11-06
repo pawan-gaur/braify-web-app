@@ -1,18 +1,21 @@
-﻿import { useState, useEffect, useCallback, useMemo } from 'react'
+﻿import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getEmailTemplates, getInternalEmailTemplates, deleteEmailTemplate, sendEmailTemplate, getGlobalPlaceholders, cloneEmailTemplate, createEmailTemplate } from '../services/api'
+import { getEmailTemplates, getEmailTemplate, getInternalEmailTemplates, deleteEmailTemplate, sendEmailTemplate, getGlobalPlaceholders, cloneEmailTemplate, createEmailTemplate } from '../services/api'
 import TemplateUploadModal from '../components/templates/TemplateUploadModal'
 import TemplateCloneModal from '../components/templates/TemplateCloneModal'
 import useDocumentTitle from '../hooks/useDocumentTitle'
+import useUrlState from '../hooks/useUrlState'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import ViewToggle, { useView } from '../components/ui/ViewToggle'
 import VersionHistoryModal from '../components/ui/VersionHistoryModal'
 import EmailPreviewModal from '../components/ui/EmailPreviewModal'
-import EmailLibraryModal from '../components/ui/EmailLibraryModal'
 import { IconArrowRight } from '../components/ui/icons'
 import { fmtDate } from '../utils/date'
+
+// ~80 kB of library template HTML — only fetched when the library modal is opened.
+const EmailLibraryModal = lazy(() => import('../components/ui/EmailLibraryModal'))
 
 const CRUMBS = [
   { label: 'Dashboard',       to: '/' },
@@ -82,9 +85,17 @@ export default function EmailTemplatesPage() {
   const [view,     setView]     = useView('braify-view-email-templates')
   const [templates,       setTemplates]       = useState([])
   const [loading,         setLoading]         = useState(true)
-  const [activeCategory,  setActiveCategory]  = useState('all')
-  const [search,          setSearch]          = useState('')
-  const [activeTags,      setActiveTags]      = useState([])
+  // Scope / category / search / tags / sort live in the URL so Back from a template restores them.
+  const [q, setQ] = useUrlState({ scope: 'mine', category: 'all', search: '', tags: '', sort: 'updatedAt_desc' })
+  const activeCategory    = q.category
+  const setActiveCategory = v => setQ({ category: v })
+  const search            = q.search
+  const setSearch         = v => setQ({ search: v })
+  const activeTags        = useMemo(() => (q.tags ? q.tags.split(',') : []), [q.tags])
+  const setActiveTags     = v => setQ(prev => {
+    const cur = prev.tags ? prev.tags.split(',') : []
+    return { tags: (typeof v === 'function' ? v(cur) : v).join(',') }
+  })
   const [showLibrary,     setShowLibrary]     = useState(false)
   const [versionTemplate, setVersionTemplate] = useState(null)
   const [previewTemplate, setPreviewTemplate] = useState(null)
@@ -92,12 +103,14 @@ export default function EmailTemplatesPage() {
   const [uploadOpen,      setUploadOpen]      = useState(false)
   const [cloneSource,     setCloneSource]     = useState(null)
 
-  const [tableSortKey, setTableSortKey] = useState('updatedAt_desc')
+  const tableSortKey    = q.sort
+  const setTableSortKey = v => setQ({ sort: v })
 
   // Platform admins can switch between org templates ('mine') and the platform's
   // built-in system templates ('system' → INTERNAL, invite/reset/onboarding/e-sign).
   const isPlatformAdmin = can('manageOrgs')
-  const [scope, setScope] = useState('mine')
+  const scope    = isPlatformAdmin && q.scope === 'system' ? 'system' : 'mine'
+  const setScope = v => setQ({ scope: v })
 
   const load = useCallback(() => {
     setLoading(true)
@@ -163,6 +176,13 @@ export default function EmailTemplatesPage() {
   }, [visibleTemplates, tableSortKey])
 
   /* Navigate to builder with a library template pre-loaded */
+  // List items omit htmlContent/cssContent (slim payload) — load the full template to preview.
+  const openPreview = async (t) => {
+    if (t.htmlContent != null) { setPreviewTemplate(t); return }
+    try { setPreviewTemplate(await getEmailTemplate(t.id)) }
+    catch (err) { toast.error(err.message) }
+  }
+
   const handleLibrarySelect = (libTmpl) => {
     // "Start from scratch" and the "Standard — Branded" card both use the dynamic
     // org-branded starter (built in the builder from live Branding), not static HTML.
@@ -440,7 +460,7 @@ export default function EmailTemplatesPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
                           </svg>
                         </button>
-                        <button onClick={() => setPreviewTemplate(t)}
+                        <button onClick={() => openPreview(t)}
                           className="p-1.5 rounded-lg hover:bg-sky-50 dark:hover:bg-sky-900/30 text-gray-400 hover:text-sky-600 transition-colors"
                           title="Preview">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -496,7 +516,7 @@ export default function EmailTemplatesPage() {
               onDelete={can('delete') ? () => handleDelete(t.id, t.name) : null}
               onClone={() => setCloneSource(t)}
               onVersions={() => setVersionTemplate(t)}
-              onPreview={() => setPreviewTemplate(t)}
+              onPreview={() => openPreview(t)}
               onSend={() => setSendTemplate(t)}
             />
           ))}
@@ -505,10 +525,12 @@ export default function EmailTemplatesPage() {
 
       {/* Library modal */}
       {showLibrary && (
-        <EmailLibraryModal
-          onClose={() => setShowLibrary(false)}
-          onSelect={handleLibrarySelect}
-        />
+        <Suspense fallback={null}>
+          <EmailLibraryModal
+            onClose={() => setShowLibrary(false)}
+            onSelect={handleLibrarySelect}
+          />
+        </Suspense>
       )}
 
       {/* Version history modal */}

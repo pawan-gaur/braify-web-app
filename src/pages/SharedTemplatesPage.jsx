@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useToast } from '../context/ToastContext'
 import { getReceivedShares, getSentShares, revokeShare } from '../services/api'
 import useDocumentTitle from '../hooks/useDocumentTitle'
+import useUrlState from '../hooks/useUrlState'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import { fmtDate } from '../utils/date'
 
@@ -176,7 +177,10 @@ export default function SharedTemplatesPage() {
   useDocumentTitle('Shared Templates')
   const toast = useToast()
 
-  const [tab,      setTab]      = useState('received')  // 'received' | 'sent'
+  // Tab lives in the URL so Back from a template returns to the same tab.
+  const [q, setQ] = useUrlState({ tab: 'received' })
+  const tab    = q.tab === 'sent' ? 'sent' : 'received'   // 'received' | 'sent'
+  const setTab = t => setQ({ tab: t })
   const [received, setReceived] = useState([])
   const [sent,     setSent]     = useState([])
   const [loading,  setLoading]  = useState(true)

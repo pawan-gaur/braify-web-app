@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getAuditLogs, getAuditLogStats, exportAuditLogs, verifyAuditIntegrity, getOrganizations } from '../services/api'
 import useDocumentTitle from '../hooks/useDocumentTitle'
+import useUrlState from '../hooks/useUrlState'
 import { useToast } from '../context/ToastContext'
 import { useAuth, ROLES } from '../context/AuthContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
@@ -444,21 +445,32 @@ export default function AuditLogPage() {
   // ── State ──────────────────────────────────────────────────────
   const [data,            setData]           = useState({ content: [], totalElements: 0, totalPages: 0 })
   const [stats,           setStats]          = useState(null)
-  const [page,            setPage]           = useState(0)
   const [loading,         setLoading]        = useState(true)
   const [exporting,       setExporting]      = useState(false)
   const [verifying,       setVerifying]      = useState(false)
-  const [actionFilter,    setActionFilter]   = useState('ALL')
-  const [typeFilter,      setTypeFilter]     = useState('')
-  const [orgFilter,       setOrgFilter]      = useState('')
-  const [performedByFilt, setPerformedByFilt] = useState('')
-  const [fromDate,        setFromDate]       = useState('')
-  const [toDate,          setToDate]         = useState('')
+  // Page / filters live in the URL so Back from a template returns to the same page with the same filters.
+  const [q, setQ] = useUrlState({ page: 0, action: 'ALL', type: '', org: '', by: '', from: '', to: '' })
+  const page            = q.page
+  const actionFilter    = q.action
+  const typeFilter      = q.type
+  const orgFilter       = isPlatformAdmin ? q.org : ''   // org filter is platform-admin only
+  const performedByFilt = q.by
+  const fromDate        = q.from
+  const toDate          = q.to
+  const setPage = p => setQ(prev => ({ page: typeof p === 'function' ? p(prev.page) : p }))
+  // reset page on any filter change
+  const setFilter = (k, v) => setQ(prev => (prev[k] === v ? {} : { [k]: v, page: 0 }))
+  const setActionFilter    = v => setFilter('action', v)
+  const setTypeFilter      = v => setFilter('type', v)
+  const setOrgFilter       = v => setFilter('org', v)
+  const setPerformedByFilt = v => setFilter('by', v)
+  const setFromDate        = v => setFilter('from', v)
+  const setToDate          = v => setFilter('to', v)
   const [orgs,            setOrgs]           = useState([])
   const [expandedId,      setExpandedId]     = useState(null)
 
   // debounce performer input
-  const performedByRef  = useRef('')
+  const performedByRef  = useRef(q.by)
   const debounceTimerRef = useRef(null)
 
   const SIZE = 20
@@ -474,9 +486,6 @@ export default function AuditLogPage() {
       .then(setStats)
       .catch(() => {})
   }, [orgFilter])
-
-  // reset page on any filter change
-  useEffect(() => { setPage(0) }, [typeFilter, orgFilter, actionFilter, performedByFilt, fromDate, toDate])
 
   const toIso = (localDatetimeStr) => localDatetimeStr ? new Date(localDatetimeStr).toISOString() : null
 

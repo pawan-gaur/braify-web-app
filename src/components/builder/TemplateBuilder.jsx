@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import grapesjs from 'grapesjs'
 import { EDITOR_CONFIG } from './grapes-config'
+import { uploadToStorage } from '../../services/api'
+import { useToast } from '../../context/ToastContext'
 import PreviewDataModal from '../ui/PreviewDataModal'
 import AiAssistBar from './AiAssistBar'
 import { IconCheck } from '../ui/icons'
@@ -140,6 +142,7 @@ const PDF_PRESET_VARS = [
 export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
   const navigate   = useNavigate()
   const editorRef  = useRef(null)
+  const toast      = useToast()
   const mountedRef = useRef(false)
   // True when this template is a self-contained HTML document (uploaded design). Kept so that
   // saving re-emits a full document, preserving the backend's verbatim rendering.
@@ -221,7 +224,21 @@ export default function TemplateBuilder({ initialTemplate, onSave, isSaving }) {
     if (mountedRef.current) return
     mountedRef.current = true
 
-    const editor = grapesjs.init(EDITOR_CONFIG('gjs-canvas'))
+    const editor = grapesjs.init(EDITOR_CONFIG('gjs-canvas', {
+      onUploadImages: async (files) => {
+        const urls = []
+        for (const file of files) {
+          try {
+            const stored = await uploadToStorage(file, 'TEMPLATE_IMAGE')
+            editor.AssetManager.add({ src: stored.publicUrl, name: stored.filename })
+            urls.push(stored.publicUrl)
+          } catch (err) {
+            toast.error(`Could not upload ${file.name}: ${err.message}`)
+          }
+        }
+        return urls
+      },
+    }))
     editorRef.current = editor
 
     // ── Register th/td as text-type so double-click opens the RTE in tables ──

@@ -1,7 +1,9 @@
 ﻿import { useState, useEffect } from 'react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth, ROLES as USER_ROLES } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { getBranding, updateBranding, getCloudConfig, updateCloudConfig, getEsignReminderPolicy, updateEsignReminderPolicy } from '../services/api'
+import { getBranding, updateBranding, getCloudConfig, updateCloudConfig, getEsignReminderPolicy, updateEsignReminderPolicy, getOrgSmsConfig, updateOrgSmsConfig, testOrgSmsConfig } from '../services/api'
+import SmsProviderForm from '../components/settings/SmsProviderForm'
+import { Link } from 'react-router-dom'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import LogoUpload from '../components/ui/LogoUpload'
@@ -45,7 +47,7 @@ const PRESETS = [
 /* ─────────────────────────────────────────────────────────────── */
 export default function OrgSettingsPage() {
   useDocumentTitle('Organization Settings')
-  const { user, setFeatureRoleAccess } = useAuth()
+  const { user, setFeatureRoleAccess, bulkEnabled } = useAuth()
   const toast = useToast()
   const orgId = user?.organizationId
 
@@ -53,6 +55,7 @@ export default function OrgSettingsPage() {
   const [loading,   setLoading]   = useState(true)
   const [saving,    setSaving]    = useState(false)
   const [savingCloud, setSavingCloud] = useState(false)
+  const [managedStorage, setManagedStorage] = useState(false)
   const [savingReminders, setSavingReminders] = useState(false)
   const [orgFeatures, setOrgFeatures] = useState([])   // which features org has enabled
 
@@ -62,11 +65,13 @@ export default function OrgSettingsPage() {
     firstReminderAfterHours: 24,
     repeatEveryHours: 24,
     maxReminders: 10,
+    smsEnabled: false,
   })
 
   /* Branding form state */
   const [form, setForm] = useState({
-    logoBase64:      null,
+    logoFileId:      null,   // new upload, sent on save
+    logoPreview:     null,   // its preview URL
     logoUrl:         null,
     primaryColor:    DEFAULT_PRIMARY,
     accentColor:     DEFAULT_ACCENT,
@@ -109,6 +114,7 @@ export default function OrgSettingsPage() {
           firstReminderAfterHours: p.firstReminderAfterHours ?? 24,
           repeatEveryHours: p.repeatEveryHours ?? 24,
           maxReminders: p.maxReminders ?? 10,
+          smsEnabled: !!p.smsEnabled,
         })
       }
 
@@ -116,7 +122,8 @@ export default function OrgSettingsPage() {
       if (brandingResult.status === 'fulfilled') {
         const data = brandingResult.value
         setForm({
-          logoBase64:        data.logoBase64        || null,
+          logoFileId:        null,
+          logoPreview:       null,
           logoUrl:           data.logoUrl           || null,
           primaryColor:      data.primaryColor      || DEFAULT_PRIMARY,
           accentColor:       data.accentColor       || DEFAULT_ACCENT,
@@ -130,6 +137,7 @@ export default function OrgSettingsPage() {
       }
 
       // Cloud config
+      setManagedStorage(cloudResult.status === 'fulfilled' && !!cloudResult.value?.managedStorage)
       if (cloudResult.status === 'fulfilled' && cloudResult.value?.configured) {
         const c = cloudResult.value
         setCloudForm({
@@ -162,6 +170,7 @@ export default function OrgSettingsPage() {
         firstReminderAfterHours: Number(reminderForm.firstReminderAfterHours) || 24,
         repeatEveryHours: Number(reminderForm.repeatEveryHours) || 24,
         maxReminders: Number(reminderForm.maxReminders) || 10,
+        smsEnabled: !!reminderForm.smsEnabled,
       }
       const saved = await updateEsignReminderPolicy(orgId, payload)
       setReminderForm({
@@ -169,6 +178,7 @@ export default function OrgSettingsPage() {
         firstReminderAfterHours: saved.firstReminderAfterHours ?? 24,
         repeatEveryHours: saved.repeatEveryHours ?? 24,
         maxReminders: saved.maxReminders ?? 10,
+        smsEnabled: !!saved.smsEnabled,
       })
       toast.success('Reminder policy saved.')
     } catch (err) {
@@ -184,8 +194,8 @@ export default function OrgSettingsPage() {
     try {
       const res = await updateBranding(orgId, form)
       setFeatureRoleAccess(res.featureRoleAccess ?? null)
-      // Sync logo state with what the server persisted (base64 may be offloaded → null, url set).
-      setForm(f => ({ ...f, logoBase64: res.logoBase64 || null, logoUrl: res.logoUrl || null }))
+      // The upload is now the saved logo; keep only its stable URL.
+      setForm(f => ({ ...f, logoFileId: null, logoPreview: null, logoUrl: res.logoUrl || null }))
       if (form.primaryColor) document.documentElement.style.setProperty('--brand-primary', form.primaryColor)
       if (form.accentColor)  document.documentElement.style.setProperty('--brand-accent',  form.accentColor)
       toast.success('Settings saved successfully.')
@@ -243,6 +253,9 @@ export default function OrgSettingsPage() {
       ? [{ id: 'reminders', label: 'E-Sign Reminders', icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' }]
       : []),
     { id: 'cloud',    label: 'Cloud Storage',  icon: 'M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z' },
+    ...(orgId && [USER_ROLES.ORG_ADMIN, USER_ROLES.PLATFORM_ADMIN].includes(user?.role)
+      ? [{ id: 'sms', label: 'SMS', icon: 'M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z' }]
+      : []),
   ]
 
   return (
@@ -280,7 +293,7 @@ export default function OrgSettingsPage() {
 
       {/* ── Tab: Identity ── */}
       {activeTab === 'identity' && (
-        <IdentityTab form={form} set={set} saving={saving} onSave={handleSave} />
+        <IdentityTab form={form} set={set} saving={saving} onSave={handleSave} orgId={orgId} />
       )}
 
       {/* ── Tab: Theme & Colors ── */}
@@ -306,12 +319,27 @@ export default function OrgSettingsPage() {
           set={setReminder}
           saving={savingReminders}
           onSave={handleSaveReminders}
+          smsAllowed={bulkEnabled}
         />
+      )}
+
+      {/* ── Tab: SMS provider ── */}
+      {activeTab === 'sms' && (
+        <div className="max-w-2xl card p-6">
+          <h2 className="text-sm font-bold text-gray-700 dark:text-gray-200">SMS provider</h2>
+          <p className="text-xs text-ink-3 mt-1 mb-5">
+            Send SMS reminders through your own Twilio, Vonage or HTTP gateway account. Leave it on
+            “Platform default” to use the provider Braify sets up.
+          </p>
+          <SmsProviderForm noneLabel="Platform default"
+            load={() => getOrgSmsConfig(orgId)} save={body => updateOrgSmsConfig(orgId, body)} test={to => testOrgSmsConfig(orgId, to)} />
+        </div>
       )}
 
       {/* ── Tab: Cloud Storage ── */}
       {activeTab === 'cloud' && (
         <CloudStorageTab
+          managed={managedStorage}
           form={cloudForm}
           set={setCloud}
           saving={savingCloud}
@@ -325,7 +353,7 @@ export default function OrgSettingsPage() {
 /* ══════════════════════════════════════════════════════════════════
    Tab: E-Sign Reminders — automatic reminder schedule for the org
 ══════════════════════════════════════════════════════════════════ */
-function RemindersTab({ form, set, saving, onSave }) {
+function RemindersTab({ form, set, saving, onSave, smsAllowed }) {
   const num = (key, val) => set(key, val === '' ? '' : Math.max(0, parseInt(val, 10) || 0))
   return (
     <div className="max-w-2xl space-y-6">
@@ -369,6 +397,29 @@ function RemindersTab({ form, set, saving, onSave }) {
             hint="Stop after this many per signer." />
         </div>
 
+        <label className={`flex items-center justify-between gap-4 py-2 border-t border-ink-8 dark:border-gray-700 pt-4 ${smsAllowed ? '' : 'opacity-60'}`}>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+            Also send reminders by SMS {!smsAllowed && <span className="badge badge-brand ml-1 align-middle">Pro</span>}
+            <span className="block text-xs text-ink-3 font-normal">
+              {smsAllowed
+                ? 'Texts a short signing link to signatories who have a phone number. Uses your SMS provider (Settings → SMS) or the platform default.'
+                : <>SMS reminders are on the Pro plan. <Link to="/settings/billing" className="text-brand font-semibold">Upgrade</Link></>}
+            </span>
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={!!form.smsEnabled}
+            disabled={!smsAllowed && !form.smsEnabled}   /* after a downgrade it can still be switched off */
+            onClick={() => set('smsEnabled', !form.smsEnabled)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0
+              ${form.smsEnabled ? 'bg-gradient-accent' : 'bg-gray-300 dark:bg-gray-600'}`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+              ${form.smsEnabled ? 'translate-x-6' : 'translate-x-1'}`}/>
+          </button>
+        </label>
+
         <p className="text-xs text-ink-3">
           Reminders never extend a document’s expiry — they stop automatically once it’s signed or expires.
         </p>
@@ -400,7 +451,7 @@ function NumberField({ label, suffix, value, onChange, min, max, hint }) {
 /* ══════════════════════════════════════════════════════════════════
    Tab: Identity — Logo + Email Sender + Footer
 ══════════════════════════════════════════════════════════════════ */
-function IdentityTab({ form, set, saving, onSave }) {
+function IdentityTab({ form, set, saving, onSave, orgId }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       {/* Left column */}
@@ -412,9 +463,12 @@ function IdentityTab({ form, set, saving, onSave }) {
             Appears in PDF document headers, outgoing emails, and the web app navigation.
           </p>
           <LogoUpload
-            logoBase64={form.logoBase64}
+            logoPreview={form.logoPreview}
             logoUrl={form.logoUrl}
-            onChange={({ base64, url }) => { set('logoBase64', base64 ?? null); set('logoUrl', url ?? null) }}
+            orgId={orgId}
+            onChange={({ fileId, preview, url }) => {
+              set('logoFileId', fileId ?? null); set('logoPreview', preview ?? null); set('logoUrl', url ?? null)
+            }}
             label=""
           />
         </div>
@@ -767,8 +821,8 @@ function PdfPreview({ form }) {
     <div className="card p-0 overflow-hidden">
       <div className="px-5 py-4 flex items-center gap-4 bg-white dark:bg-gray-800"
         style={{ borderBottom: `3px solid ${form.primaryColor}` }}>
-        {(form.logoBase64 || form.logoUrl) ? (
-          <img src={form.logoBase64 || form.logoUrl} alt="Logo" className="h-10 max-w-[100px] object-contain shrink-0" />
+        {(form.logoPreview || form.logoUrl) ? (
+          <img src={form.logoPreview || form.logoUrl} alt="Logo" className="h-10 max-w-[100px] object-contain shrink-0" />
         ) : (
           <div className="w-14 h-10 rounded border-2 border-dashed border-gray-200 dark:border-gray-600
                           flex items-center justify-center shrink-0">
@@ -804,8 +858,8 @@ function EmailPreview({ form }) {
       <div className="h-1.5 w-full" style={{ background: form.primaryColor }} />
       <div className="p-5 bg-white dark:bg-gray-800">
         <div className="flex items-center gap-3 mb-4">
-          {(form.logoBase64 || form.logoUrl) ? (
-            <img src={form.logoBase64 || form.logoUrl} alt="Logo" className="h-8 max-w-[80px] object-contain" />
+          {(form.logoPreview || form.logoUrl) ? (
+            <img src={form.logoPreview || form.logoUrl} alt="Logo" className="h-8 max-w-[80px] object-contain" />
           ) : (
             <div className="w-10 h-8 rounded border-2 border-dashed border-gray-200 dark:border-gray-600
                             flex items-center justify-center">
@@ -850,8 +904,8 @@ function AppThemePreview({ form }) {
     <div className="card overflow-hidden">
       {/* Mock top nav */}
       <div className="px-4 py-3 flex items-center gap-3" style={{ background: p }}>
-        {(form.logoBase64 || form.logoUrl) ? (
-          <img src={form.logoBase64 || form.logoUrl} alt="Logo" className="h-7 max-w-[80px] object-contain" />
+        {(form.logoPreview || form.logoUrl) ? (
+          <img src={form.logoPreview || form.logoUrl} alt="Logo" className="h-7 max-w-[80px] object-contain" />
         ) : (
           <div className="flex items-center gap-1.5">
             <div className="w-6 h-6 rounded bg-white/20" />
@@ -961,7 +1015,7 @@ const CLOUD_PROVIDERS = [
 
 const COMMON_FILE_TYPES = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'zip']
 
-function CloudStorageTab({ form, set, saving, onSave }) {
+function CloudStorageTab({ managed, form, set, saving, onSave }) {
   const [fileTypeInput, setFileTypeInput] = useState('')
 
   const addFileType = (type) => {
@@ -984,6 +1038,14 @@ function CloudStorageTab({ form, set, saving, onSave }) {
 
   return (
     <div className="space-y-6">
+
+      {/* Managed storage — no setup needed */}
+      {managed && (
+        <div className="alert-success border rounded-xl px-5 py-4 text-sm">
+          <p className="font-semibold">Using Braify managed storage — no setup needed.</p>
+          <p className="mt-1">Your files, e-sign documents and logo are stored securely by Braify. Configure your own bucket below only if you need data in your own cloud account; new files then go there, and existing files stay readable.</p>
+        </div>
+      )}
 
       {/* Info banner */}
       <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl px-5 py-4">

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { updateProfile, changePassword, uploadAvatar, getMyAuditLog } from '../services/api'
+import { updateProfile, changePassword, uploadAvatar, uploadToStorage, getMyAuditLog } from '../services/api'
 import MfaCard from '../components/profile/MfaCard'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
@@ -111,21 +111,13 @@ export default function ProfilePage() {
     if (file.size > 2 * 1024 * 1024) { toast.error('Image must be smaller than 2 MB.'); return }
     setUploadingAvatar(true)
     try {
-      const reader = new FileReader()
-      reader.onload = async (ev) => {
-        try {
-          const base64 = ev.target.result
-          const updated = await uploadAvatar(base64)
-          setUser(u => ({ ...u, profilePicture: updated.profilePicture }))
-          toast.success('Profile picture updated.')
-        } catch (err) {
-          toast.error(err.message || 'Failed to upload avatar.')
-        } finally {
-          setUploadingAvatar(false)
-        }
-      }
-      reader.readAsDataURL(file)
-    } catch {
+      const stored  = await uploadToStorage(file, 'AVATAR')
+      const updated = await uploadAvatar(stored.id)
+      setUser(u => ({ ...u, profilePicture: updated.profilePicture }))
+      toast.success('Profile picture updated.')
+    } catch (err) {
+      toast.error(err.message || 'Failed to upload avatar.')
+    } finally {
       setUploadingAvatar(false)
     }
   }

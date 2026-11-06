@@ -9,8 +9,11 @@ import {
   getTemplates,
   generatePdfAsBase64,
   getEmailTemplates,
+  uploadToStorage,
+  dataUrlToBlob,
 } from '../services/api'
 import { useToast } from '../context/ToastContext'
+import { useAuth } from '../context/AuthContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import FileDropZone from '../components/ui/FileDropZone'
 import TemplatePreviewButton from '../components/ui/TemplatePreviewButton'
@@ -18,9 +21,12 @@ import { IconX, IconCheck, IconArrowRight, IconArrowLeft } from '../components/u
 import PdfPageCanvas from '../components/esign/PdfPageCanvas'
 import SignatureCaptureModal from '../components/esign/SignatureCaptureModal'
 import PdfZoomControl from '../components/esign/PdfZoomControl'
+import SaveAsTemplateModal from '../components/esign/SaveAsTemplateModal'
 import { fmtFieldDate } from '../utils/date'
+import { compressPdfIfLarge, fmtMb } from '../utils/compressPdf'
 import EmailAutocomplete from '../components/ui/EmailAutocomplete'
 import useEmailContacts, { addLocalContacts } from '../hooks/useEmailContacts'
+import { listUrl } from '../hooks/useUrlState'
 
 const FIELD_TYPES = [
   { type: 'SIGNATURE', label: 'Signature',  color: '#7c3aed', bg: '#ede9fe' },
@@ -94,6 +100,7 @@ async function fetchFileAsBase64(url, extraHeaders = {}) {
 /* ══════════════════════════════════════════════════════════════════════════ */
 export default function ESignBuilderPage({ initialDocStatus }) {
   const { id }        = useParams()
+  const { bulkEnabled: smsAvailable } = useAuth()   // SMS reminders follow the bulk (Pro) rule
   const navigate      = useNavigate()
   const { showToast } = useToast()
   const isEdit        = !!id
@@ -108,6 +115,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
   })
   const [formErrors, setFormErrors] = useState({})
   const [creating, setCreating]     = useState(false)
+  const [compressing, setCompressing] = useState(null)  // { page, total } while shrinking a large PDF
 
   /* ── recipient chip lists (CC on invitation + final signed-copy) ─────── */
   const [inviteCc,          setInviteCc]          = useState([])   // CC on the signing invitation
@@ -223,6 +231,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
   const [sending, setSending] = useState(false)
   const [saving,  setSaving]  = useState(false)
   const [savingDraft, setSavingDraft] = useState(false)
+  const [templateDoc, setTemplateDoc] = useState(null)   // Save-as-template modal (doc snapshot)
   const [lastSavedAt, setLastSavedAt] = useState(null)
 
   /* ── derived ──────────────────────────────────────────────────────────── */
@@ -294,7 +303,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
       setFields(d.fields || [])
       setForm(f => ({ ...f, title: d.title, clientEmail: d.clientEmail, clientName: d.clientName }))
       setSignatories(d.signatories?.length
-        ? d.signatories.map(s => ({ id: s.id, name: s.name, email: s.email }))
+        ? d.signatories.map(s => ({ id: s.id, name: s.name, email: s.email, phone: s.phone || '' }))
         : [{ name: d.clientName || '', email: d.clientEmail || '' }])
       setSigningMode(d.signingMode || 'PARALLEL')
       setInviteCc(d.ccEmails || [])
@@ -394,6 +403,26 @@ export default function ESignBuilderPage({ initialDocStatus }) {
     }
   }
 
+  /** Shrink an uploaded / fetched PDF that is too large to send (see utils/compressPdf). */
+  async function shrinkPdf(dataUrl) {
+    try {
+      const r = await compressPdfIfLarge(dataUrl, {
+        onProgress: (page, total) => setCompressing({ page, total }),
+      })
+      if (r.compressed)
+        showToast(`Large PDF compressed from ${fmtMb(r.originalBytes)} to ${fmtMb(r.bytes)}`, 'info')
+      return r.dataUrl
+    } finally {
+      setCompressing(null)
+    }
+  }
+
+  /** Upload the PDF to storage first; the create call then only carries its id. */
+  async function uploadSourcePdf(dataUrl, name) {
+    const stored = await uploadToStorage(dataUrlToBlob(dataUrl, 'application/pdf'), 'ESIGN_SOURCE', name || 'document.pdf')
+    return stored.id
+  }
+
   /** Try each active source in priority order, return first that succeeds. */
   async function resolvePdfSource() {
     let lastErr = null
@@ -401,15 +430,17 @@ export default function ESignBuilderPage({ initialDocStatus }) {
       try {
         if (src === 'single') {
           if (!pdfBase64) throw new Error('No PDF uploaded')
-          return { sourceType: 'UPLOAD', pdfBase64, previewBase64: pdfBase64 }
+          const b64 = await shrinkPdf(pdfBase64)
+          return { sourceType: 'UPLOAD', sourceFileId: await uploadSourcePdf(b64, pdfFileName), previewBase64: b64 }
         } else if (src === 'template') {
           if (!selectedTemplateId) throw new Error('No template selected')
           const previewB64 = await generatePdfAsBase64(selectedTemplateId, {})
-          return { sourceType: 'TEMPLATE', templateId: selectedTemplateId, previewBase64: previewB64 }
+          // Send the rendered PDF too — the backend stores it as the signing source.
+          return { sourceType: 'TEMPLATE', templateId: selectedTemplateId, pdfBase64: previewB64, previewBase64: previewB64 }
         } else {
           if (!fileApi.url) throw new Error('No API URL configured')
-          const b64 = await fetchFileAsBase64(fileApi.url, buildAuthHeaders(fileApi))
-          return { sourceType: 'UPLOAD', pdfBase64: b64, previewBase64: b64 }
+          const b64 = await shrinkPdf(await fetchFileAsBase64(fileApi.url, buildAuthHeaders(fileApi)))
+          return { sourceType: 'UPLOAD', sourceFileId: await uploadSourcePdf(b64, 'document.pdf'), previewBase64: b64 }
         }
       } catch (e) {
         lastErr = e
@@ -471,6 +502,8 @@ export default function ESignBuilderPage({ initialDocStatus }) {
       const emails = signatories.map(s => s.email.trim().toLowerCase())
       if (new Set(emails).size !== emails.length)
         errors.signatories = 'Each signatory must have a unique email'
+      else if (signatories.some(s => s.phone?.trim() && !/^(\+|00)[1-9][\d\s().-]{6,20}$/.test(s.phone.trim())))
+        errors.signatories = 'Phone numbers must be in international format, e.g. +250788123456'
     }
 
     // At least one source must be enabled and minimally configured
@@ -508,9 +541,11 @@ export default function ESignBuilderPage({ initialDocStatus }) {
         title:           form.title,
         sourceType:      resolved.sourceType,
         pdfBase64:       resolved.pdfBase64,
+        sourceFileId:    resolved.sourceFileId,
         templateId:      resolved.templateId,
         signatories:     signatories.map((s, i) => ({
                             name: s.name.trim(), email: s.email.trim(), signingOrder: i + 1,
+                            phone: s.phone?.trim() || undefined,
                          })),
         signingMode,
         tokenValidDays:  form.tokenValidDays,
@@ -666,6 +701,24 @@ export default function ESignBuilderPage({ initialDocStatus }) {
     }
   }
 
+  /** Saves the current layout, then offers to keep it as a reusable template. */
+  async function handleSaveAsTemplate() {
+    if (!docId) return
+    setSavingDraft(true)
+    try {
+      await esignSaveFields(docId, fieldsPayload())
+      setLastSavedAt(Date.now())
+      setTemplateDoc({
+        id: docId, title: form.title,
+        signatories: signatories.map((s, i) => ({ ...s, signingOrder: i + 1 })),
+      })
+    } catch (e) {
+      showToast(e.message || 'Failed to save fields', 'error')
+    } finally {
+      setSavingDraft(false)
+    }
+  }
+
   async function handleSaveFields() {
     if (!docId) { showToast('Document not ready — complete Step 1 first', 'error'); return }
     setSaving(true)
@@ -675,7 +728,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                        || ['PENDING', 'IN_REVIEW'].includes(doc?.status)
       if (alreadySent) {
         showToast('Fields updated successfully', 'success')
-        navigate('/esign')
+        navigate(listUrl('/esign'))
         return
       }
       setStep(2)
@@ -695,7 +748,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
     setSending(true)
     try {
       await esignSendDocument(docId, form.tokenValidDays)
-      navigate('/esign')
+      navigate(listUrl('/esign'))
       const recipientNote = signatories.length > 1
         ? `${signatories.length} signatories`
         : (signatories[0]?.email || doc?.clientEmail)
@@ -1021,7 +1074,7 @@ export default function ESignBuilderPage({ initialDocStatus }) {
           { label: 'E-Sign Documents', to: '/esign' },
           { label: isEdit ? 'Edit Document' : 'New Document' },
         ]} />
-        <button onClick={() => navigate('/esign')}
+        <button onClick={() => navigate(listUrl('/esign'))}
           className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 dark:hover:text-white mt-4 mb-4">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/>
@@ -1278,6 +1331,17 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                         ...(s.name?.trim() ? {} : { name: c.name || '' }),
                       })}
                     />
+                    {smsAvailable && (
+                      <input
+                        className={inputCls + ' !w-36 shrink-0'}
+                        type="tel"
+                        placeholder="+250… (SMS)"
+                        title="Optional mobile number in international format — used for SMS reminders"
+                        aria-label={`Signatory ${i + 1} phone (optional)`}
+                        value={s.phone || ''}
+                        onChange={e => updateSignatory(i, { phone: e.target.value })}
+                      />
+                    )}
                     {signingMode === 'SEQUENTIAL' && signatories.length > 1 && (
                       <div className="flex flex-col shrink-0">
                         <button type="button" onClick={() => moveSignatory(i, -1)} disabled={i === 0}
@@ -1369,7 +1433,9 @@ export default function ESignBuilderPage({ initialDocStatus }) {
             disabled={creating}
             className="btn btn-accent w-full mt-6"
           >
-            {creating ? 'Creating…' : 'Continue → Place Fields'}
+            {compressing
+              ? `Compressing PDF… page ${compressing.page} of ${compressing.total}`
+              : creating ? 'Creating…' : 'Continue → Place Fields'}
           </button>
         </div>
       )}
@@ -1588,6 +1654,16 @@ export default function ESignBuilderPage({ initialDocStatus }) {
                 {lastSavedAt && (
                   <p className="text-[11px] text-center text-gray-400 mt-1.5">Draft saved</p>
                 )}
+                <button
+                  onClick={handleSaveAsTemplate}
+                  disabled={saving || savingDraft || !docId || fields.length === 0}
+                  className="w-full mt-2 py-2 rounded-xl text-sm font-semibold text-accent-700 dark:text-accent-300
+                             hover:bg-accent-50 dark:hover:bg-accent-900/20 transition-colors disabled:opacity-50"
+                  title="Reuse this PDF and field layout for future documents"
+                >
+                  Save as template
+                </button>
+                {templateDoc && <SaveAsTemplateModal doc={templateDoc} openList={false} onClose={() => setTemplateDoc(null)} />}
 
                 <button
                   onClick={() => setStep(0)}

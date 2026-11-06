@@ -1,18 +1,15 @@
 import { useState, useRef, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import * as XLSX from 'xlsx'
-import * as pdfjsLib from 'pdfjs-dist'
-import PdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?worker'
-import { esignBulkCreate, getTemplates, generatePdfAsBase64, getEmailTemplates } from '../services/api'
+import { esignBulkCreate, getTemplates, generatePdfAsBase64, getEmailTemplates, uploadToStorage, dataUrlToBlob } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import FileDropZone from '../components/ui/FileDropZone'
 import TemplatePreviewButton from '../components/ui/TemplatePreviewButton'
 import { IconCheck, IconX, IconChevronRight } from '../components/ui/icons'
-
-// Bundle the pdf.js worker via Vite's ?worker (a .js chunk) rather than ?url (a .mjs file),
-// which some prod static hosts serve with a non-JS MIME type and refuse to load.
-pdfjsLib.GlobalWorkerOptions.workerPort = new PdfjsWorker()
+import { listUrl } from '../hooks/useUrlState'
+import { compressPdfIfLarge } from '../utils/compressPdf'
+// pdf.js + its worker load lazily the first time a PDF is rendered.
+import { getPdfjs } from '../utils/pdfjsLoader'
 
 const CRUMBS = [
   { label: 'Dashboard', to: '/' },
@@ -54,7 +51,9 @@ const ESIGN_MAP_FIELDS = [
 /* Utilities                                                            */
 /* ─────────────────────────────────────────────────────────────────── */
 
-function parseExcelFile(file) {
+async function parseExcelFile(file) {
+  // xlsx (~325 kB) is only needed once a sheet is dropped, not to render the page.
+  const XLSX = await import('xlsx')
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = e => {
@@ -329,11 +328,14 @@ function PdfPageCanvas({ base64DataUrl, pageNumber, onPageCountChange }) {
   useEffect(() => {
     if (!base64DataUrl || !canvasRef.current) return
     let cancelled = false
+    let renderTask = null   // in-flight page.render(); cancelled on cleanup so a re-run can reuse the canvas
 
     ;(async () => {
       try {
         const b64   = base64DataUrl.includes(',') ? base64DataUrl.split(',')[1] : base64DataUrl
         const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0))
+        const pdfjsLib = await getPdfjs()
+        if (cancelled) return
         const pdf   = await pdfjsLib.getDocument({ data: bytes }).promise
         if (cancelled) return
 
@@ -356,13 +358,14 @@ function PdfPageCanvas({ base64DataUrl, pageNumber, onPageCountChange }) {
 
         const ctx = canvas.getContext('2d')
         ctx.clearRect(0, 0, canvas.width, canvas.height)
-        await page.render({ canvasContext: ctx, viewport: scaled }).promise
+        renderTask = page.render({ canvasContext: ctx, viewport: scaled })
+        await renderTask.promise
       } catch (err) {
-        if (!cancelled) console.error('PDF render error:', err)
+        if (!cancelled && err?.name !== 'RenderingCancelledException') console.error('PDF render error:', err)
       }
     })()
 
-    return () => { cancelled = true }
+    return () => { cancelled = true; renderTask?.cancel() }
   }, [base64DataUrl, pageNumber])
 
   return <canvas ref={canvasRef} className="block w-full" />
@@ -813,32 +816,46 @@ export default function ESignBulkPage() {
     const fieldPayload  = bulkFields.map(({ id: _id, ...rest }) => rest)
     const resolvedDocs  = []
 
+    // Each PDF is compressed if it's too large to upload, then uploaded to storage; the bulk
+    // request only carries file ids. See utils/compressPdf.
+    const toStoredPdf = async (dataUrl, i, name) => {
+      const r = await compressPdfIfLarge(dataUrl, {
+        onProgress: (page, pages) => setProcessProgress({
+          current: i, total: validRows.length, note: `Compressing PDF… page ${page} of ${pages}`,
+        }),
+      }).finally(() => setProcessProgress({ current: i, total: validRows.length }))
+      const stored = await uploadToStorage(dataUrlToBlob(r.dataUrl, 'application/pdf'), 'ESIGN_SOURCE', name)
+      return stored.id
+    }
+    let singleFileId = null   // the shared single PDF, uploaded once; the server copies it per document
+
     // ── Phase 1: Resolve PDFs browser-side with progress ──────────────
     for (let i = 0; i < validRows.length; i++) {
       const row = validRows[i]
       setProcessProgress({ current: i, total: validRows.length })
 
-      let pdfBase64 = null, lastErr = null
+      let sourceFileId = null, lastErr = null
       for (const src of activeSources) {
         try {
           if (src === 'single') {
-            pdfBase64 = singlePdfBase64
+            singleFileId ??= await toStoredPdf(singlePdfBase64, i, singlePdfFileName || 'document.pdf')
+            sourceFileId = singleFileId
           } else if (src === 'template') {
             const data = {}
             ;(selectedTemplate?.placeholders || []).forEach(p => {
               const col = placeholderMapping[p]
               data[p] = col ? (row.rawRow[col] || '') : ''
             })
-            pdfBase64 = await generatePdfAsBase64(selectedTemplateId, data)
+            sourceFileId = await toStoredPdf(await generatePdfAsBase64(selectedTemplateId, data), i, `${row.title || 'document'}.pdf`)
           } else {
             const url = buildApiUrl(fileApi.url, row.rawRow)
-            pdfBase64 = await fetchFileAsBase64(url, buildAuthHeaders(fileApi))
+            sourceFileId = await toStoredPdf(await fetchFileAsBase64(url, buildAuthHeaders(fileApi)), i, `${row.title || 'document'}.pdf`)
           }
-          if (pdfBase64) break
+          if (sourceFileId) break
         } catch (e) { lastErr = e }
       }
 
-      if (!pdfBase64) {
+      if (!sourceFileId) {
         setProcessing(false)
         setProcessError(`Row ${i + 1} (${row.clientEmail}): PDF resolution failed — ${lastErr?.message || 'No PDF source returned data'}`)
         return
@@ -850,7 +867,8 @@ export default function ESignBulkPage() {
         clientName:      row.clientName,
         ccEmails:        row.ccEmails?.length ? row.ccEmails : undefined,
         tokenValidDays:  parseInt(row.tokenValidDays) || 7,
-        pdfBase64,
+        sourceType:      'UPLOAD',
+        sourceFileId,
         fields:          fieldPayload.length ? fieldPayload : undefined,
         emailTemplateId: selectedEmailTemplateId || undefined,
       })
@@ -862,7 +880,7 @@ export default function ESignBulkPage() {
     try {
       await esignBulkCreate(resolvedDocs, true, resolvedLabel, allowClientUpload, allowedFileTypes)
       showToast(`Bulk send complete — ${resolvedDocs.length} document${resolvedDocs.length !== 1 ? 's' : ''} created`, 'success')
-      navigate('/esign')
+      navigate(listUrl('/esign'))
     } catch (err) {
       setProcessError('Failed to create bulk batch: ' + err.message)
     } finally {
@@ -2153,7 +2171,7 @@ export default function ESignBulkPage() {
 
     // ── Processing: progress bar ──────────────────────────────────────
     if (processing) {
-      const { current, total } = processProgress
+      const { current, total, note } = processProgress
       const pct = total > 0 ? Math.round((current / total) * 100) : 0
       return (
         <div className="space-y-6 py-6">
@@ -2161,6 +2179,7 @@ export default function ESignBulkPage() {
             <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin shrink-0"/>
             <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
               Processing… {current} / {total}
+              {note && <span className="ml-2 font-normal text-gray-500 dark:text-gray-400">{note}</span>}
             </p>
           </div>
           <div className="space-y-1">

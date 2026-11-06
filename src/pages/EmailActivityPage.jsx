@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { emailLogsList, getOrganizations } from '../services/api'
 import { useAuth, ROLES } from '../context/AuthContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
+import useUrlState from '../hooks/useUrlState'
 import { fmtDateTimeGB as fmtDate } from '../utils/date'
 
 const CRUMBS = [{ label: 'Dashboard', to: '/' }, { label: 'Email Activity' }]
@@ -46,15 +47,19 @@ export default function EmailActivityPage() {
 
   const [data,     setData]     = useState({ content: [], totalElements: 0, totalPages: 0 })
   const [loading,  setLoading]  = useState(true)
-  const [page,     setPage]     = useState(0)
-  const [search,   setSearch]   = useState('')
-  const [debounced, setDebounced] = useState('')
-  const [category, setCategory] = useState('')
-  const [status,   setStatus]   = useState('')
-  const [recipientType, setRecipientType] = useState('')  // '' | 'TO' | 'CC'
-  const [orgFilter, setOrgFilter] = useState('')
-  const [fromDate, setFromDate] = useState('')
-  const [toDate,   setToDate]   = useState('')
+  // Page / filters live in the URL so Back/refresh returns to the same page with the same filters.
+  const [q, setQ] = useUrlState({ page: 0, search: '', category: '', status: '', rtype: '', org: '', from: '', to: '' })
+  const { page, category, status } = q
+  const debounced = q.search, recipientType = q.rtype, orgFilter = q.org, fromDate = q.from, toDate = q.to  // recipientType: '' | 'TO' | 'CC'
+  const setPage   = p => setQ(prev => ({ page: typeof p === 'function' ? p(prev.page) : p }))
+  const [search,   setSearch]   = useState(q.search)   // input text; debounced into the URL
+  // Changing a filter resets to the first page
+  const setCategory      = v => setQ({ category: v, page: 0 })
+  const setStatus        = v => setQ({ status: v, page: 0 })
+  const setRecipientType = v => setQ({ rtype: v, page: 0 })
+  const setOrgFilter     = v => setQ({ org: v, page: 0 })
+  const setFromDate      = v => setQ({ from: v, page: 0 })
+  const setToDate        = v => setQ({ to: v, page: 0 })
   const [orgs,     setOrgs]     = useState([])
   const [expandedId, setExpandedId] = useState(null)
 
@@ -64,14 +69,12 @@ export default function EmailActivityPage() {
     getOrganizations().then(list => setOrgs(Array.isArray(list) ? list : (list?.content || []))).catch(() => {})
   }, [isPlatform])
 
-  // Debounce search
+  // Debounce search (also resets to the first page on change)
   useEffect(() => {
-    const t = setTimeout(() => setDebounced(search.trim()), 350)
+    if (search.trim() === q.search) return   // unchanged (incl. first render) — keep the restored page
+    const t = setTimeout(() => setQ({ search: search.trim(), page: 0 }), 350)
     return () => clearTimeout(t)
-  }, [search])
-
-  // Reset to first page whenever a filter changes
-  useEffect(() => { setPage(0) }, [debounced, category, status, recipientType, orgFilter, fromDate, toDate])
+  }, [search]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchLogs = useCallback(() => {
     setLoading(true)
@@ -94,7 +97,7 @@ export default function EmailActivityPage() {
 
   const hasFilters = debounced || category || status || recipientType || orgFilter || fromDate || toDate
   const clearFilters = () => {
-    setSearch(''); setDebounced(''); setCategory(''); setStatus(''); setRecipientType(''); setOrgFilter(''); setFromDate(''); setToDate('')
+    setSearch(''); setQ({ search: '', category: '', status: '', rtype: '', org: '', from: '', to: '', page: 0 })
   }
 
   return (

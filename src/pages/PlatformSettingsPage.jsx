@@ -22,6 +22,13 @@ const CATEGORIES = [
     chips: ['Self-signup', 'Email verification', 'Default role', 'Profile editing'],
   },
   {
+    to: '/settings/platform/messaging',
+    title: 'Messaging providers',
+    iconPath: 'M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z',
+    desc: 'Default SMS provider (Twilio, Vonage or any HTTP gateway) for organisations without their own.',
+    chips: ['SMS', 'Twilio', 'Vonage', 'Custom HTTP'],
+  },
+  {
     to: null, // future
     title: 'New-organisation defaults',
     iconPath: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',

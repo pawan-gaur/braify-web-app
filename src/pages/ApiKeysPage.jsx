@@ -3,6 +3,7 @@ import { useAuth, ROLES } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { getApiKeys, getAllApiKeys, createApiKey, revokeApiKey, toggleApiKey } from '../services/api'
 import useDocumentTitle from '../hooks/useDocumentTitle'
+import useUrlState from '../hooks/useUrlState'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import ApiKeyCard from '../components/ui/ApiKeyCard'
 import { IconArrowRight } from '../components/ui/icons'
@@ -37,12 +38,17 @@ export default function ApiKeysPage() {
 ══════════════════════════════════════════════════════════════════ */
 function AdminApiKeysView() {
   const toast = useToast()
-  const [activeTab,   setActiveTab]   = useState('keys')
+  // Tab, search and filters live in the URL (?tab=&search=&org=&status=) so Back restores them
+  const [urlQ, setUrlQ] = useUrlState({ tab: 'keys', search: '', org: 'all', status: 'all' })
+  const activeTab      = urlQ.tab === 'reference' ? 'reference' : 'keys'
+  const filterOrg      = urlQ.org
+  const filterStatus   = urlQ.status   // 'all' | 'active' | 'inactive'
+  const setActiveTab   = tab => setUrlQ({ tab })
+  const setFilterOrg   = v => setUrlQ({ org: v })
+  const setFilterStatus = v => setUrlQ({ status: v })
   const [allKeys,     setAllKeys]     = useState([])
   const [loading,     setLoading]     = useState(true)
-  const [search,      setSearch]      = useState('')
-  const [filterOrg,   setFilterOrg]   = useState('all')
-  const [filterStatus,setFilterStatus]= useState('all')   // 'all' | 'active' | 'inactive'
+  const [search,      setSearch]      = useState(urlQ.search)   // input text; debounced into the URL
   const [toggling,    setToggling]    = useState({})
   const [revoking,    setRevoking]    = useState({})
 
@@ -55,6 +61,12 @@ function AdminApiKeysView() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    if (search.trim() === urlQ.search) return
+    const t = setTimeout(() => setUrlQ({ search: search.trim() }), 350)
+    return () => clearTimeout(t)
+  }, [search, urlQ.search]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Unique orgs from data — for filter dropdown
   const orgOptions = useMemo(() => {
@@ -323,7 +335,10 @@ function OrgApiKeysView() {
   const toast = useToast()
   const orgId = user?.organizationId
 
-  const [activeTab,   setActiveTab]   = useState('keys')
+  // Active tab lives in the URL (?tab=reference) so Back returns to it
+  const [urlQ, setUrlQ] = useUrlState({ tab: 'keys' })
+  const activeTab    = urlQ.tab === 'reference' ? 'reference' : 'keys'
+  const setActiveTab = tab => setUrlQ({ tab })
   const [keys,        setKeys]        = useState([])
   const [loading,     setLoading]     = useState(true)
   const [showCreate,  setShowCreate]  = useState(false)
@@ -871,7 +886,7 @@ function ApiReferenceTab() {
 Returns file metadata including the assigned fileId (format: F<yyyyMMdd><8-digit-seq>, e.g. F2026052000000001).
 Accepted form parts: file (required), folder, documentType, documentExpiryDate (yyyy-MM-dd), description, tags (repeatable).`}
             requestBody={`// multipart/form-data\nfile:               <binary>        (required)\nfolder:             invoices/2026   (optional)\ndocumentType:       INVOICE         (optional)\n                    CONTRACT | INVOICE | REPORT | RECEIPT\n                    CERTIFICATE | IDENTITY | POLICY | AGREEMENT\n                    PRESENTATION | SPREADSHEET | IMAGE | VIDEO | AUDIO | OTHER\ndocumentExpiryDate: 2027-12-31      (optional, yyyy-MM-dd)\ndescription:        Q2 invoice      (optional)\ntags:               legal           (optional, repeatable)`}
-            responseBody={`{\n  "fileId":           "F2026052000000001",\n  "organizationId":   "69fa81208b72f556b921e10e",\n  "uploadedBy":       "api-key:brfy_abc1",\n  "originalFilename": "invoice_q2.pdf",\n  "storageKey":       "braify/69fa81/F2026052000000001/invoice_q2.pdf",\n  "bucket":           "my-org-bucket",\n  "cloudProvider":    "AWS",\n  "contentType":      "application/pdf",\n  "fileSizeBytes":    245760,\n  "fileSizeMb":       0.234,\n  "folder":           "invoices/2026",\n  "documentType":     "INVOICE",\n  "description":      "Q2 invoice",\n  "tags":             ["legal"],\n  "status":           "ACTIVE",\n  "downloadCount":    0,\n  "createdAt":        "2026-05-20T10:00:00"\n}`}
+            responseBody={`{\n  "fileId":           "F2026052000000001",\n  "organizationId":   "69fa81208b72f556b921e10e",\n  "uploadedBy":       "api-key:brfy_abc1",\n  "originalFilename": "invoice_q2.pdf",\n  "cloudProvider":    "AWS",\n  "contentType":      "application/pdf",\n  "fileSizeBytes":    245760,\n  "fileSizeMb":       0.234,\n  "folder":           "invoices/2026",\n  "documentType":     "INVOICE",\n  "description":      "Q2 invoice",\n  "tags":             ["legal"],\n  "status":           "ACTIVE",\n  "downloadCount":    0,\n  "createdAt":        "2026-05-20T10:00:00"\n}`}
             curlExample={`curl -X POST "https://your-domain.com/api/external/files/{orgId}/upload" \\\n  -H "X-API-Key: brfy_your_api_key_here" \\\n  -F "file=@invoice_q2.pdf" \\\n  -F "folder=invoices/2026" \\\n  -F "documentType=INVOICE" \\\n  -F "description=Q2 invoice" \\\n  -F "tags=legal"`}
             fetchExample={`const form = new FormData()\nform.append('file', file)            // File object\nform.append('folder', 'invoices/2026')\nform.append('documentType', 'INVOICE')\nform.append('description', 'Q2 invoice')\nform.append('tags', 'legal')\n\nconst res = await fetch(\`https://your-domain.com/api/external/files/\${orgId}/upload\`, {\n  method: 'POST',\n  headers: { 'X-API-Key': 'brfy_your_api_key_here' },\n  // do NOT set Content-Type — the browser sets multipart boundary automatically\n  body: form,\n})\nconst meta = await res.json()\nconsole.log(meta.fileId) // "F2026052000000001"`}
           />

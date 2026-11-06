@@ -1,6 +1,4 @@
-﻿import { useEffect, useState, useCallback } from 'react'
-import SwaggerUI from 'swagger-ui-react'
-import 'swagger-ui-react/swagger-ui.css'
+﻿import { useEffect, useState, useCallback, lazy, Suspense } from 'react'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 
@@ -18,6 +16,16 @@ import Breadcrumbs from '../components/ui/Breadcrumbs'
  *   organizations — /api/organizations/** + /api/sharing/**
  *   all           — every /api/** endpoint
  */
+
+// swagger-ui-react (~1.2 MB JS + ~180 KB CSS) is only fetched once the spec probe below
+// confirms springdoc is serving JSON — in prod springdoc is disabled and /v3/api-docs/*
+// falls through to the SPA's index.html.
+const SwaggerUI = lazy(() =>
+  Promise.all([
+    import('swagger-ui-react'),
+    import('swagger-ui-react/swagger-ui.css'),
+  ]).then(([mod]) => mod)
+)
 
 const CRUMBS = [
   { label: 'Dashboard', to: '/' },
@@ -165,15 +173,19 @@ export default function ApiDocsPage() {
 
   const [selectedGroup, setSelectedGroup] = useState(API_GROUPS[0])
   const [specUrl,       setSpecUrl]       = useState(API_GROUPS[0].url)
-  const [backendStatus, setBackendStatus] = useState('checking') // 'checking' | 'online' | 'offline'
+  const [backendStatus, setBackendStatus] = useState('checking') // 'checking' | 'online' | 'offline' | 'unavailable'
   const [lastRefreshed, setLastRefreshed] = useState(null)
 
-  // Check if backend is reachable
+  // Check the backend serves an OpenAPI spec. A 200 that isn't JSON means springdoc is
+  // disabled here (the SPA's index.html came back instead) → 'unavailable'.
   const checkBackend = useCallback(() => {
-    fetch(`${BACKEND_ORIGIN}/v3/api-docs/organizations`)
+    setBackendStatus('checking')
+    return fetch(API_GROUPS[0].url, { headers: { Accept: 'application/json' } })
       .then(r => {
-        setBackendStatus(r.ok ? 'online' : 'offline')
-        if (r.ok) setLastRefreshed(new Date())
+        if (!r.ok) { setBackendStatus('offline'); return }
+        const isJson = /json/i.test(r.headers.get('content-type') || '')
+        setBackendStatus(isJson ? 'online' : 'unavailable')
+        if (isJson) setLastRefreshed(new Date())
       })
       .catch(() => setBackendStatus('offline'))
   }, [])
@@ -190,14 +202,9 @@ export default function ApiDocsPage() {
   }
 
   const handleRefresh = () => {
-    setBackendStatus('checking')
     const url = selectedGroup.url
     setSpecUrl('')
-    setTimeout(() => {
-      setSpecUrl(url)
-      setBackendStatus('online')
-      setLastRefreshed(new Date())
-    }, 100)
+    checkBackend().then(() => setSpecUrl(url))
   }
 
   return (
@@ -225,10 +232,12 @@ export default function ApiDocsPage() {
             <span className={`w-1.5 h-1.5 rounded-full ${
               backendStatus === 'online' ? 'bg-emerald-500 animate-pulse'
               : backendStatus === 'offline' ? 'bg-red-500'
+              : backendStatus === 'unavailable' ? 'bg-gray-400'
               : 'bg-gray-400 animate-pulse'
             }`} />
             {backendStatus === 'online' ? 'Backend online'
               : backendStatus === 'offline' ? 'Backend offline'
+              : backendStatus === 'unavailable' ? 'Docs unavailable'
               : 'Checking…'}
           </div>
 
@@ -281,7 +290,25 @@ export default function ApiDocsPage() {
       )}
 
       {/* ── Swagger UI ── */}
-      {backendStatus === 'offline' ? (
+      {backendStatus === 'unavailable' ? (
+        <div className="card flex flex-col items-center justify-center py-16 gap-3 text-center">
+          <svg className="w-10 h-10 text-ink-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <div>
+            <p className="text-sm font-semibold text-ink dark:text-gray-200">API reference isn't available in this environment</p>
+            <p className="text-xs text-ink-3 mt-1 max-w-md">
+              The interactive OpenAPI reference is only served by development backends.
+              Contact your administrator if you need the API specification.
+            </p>
+          </div>
+        </div>
+      ) : backendStatus === 'checking' ? (
+        <div className="card flex items-center justify-center py-20 text-sm text-ink-3">
+          Checking backend…
+        </div>
+      ) : backendStatus === 'offline' ? (
         <div className="card flex flex-col items-center justify-center py-20 gap-4 text-gray-400">
           <svg className="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -317,6 +344,7 @@ export default function ApiDocsPage() {
           {/* Swagger UI mount point */}
           <div className="p-4">
             {specUrl && (
+              <Suspense fallback={<p className="py-16 text-center text-sm text-ink-3">Loading API reference…</p>}>
               <SwaggerUI
                 url={specUrl}
                 docExpansion="list"
@@ -334,6 +362,7 @@ export default function ApiDocsPage() {
                   return req
                 }}
               />
+              </Suspense>
             )}
           </div>
         </div>

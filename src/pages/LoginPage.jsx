@@ -3,12 +3,8 @@ import AuthLayout from '../components/auth/AuthLayout'
 import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom'
 import { useAuth, ACCOUNT_TYPES } from '../context/AuthContext'
 import useDocumentTitle from '../hooks/useDocumentTitle'
+import { safeAppPath } from '../utils/safeRedirect'
 
-/** Only same-app paths are accepted as a post-login destination (no open redirects). */
-function safePath(p) {
-  // Browsers treat "/\\host" like "//host", so backslashes are rejected too.
-  return typeof p === 'string' && p.startsWith('/') && !p.startsWith('//') && !p.includes('\\') ? p : null
-}
 
 export default function LoginPage() {
   useDocumentTitle('Sign In')
@@ -18,9 +14,10 @@ export default function LoginPage() {
   const [params]  = useSearchParams()
 
   // Destination: ?next= (links in signing emails) → the page that bounced here → home.
-  const nextParam  = safePath(params.get('next'))
+  const nextParam  = safeAppPath(params.get('next'))
   const emailParam = params.get('email') || ''
-  const from = nextParam || location.state?.from?.pathname || '/'
+  const bounced = location.state?.from
+  const from = nextParam || (bounced ? bounced.pathname + (bounced.search || '') + (bounced.hash || '') : '/')
 
   const [email,    setEmail]    = useState(emailParam)
   const [password, setPassword] = useState('')
@@ -60,7 +57,7 @@ export default function LoginPage() {
 
   /** Signers land on their dashboard (or inbox, from an email link); Braify users go where they were headed. */
   const finish = (session) => {
-    const signerDest = ['/dashboard', '/my-documents'].includes(from) ? from : '/dashboard'
+    const signerDest = /^\/(dashboard|my-documents)(\?|#|$)/.test(from) ? from : '/dashboard'
     navigate(session?.accountType === ACCOUNT_TYPES.SIGNER ? signerDest : from, { replace: true })
   }
 
@@ -219,8 +216,9 @@ export default function LoginPage() {
                 </div>
               ) : (
                 <div>
-                  <label className="form-label">Email address</label>
+                  <label className="form-label" htmlFor="login-email">Email address</label>
                   <input
+                  id="login-email"
                     type="email"
                     autoComplete="email"
                     value={email}
@@ -295,8 +293,9 @@ export default function LoginPage() {
           {!mfaToken && method === 'code' && codeSent && (
           <form onSubmit={handleCodeSubmit} className="space-y-5">
             <div>
-              <label className="form-label">Sign-in code</label>
+              <label className="form-label" htmlFor="login-code">Sign-in code</label>
               <input
+                  id="login-code"
                 type="text"
                 inputMode="numeric"
                 autoComplete="one-time-code"

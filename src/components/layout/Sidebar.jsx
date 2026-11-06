@@ -1,5 +1,5 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useApp } from '../../context/AppContext'
 import { useAuth, ROLES } from '../../context/AuthContext'
 import { FEATURES } from '../../config/features'
@@ -33,6 +33,11 @@ const NAV_SECTIONS = [
         to: '/templates', label: 'PDF Templates',
         feature: FEATURES.PDF_TEMPLATES,
         icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+      },
+      {
+        to: '/bulk-pdf', label: 'Bulk PDF',
+        feature: FEATURES.PDF_TEMPLATES,
+        icon: 'M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2zM9 13h6M9 17h6M9 9h1',
       },
       {
         to: '/email-templates', label: 'Email Templates',
@@ -95,7 +100,7 @@ const NAV_SECTIONS = [
         icon: 'M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z',
       },
       {
-        to: '/usage', label: 'Usage',
+        to: '/usage', label: 'Usage', minRole: ROLES.ORG_ADMIN,
         icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
       },
     ],
@@ -114,9 +119,19 @@ const NAV_SECTIONS = [
         icon: 'M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01',
       },
       {
+        to: '/settings/billing', label: 'Plan & Billing',
+        minRole: ROLES.ORG_ADMIN,
+        icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z',
+      },
+      {
         to: '/settings/api-keys', label: 'API Keys',
         minRole: ROLES.ORG_ADMIN,
         icon: 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z',
+      },
+      {
+        to: '/settings/webhooks', label: 'Webhooks',
+        minRole: ROLES.ORG_ADMIN,
+        icon: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1',
       },
       {
         to: '/settings/placeholders', label: 'Global Placeholders',
@@ -187,17 +202,29 @@ export default function Sidebar() {
 
   // Documents awaiting MY signature — refreshed every minute and on navigation
   // (e.g. coming back from signing).
+  // A 403 means "confirm your email first" (admin-set password) — stop asking until the user
+  // verifies (VerifyEmailCard fires 'braify:email-verified') or a different user signs in.
+  const countsBlocked = useRef(false)
+  const [verifiedTick, setVerifiedTick] = useState(0)
+  useEffect(() => { countsBlocked.current = false }, [user?.id])
+  useEffect(() => {
+    const onVerified = () => { countsBlocked.current = false; setVerifiedTick(t => t + 1) }
+    window.addEventListener('braify:email-verified', onVerified)
+    return () => window.removeEventListener('braify:email-verified', onVerified)
+  }, [])
   useEffect(() => {
     if (!user) return
     let cancelled = false
-    const fetch = () =>
+    const fetch = () => {
+      if (countsBlocked.current) return
       signerGetCounts()
         .then(c => { if (!cancelled) setPendingSignatures(c?.ACTION ?? 0) })
-        .catch(() => {})
+        .catch(e => { if (e?.status === 403) countsBlocked.current = true })
+    }
     fetch()
     const interval = setInterval(fetch, 60_000)
     return () => { cancelled = true; clearInterval(interval) }
-  }, [user, pathname])
+  }, [user, pathname, verifiedTick])
 
   const visibleSections = NAV_SECTIONS
     // Signer-portal sessions only see the links flagged `signer`

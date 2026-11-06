@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import EmptyState from '../components/ui/EmptyState'
 import SignerDocumentRow, { useSignerDocActions } from '../components/signer/SignerDocumentRow'
 import { useAuth } from '../context/AuthContext'
 import useDocumentTitle from '../hooks/useDocumentTitle'
+import useUrlState from '../hooks/useUrlState'
 import VerifyEmailCard from '../components/signer/VerifyEmailCard'
 import { signerListDocuments, needsEmailVerification } from '../services/api'
 
@@ -30,50 +31,45 @@ const TABS = [
 export default function MyDocumentsPage() {
   useDocumentTitle('My signatures')
   const { user, isSigner } = useAuth()
-  const [params, setParams] = useSearchParams()
+  // Tab, org filter, search and page live in the URL (?tab=&org=&search=&page=) so Back restores them
+  const [q, setQ] = useUrlState({ tab: '', org: '', search: '', page: 0 })
 
-  const tab    = TABS.some(t => t.key === params.get('tab')) ? params.get('tab') : 'ACTION'
-  const orgId  = params.get('org') || ''
-  const [search, setSearch] = useState('')
-  const [query,  setQuery]  = useState('')
-  const [page,   setPage]   = useState(0)
+  const tab    = TABS.some(t => t.key === q.tab) ? q.tab : 'ACTION'
+  const orgId  = q.org
+  const query  = q.search
+  const page   = q.page
+  const setPage = p => setQ(prev => ({ page: typeof p === 'function' ? p(prev.page) : p }))
+  const [search, setSearch] = useState(q.search)   // input text; debounced into the URL
 
   const [data,    setData]    = useState(null)
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState(null)
   const [mustVerify, setMustVerify] = useState(false)
 
-  // Debounce the search box.
+  // Debounce the search box. Unchanged text (incl. first render) keeps the restored page.
   useEffect(() => {
-    const t = setTimeout(() => setQuery(search.trim()), 300)
+    if (search.trim() === q.search) return
+    const t = setTimeout(() => setQ({ search: search.trim(), page: 0 }), 300)
     return () => clearTimeout(t)
-  }, [search])
+  }, [search, q.search]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Back to page 1 whenever the tab or filters change — reset during render so the
-  // list is fetched once, not once for the stale page and again for page 1.
-  const filterKey = `${tab}|${orgId}|${query}`
-  const [pageKey, setPageKey] = useState(filterKey)
-  if (pageKey !== filterKey) {
-    setPageKey(filterKey)
-    setPage(0)
-  }
-
+  // Only the latest request may update the list (typing / switching tabs fires overlapping calls).
+  const requestSeq = useRef(0)
   const load = useCallback(() => {
+    const seq = ++requestSeq.current
+    const isLatest = () => seq === requestSeq.current
     setLoading(true)
     setError(null)
     signerListDocuments({ tab, orgId: orgId || undefined, search: query || undefined, page, size: PAGE_SIZE })
-      .then(setData)
-      .catch(e => needsEmailVerification(e) ? setMustVerify(true) : setError(e.message))
-      .finally(() => setLoading(false))
+      .then(d => { if (isLatest()) setData(d) })
+      .catch(e => { if (isLatest()) needsEmailVerification(e) ? setMustVerify(true) : setError(e.message) })
+      .finally(() => { if (isLatest()) setLoading(false) })
   }, [tab, orgId, query, page])
 
   useEffect(() => { load() }, [load])
 
-  const setParam = (key, value) => {
-    const next = new URLSearchParams(params)
-    if (value) next.set(key, value); else next.delete(key)
-    setParams(next, { replace: true })
-  }
+  // Changing the tab or org filter goes back to page 1.
+  const setParam = (key, value) => setQ(prev => (prev[key] === (value || '') ? {} : { [key]: value || '', page: 0 }))
 
   const { busyId, sign, view, download } = useSignerDocActions(load)
 

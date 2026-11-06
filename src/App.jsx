@@ -1,7 +1,8 @@
 import React, { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { AppProvider, useApp }  from './context/AppContext'
-import { AuthProvider, useAuth } from './context/AuthContext'
+import { AuthProvider, useAuth, ROLES, roleAtLeast } from './context/AuthContext'
+import { safeAppPath } from './utils/safeRedirect'
 import { ToastProvider } from './context/ToastContext'
 import { NetworkStatusProvider } from './context/NetworkStatusContext'
 import ConnectionBanner from './components/ui/ConnectionBanner'
@@ -11,6 +12,9 @@ import ProtectedRoute   from './components/auth/ProtectedRoute'
 import Sidebar          from './components/layout/Sidebar'
 import Navbar           from './components/layout/Navbar'
 import PageTransition        from './components/ui/PageTransition'
+import TrialBanner           from './components/billing/TrialBanner'
+import UpgradePrompt         from './components/billing/UpgradePrompt'
+import LockedFeature         from './components/billing/LockedFeature'
 import TitleManager          from './components/ui/TitleManager'
 
 // ── Eager — public entry, kept in the main chunk for instant first paint ──
@@ -45,7 +49,8 @@ const BulkEmailDetailPage    = lazy(() => import('./pages/BulkEmailDetailPage'))
 const ESignVerifyPage        = lazy(() => import('./pages/ESignVerifyPage'))
 const ESignUnsubscribePage   = lazy(() => import('./pages/ESignUnsubscribePage'))
 const ESignViewPage          = lazy(() => import('./pages/ESignViewPage'))
-const GetStartedPage         = lazy(() => import('./pages/GetStartedPage'))
+const GetStartedPage         = lazy(() => import('./pages/GetStartedPage'))   // assisted onboarding request (Contact sales)
+const SignupPage             = lazy(() => import('./pages/SignupPage'))       // instant self-serve sign-up
 const OnboardingRequestsPage = lazy(() => import('./pages/OnboardingRequestsPage'))
 const OrgSettingsPage        = lazy(() => import('./pages/BrandingPage'))
 const UsagePage              = lazy(() => import('./pages/UsagePage'))
@@ -66,6 +71,11 @@ const TermsPage              = lazy(() => import('./pages/TermsPage'))
 const MyDocumentsPage        = lazy(() => import('./pages/MyDocumentsPage'))
 const SignerAccountPage      = lazy(() => import('./pages/SignerAccountPage'))
 const SignerDashboardPage    = lazy(() => import('./pages/SignerDashboardPage'))
+const BillingPage            = lazy(() => import('./pages/BillingPage'))
+const WebhooksPage           = lazy(() => import('./pages/WebhooksPage'))
+const BulkPdfPage            = lazy(() => import('./pages/BulkPdfPage'))
+const ShortLinkPage          = lazy(() => import('./pages/ShortLinkPage'))
+const PlatformMessagingPage  = lazy(() => import('./pages/PlatformMessagingPage'))
 
 /* Centered spinner shown while a lazy route chunk loads. */
 function RouteFallback() {
@@ -118,6 +128,27 @@ function FeatureRoute({ feature, children }) {
   return children
 }
 
+/**
+ * RoleRoute — renders `children` only for users with at least `min` role; others go to the
+ * dashboard. Mirrors the sidebar's role gates so typing an admin URL can't open the page.
+ * (The backend enforces the same roles; this keeps the UI from showing pages that would 403.)
+ */
+function RoleRoute({ min, children }) {
+  const { user } = useAuth()
+  if (!roleAtLeast(user?.role, min)) return <Navigate to="/dashboard" replace />
+  return children
+}
+
+/** BulkGate — bulk email / bulk e-sign are paid features (the API enforces this too). */
+function BulkGate({ title, children }) {
+  const { bulkEnabled } = useAuth()
+  if (!bulkEnabled) {
+    return <LockedFeature title={title}
+      description="Send to hundreds of recipients at once from a spreadsheet. Bulk sending is included in the Pro plan." />
+  }
+  return children
+}
+
 /* ── Authenticated layout: sidebar + navbar + page area ────────────────── */
 function AppLayout({ children }) {
   const { collapsed } = useApp()
@@ -128,6 +159,8 @@ function AppLayout({ children }) {
       <Sidebar />
       <Navbar  />
       <main className={`flex-1 ${sideW} pt-14 app-wash transition-[margin-left] duration-300 ease-spring min-w-0`}>
+        <TrialBanner />
+        <UpgradePrompt />
         <PageTransition>
         <Suspense fallback={<RouteFallback />}>
           {children}
@@ -157,13 +190,14 @@ function Shell() {
           <Route path="/email-builder"     element={<FeatureRoute feature={FEATURES.EMAIL_TEMPLATES}><EmailBuilderPage /></FeatureRoute>} />
           <Route path="/email-builder/:id" element={<FeatureRoute feature={FEATURES.EMAIL_TEMPLATES}><EmailBuilderPage /></FeatureRoute>} />
           <Route path="/bulk-email"        element={<FeatureRoute feature={FEATURES.EMAIL_TEMPLATES}><BulkEmailJobsPage /></FeatureRoute>} />
-          <Route path="/bulk-email/send"   element={<FeatureRoute feature={FEATURES.EMAIL_TEMPLATES}><BulkEmailSendPage /></FeatureRoute>} />
+          <Route path="/bulk-email/send"   element={<FeatureRoute feature={FEATURES.EMAIL_TEMPLATES}><BulkGate title="Bulk email campaigns"><BulkEmailSendPage /></BulkGate></FeatureRoute>} />
           <Route path="/bulk-email/:id"    element={<FeatureRoute feature={FEATURES.EMAIL_TEMPLATES}><BulkEmailDetailPage /></FeatureRoute>} />
 
           {/* ── E-Sign (feature-gated) ── */}
           <Route path="/esign"          element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignDocumentsPage /></FeatureRoute>} />
           <Route path="/esign/new"      element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignBuilderPage /></FeatureRoute>} />
-          <Route path="/esign/bulk"     element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignBulkPage /></FeatureRoute>} />
+          <Route path="/bulk-pdf"       element={<FeatureRoute feature={FEATURES.PDF_TEMPLATES}><BulkGate title="Bulk PDF generation"><BulkPdfPage /></BulkGate></FeatureRoute>} />
+          <Route path="/esign/bulk"     element={<FeatureRoute feature={FEATURES.E_SIGN}><BulkGate title="Bulk e-signature"><ESignBulkPage /></BulkGate></FeatureRoute>} />
           <Route path="/esign/:id"      element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignDocumentRouter /></FeatureRoute>} />
           <Route path="/esign/:id/edit" element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignBuilderPage /></FeatureRoute>} />
           <Route path="/esign/:id/view" element={<FeatureRoute feature={FEATURES.E_SIGN}><ESignDetailPage /></FeatureRoute>} />
@@ -175,13 +209,13 @@ function Shell() {
           <Route path="/audit-log" element={<AuditLogPage />} />
 
           {/* ── Email activity (Org_Admin: own org · Platform_Admin: all orgs) ── */}
-          <Route path="/email-activity" element={<EmailActivityPage />} />
+          <Route path="/email-activity" element={<RoleRoute min={ROLES.ORG_ADMIN}><EmailActivityPage /></RoleRoute>} />
 
           {/* ── Admin pages ── */}
-          <Route path="/organizations"              element={<OrganizationsPage />} />
-          <Route path="/admin/organizations/:orgId" element={<OrgDetailPage />} />
-          <Route path="/onboarding-requests"        element={<OnboardingRequestsPage />} />
-          <Route path="/users"                 element={<UsersPage />} />
+          <Route path="/organizations"              element={<RoleRoute min={ROLES.PLATFORM_ADMIN}><OrganizationsPage /></RoleRoute>} />
+          <Route path="/admin/organizations/:orgId" element={<RoleRoute min={ROLES.PLATFORM_ADMIN}><OrgDetailPage /></RoleRoute>} />
+          <Route path="/onboarding-requests"        element={<RoleRoute min={ROLES.PLATFORM_ADMIN}><OnboardingRequestsPage /></RoleRoute>} />
+          <Route path="/users"                 element={<RoleRoute min={ROLES.ADMIN}><UsersPage /></RoleRoute>} />
           <Route path="/sessions"              element={<SessionsPage />} />
 
           {/* ── Signer inbox (documents sent to my email for signature) ── */}
@@ -195,12 +229,15 @@ function Shell() {
           <Route path="/settings/platform"          element={<PlatformSettingsPage />} />
           <Route path="/settings/platform/security" element={<PlatformSecurityPoliciesPage />} />
           <Route path="/settings/platform/access"   element={<PlatformUserAccessPage />} />
-          <Route path="/settings/org-settings" element={<OrgSettingsPage />} />
-          <Route path="/settings/api-keys"   element={<ApiKeysPage />} />
-          <Route path="/settings/placeholders" element={<GlobalPlaceholdersPage />} />
-          <Route path="/usage"              element={<UsagePage />} />
-          <Route path="/shared-templates"   element={<SharedTemplatesPage />} />
-          <Route path="/api-docs"           element={<ApiDocsPage />} />
+          <Route path="/settings/platform/messaging" element={<PlatformMessagingPage />} />
+          <Route path="/settings/org-settings" element={<RoleRoute min={ROLES.ADMIN}><OrgSettingsPage /></RoleRoute>} />
+          <Route path="/settings/api-keys"   element={<RoleRoute min={ROLES.ORG_ADMIN}><ApiKeysPage /></RoleRoute>} />
+          <Route path="/settings/billing"    element={<RoleRoute min={ROLES.ORG_ADMIN}><BillingPage /></RoleRoute>} />
+          <Route path="/settings/webhooks"   element={<RoleRoute min={ROLES.ORG_ADMIN}><WebhooksPage /></RoleRoute>} />
+          <Route path="/settings/placeholders" element={<RoleRoute min={ROLES.ADMIN}><GlobalPlaceholdersPage /></RoleRoute>} />
+          <Route path="/usage"              element={<RoleRoute min={ROLES.ORG_ADMIN}><UsagePage /></RoleRoute>} />
+          <Route path="/shared-templates"   element={<RoleRoute min={ROLES.ADMIN}><SharedTemplatesPage /></RoleRoute>} />
+          <Route path="/api-docs"           element={<RoleRoute min={ROLES.ADMIN}><ApiDocsPage /></RoleRoute>} />
 
           {/* Catch-all inside shell */}
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -231,8 +268,8 @@ function HomeRedirect() {
   const { isSigner } = useAuth()
   const [params] = useSearchParams()
   const next = params.get('next')
-  const safeNext = next && next.startsWith('/') && !next.startsWith('//') && !next.includes('\\') ? next : null
-  const signerNext = safeNext === '/my-documents' ? safeNext : '/dashboard'
+  const safeNext = safeAppPath(next)
+  const signerNext = safeNext && /^\/my-documents(\?|#|$)/.test(safeNext) ? safeNext : '/dashboard'
   return <Navigate to={isSigner ? signerNext : (safeNext || '/dashboard')} replace />
 }
 
@@ -262,7 +299,8 @@ function AppRoutes() {
             : <LoginPage />
         }
       />
-      <Route path="/get-started"      element={<GetStartedPage />} />
+      <Route path="/get-started"      element={!loading && isAuthenticated ? <HomeRedirect /> : <SignupPage />} />
+      <Route path="/contact-sales"    element={<GetStartedPage />} />
       <Route path="/features/:slug"   element={<FeatureDetailPage />} />
       {/* Trust / legal (public) */}
       <Route path="/trust"    element={<TrustPage />} />
@@ -277,6 +315,7 @@ function AppRoutes() {
       <Route path="/esign/view/:token"  element={<ESignViewPage />} />
       <Route path="/esign/unsubscribe/:token" element={<ESignUnsubscribePage />} />
       <Route path="/verify/:id"         element={<ESignVerifyPage />} />
+      <Route path="/s/:code"            element={<ShortLinkPage />} />
 
       {/* Everything else is protected */}
       <Route
