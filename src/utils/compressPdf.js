@@ -1,5 +1,4 @@
-import * as pdfjsLib from 'pdfjs-dist'
-import PdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?worker'
+import { createPrivatePdfWorker } from './pdfjsLoader'
 
 /**
  * Largest PDF we upload: the backend's multipart limit (spring.servlet.multipart.max-file-size)
@@ -80,8 +79,7 @@ export async function compressPdfIfLarge(dataUrl, { maxBytes = MAX_PDF_BYTES, on
 
   // A private worker: pdf.js shares one PDFWorker per port, so destroying our document
   // on the global port would also tear down the worker the page's PDF preview uses.
-  const webWorker = new PdfjsWorker()
-  const worker    = new pdfjsLib.PDFWorker({ port: webWorker })
+  const { pdfjsLib, webWorker, worker } = await createPrivatePdfWorker()
   try {
     const pdf = await pdfjsLib.getDocument({ data: dataUrlToBytes(dataUrl), worker }).promise
     for (const [scale, quality] of PASSES) {

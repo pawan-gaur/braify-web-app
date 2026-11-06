@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getEmailTemplates, getInternalEmailTemplates, deleteEmailTemplate, sendEmailTemplate, getGlobalPlaceholders, cloneEmailTemplate, createEmailTemplate } from '../services/api'
+import { getEmailTemplates, getEmailTemplate, getInternalEmailTemplates, deleteEmailTemplate, sendEmailTemplate, getGlobalPlaceholders, cloneEmailTemplate, createEmailTemplate } from '../services/api'
 import TemplateUploadModal from '../components/templates/TemplateUploadModal'
 import TemplateCloneModal from '../components/templates/TemplateCloneModal'
 import useDocumentTitle from '../hooks/useDocumentTitle'
@@ -176,6 +176,13 @@ export default function EmailTemplatesPage() {
   }, [visibleTemplates, tableSortKey])
 
   /* Navigate to builder with a library template pre-loaded */
+  // List items omit htmlContent/cssContent (slim payload) — load the full template to preview.
+  const openPreview = async (t) => {
+    if (t.htmlContent != null) { setPreviewTemplate(t); return }
+    try { setPreviewTemplate(await getEmailTemplate(t.id)) }
+    catch (err) { toast.error(err.message) }
+  }
+
   const handleLibrarySelect = (libTmpl) => {
     // "Start from scratch" and the "Standard — Branded" card both use the dynamic
     // org-branded starter (built in the builder from live Branding), not static HTML.
@@ -453,7 +460,7 @@ export default function EmailTemplatesPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
                           </svg>
                         </button>
-                        <button onClick={() => setPreviewTemplate(t)}
+                        <button onClick={() => openPreview(t)}
                           className="p-1.5 rounded-lg hover:bg-sky-50 dark:hover:bg-sky-900/30 text-gray-400 hover:text-sky-600 transition-colors"
                           title="Preview">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -509,7 +516,7 @@ export default function EmailTemplatesPage() {
               onDelete={can('delete') ? () => handleDelete(t.id, t.name) : null}
               onClone={() => setCloneSource(t)}
               onVersions={() => setVersionTemplate(t)}
-              onPreview={() => setPreviewTemplate(t)}
+              onPreview={() => openPreview(t)}
               onSend={() => setSendTemplate(t)}
             />
           ))}

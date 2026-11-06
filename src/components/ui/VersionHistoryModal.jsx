@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   getTemplateVersions,
+  getTemplateVersion,
   restoreTemplateVersion,
   getEmailTemplateVersions,
+  getEmailTemplateVersion,
   restoreEmailTemplateVersion,
 } from "../../services/api";
 import { useToast } from "../../context/ToastContext";
@@ -28,6 +30,7 @@ import { fmtDateTime as fmtDate } from '../../utils/date'
  */
 export default function VersionHistoryModal({ template, kind = "pdf", onClose, onRestored }) {
   const fetchVersions  = kind === "email" ? getEmailTemplateVersions  : getTemplateVersions;
+  const fetchVersion   = kind === "email" ? getEmailTemplateVersion   : getTemplateVersion;
   const restoreVersion = kind === "email" ? restoreEmailTemplateVersion : restoreTemplateVersion;
   const toast = useToast();
 
@@ -40,6 +43,25 @@ export default function VersionHistoryModal({ template, kind = "pdf", onClose, o
   const [compareMode,     setCompareMode]     = useState(false);
   const [compareSelected, setCompareSelected] = useState([]);  // up to 2 version numbers
   const [comparing,       setComparing]       = useState(false);
+
+  /* Full snapshots (with htmlContent) — the list endpoint omits the heavy fields, so
+     preview / compare fetch each version on demand. Versions are immutable, so the
+     cache stays valid across restores. Keyed by `${templateId}:${version}`. */
+  const [fullVersions, setFullVersions] = useState({});
+  const inFlight = useRef(new Set());
+
+  const fullKey = (vNum) => `${template.id}:${vNum}`;
+  const getFull = (vNum) => fullVersions[fullKey(vNum)];
+
+  const loadFull = (vNum) => {
+    const key = fullKey(vNum);
+    if (fullVersions[key] || inFlight.current.has(key)) return;
+    inFlight.current.add(key);
+    fetchVersion(template.id, vNum)
+      .then(full => setFullVersions(prev => ({ ...prev, [key]: full })))
+      .catch(err => toast.error(err.message || `Could not load v${vNum}.`))
+      .finally(() => inFlight.current.delete(key));
+  };
 
   useEffect(() => {
     fetchVersions(template.id)
@@ -76,6 +98,13 @@ export default function VersionHistoryModal({ template, kind = "pdf", onClose, o
   const canCompare = compareSelected.length === 2;
   const vA = versions.find(v => v.version === compareSelected[0]);
   const vB = versions.find(v => v.version === compareSelected[1]);
+  const fullA = vA && getFull(vA.version);
+  const fullB = vB && getFull(vB.version);
+
+  const startComparing = () => {
+    setComparing(true);
+    compareSelected.forEach(loadFull);
+  };
 
   /* ── Diff helpers ── */
   function charDiff(a, b) {
@@ -125,7 +154,7 @@ export default function VersionHistoryModal({ template, kind = "pdf", onClose, o
             )}
             {compareMode && canCompare && !comparing && (
               <button
-                onClick={() => setComparing(true)}
+                onClick={startComparing}
                 className="text-xs px-3 py-1.5 rounded-lg bg-brand-600 text-white hover:bg-brand-700 transition-colors"
               >
                 Show diff →
@@ -174,7 +203,7 @@ export default function VersionHistoryModal({ template, kind = "pdf", onClose, o
                               shrink-0 flex items-center gap-6 flex-wrap">
                 <CompDiff
                   label="Character diff"
-                  value={charDiff(vA.htmlContent, vB.htmlContent)}
+                  value={fullA && fullB ? charDiff(fullA.htmlContent, fullB.htmlContent) : null}
                 />
                 {(() => {
                   const { added, removed } = placeholderDiff(vA, vB);
@@ -196,9 +225,9 @@ export default function VersionHistoryModal({ template, kind = "pdf", onClose, o
 
               {/* Side-by-side HTML */}
               <div className="flex-1 flex overflow-hidden">
-                <VersionPanel version={vA} side="left" isCurrent={vA.version === template.currentVersion} />
+                <VersionPanel version={vA} full={fullA} side="left" isCurrent={vA.version === template.currentVersion} />
                 <div className="w-px bg-gray-200 dark:bg-gray-700 shrink-0" />
-                <VersionPanel version={vB} side="right" isCurrent={vB.version === template.currentVersion} />
+                <VersionPanel version={vB} full={fullB} side="right" isCurrent={vB.version === template.currentVersion} />
               </div>
             </div>
           )}
@@ -222,6 +251,7 @@ export default function VersionHistoryModal({ template, kind = "pdf", onClose, o
                     const isCurrent  = v.version === template.currentVersion;
                     const isExpanded = expanded === v.id;
                     const isChecked  = compareSelected.includes(v.version);
+                    const full       = getFull(v.version);
 
                     return (
                       <li key={v.id} className="mb-0 ml-6">
@@ -286,7 +316,11 @@ export default function VersionHistoryModal({ template, kind = "pdf", onClose, o
                             <div className="flex items-center gap-1 shrink-0">
                               {!compareMode && (
                                 <button
-                                  onClick={() => setExpanded(isExpanded ? null : v.id)}
+                                  onClick={() => {
+                                    if (isExpanded) { setExpanded(null); return; }
+                                    setExpanded(v.id);
+                                    loadFull(v.version);
+                                  }}
                                   className="text-xs px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-600
                                              text-gray-500 dark:text-gray-400 hover:border-primary hover:text-primary
                                              transition-colors"
@@ -315,7 +349,7 @@ export default function VersionHistoryModal({ template, kind = "pdf", onClose, o
                               <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs mb-2">
                                 <span className="text-gray-400">Characters</span>
                                 <span className="text-gray-700 dark:text-gray-300">
-                                  {v.htmlContent?.length?.toLocaleString() || 0}
+                                  {full ? (full.htmlContent?.length || 0).toLocaleString() : "…"}
                                 </span>
                                 <span className="text-gray-400">Placeholders</span>
                                 <span className="text-gray-700 dark:text-gray-300">
@@ -323,10 +357,14 @@ export default function VersionHistoryModal({ template, kind = "pdf", onClose, o
                                 </span>
                               </div>
                               <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 max-h-40 overflow-y-auto">
-                                <pre className="text-[10px] text-gray-500 whitespace-pre-wrap break-all leading-relaxed">
-                                  {v.htmlContent?.slice(0, 800) || "(empty)"}
-                                  {(v.htmlContent?.length || 0) > 800 ? "\n…" : ""}
-                                </pre>
+                                {full ? (
+                                  <pre className="text-[10px] text-gray-500 whitespace-pre-wrap break-all leading-relaxed">
+                                    {full.htmlContent?.slice(0, 800) || "(empty)"}
+                                    {(full.htmlContent?.length || 0) > 800 ? "\n…" : ""}
+                                  </pre>
+                                ) : (
+                                  <p className="text-[10px] text-gray-400">Loading preview…</p>
+                                )}
                               </div>
                             </div>
                           )}
@@ -360,7 +398,7 @@ function CompDiff({ label, value, positive, negative }) {
   );
 }
 
-function VersionPanel({ version, side, isCurrent }) {
+function VersionPanel({ version, full, side, isCurrent }) {
   const [tab, setTab] = useState("html"); // 'html' | 'rendered'
 
   return (
@@ -401,10 +439,18 @@ function VersionPanel({ version, side, isCurrent }) {
 
       {/* Content */}
       <div className="flex-1 overflow-auto min-h-0">
-        {tab === "html" ? (
+        {!full ? (
+          <div className="flex items-center justify-center h-full py-16 text-xs text-gray-400 gap-2">
+            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+            </svg>
+            Loading v{version.version}…
+          </div>
+        ) : tab === "html" ? (
           <pre className="text-[10px] leading-relaxed text-gray-600 dark:text-gray-400
                           p-4 whitespace-pre-wrap break-all font-mono h-full min-h-0">
-            {version.htmlContent || "(empty)"}
+            {full.htmlContent || "(empty)"}
           </pre>
         ) : (
           <iframe
@@ -415,7 +461,7 @@ function VersionPanel({ version, side, isCurrent }) {
                 body{margin:0;padding:16px;background:#f5f5f5;font-family:Arial,sans-serif;}
                 *{max-width:100%!important;}
               </style>
-            </head><body>${version.htmlContent || ""}</body></html>`}
+            </head><body>${full.htmlContent || ""}</body></html>`}
             className="w-full h-full border-none"
             sandbox="allow-same-origin allow-scripts"
           />
@@ -425,7 +471,7 @@ function VersionPanel({ version, side, isCurrent }) {
       {/* Footer metadata */}
       <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50
                       flex items-center gap-4 text-xs text-gray-400 shrink-0">
-        <span>{(version.htmlContent?.length || 0).toLocaleString()} chars</span>
+        {full && <span>{(full.htmlContent?.length || 0).toLocaleString()} chars</span>}
         <span>{version.placeholders?.length || 0} placeholders</span>
         <span>Saved by {version.savedBy || "system"}</span>
       </div>

@@ -13,7 +13,6 @@
  */
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import * as XLSX from 'xlsx'
 import {
   getEmailTemplates, getTemplates,
   bulkEmailCreateJob, uploadToStorage,
@@ -228,8 +227,12 @@ export default function BulkEmailSendPage() {
   function goBack()    { setStep(s => Math.max(s - 1, 0)) }
 
   // ── XLSX upload ───────────────────────────────────────────────────────────
-  function handleXlsxFile(file) {
+  async function handleXlsxFile(file) {
     if (!file) return
+    // xlsx (~325 kB) is only needed once a sheet is dropped, not to render the page.
+    let XLSX
+    try { XLSX = await import('xlsx') }
+    catch (err) { showToast('Could not load the spreadsheet parser: ' + err.message, 'error'); return }
     const reader = new FileReader()
     reader.onload = (e) => {
       try {

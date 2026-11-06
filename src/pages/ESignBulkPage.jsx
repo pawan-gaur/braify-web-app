@@ -1,8 +1,5 @@
 import { useState, useRef, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import * as XLSX from 'xlsx'
-import * as pdfjsLib from 'pdfjs-dist'
-import PdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?worker'
 import { esignBulkCreate, getTemplates, generatePdfAsBase64, getEmailTemplates, uploadToStorage, dataUrlToBlob } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
@@ -11,10 +8,8 @@ import TemplatePreviewButton from '../components/ui/TemplatePreviewButton'
 import { IconCheck, IconX, IconChevronRight } from '../components/ui/icons'
 import { listUrl } from '../hooks/useUrlState'
 import { compressPdfIfLarge } from '../utils/compressPdf'
-
-// Bundle the pdf.js worker via Vite's ?worker (a .js chunk) rather than ?url (a .mjs file),
-// which some prod static hosts serve with a non-JS MIME type and refuse to load.
-pdfjsLib.GlobalWorkerOptions.workerPort = new PdfjsWorker()
+// pdf.js + its worker load lazily the first time a PDF is rendered.
+import { getPdfjs } from '../utils/pdfjsLoader'
 
 const CRUMBS = [
   { label: 'Dashboard', to: '/' },
@@ -56,7 +51,9 @@ const ESIGN_MAP_FIELDS = [
 /* Utilities                                                            */
 /* ─────────────────────────────────────────────────────────────────── */
 
-function parseExcelFile(file) {
+async function parseExcelFile(file) {
+  // xlsx (~325 kB) is only needed once a sheet is dropped, not to render the page.
+  const XLSX = await import('xlsx')
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = e => {
@@ -331,11 +328,14 @@ function PdfPageCanvas({ base64DataUrl, pageNumber, onPageCountChange }) {
   useEffect(() => {
     if (!base64DataUrl || !canvasRef.current) return
     let cancelled = false
+    let renderTask = null   // in-flight page.render(); cancelled on cleanup so a re-run can reuse the canvas
 
     ;(async () => {
       try {
         const b64   = base64DataUrl.includes(',') ? base64DataUrl.split(',')[1] : base64DataUrl
         const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0))
+        const pdfjsLib = await getPdfjs()
+        if (cancelled) return
         const pdf   = await pdfjsLib.getDocument({ data: bytes }).promise
         if (cancelled) return
 
@@ -358,13 +358,14 @@ function PdfPageCanvas({ base64DataUrl, pageNumber, onPageCountChange }) {
 
         const ctx = canvas.getContext('2d')
         ctx.clearRect(0, 0, canvas.width, canvas.height)
-        await page.render({ canvasContext: ctx, viewport: scaled }).promise
+        renderTask = page.render({ canvasContext: ctx, viewport: scaled })
+        await renderTask.promise
       } catch (err) {
-        if (!cancelled) console.error('PDF render error:', err)
+        if (!cancelled && err?.name !== 'RenderingCancelledException') console.error('PDF render error:', err)
       }
     })()
 
-    return () => { cancelled = true }
+    return () => { cancelled = true; renderTask?.cancel() }
   }, [base64DataUrl, pageNumber])
 
   return <canvas ref={canvasRef} className="block w-full" />
