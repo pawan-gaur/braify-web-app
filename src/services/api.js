@@ -508,6 +508,17 @@ export const getAllOrgUsage    = ()               => http.get('/admin/usage').th
 // ── AI Assist (PDF & email templates) ───────────────────────
 export const getAiStatus       = ()        => http.get('/ai/status').then(r => r.data)
 export const aiTemplateAssist  = (payload) => http.post('/ai/template-assist', payload).then(r => r.data)
+/** Draft a template from an uploaded document (.docx/.pdf/.html/.txt). kind: 'PDF' | 'EMAIL'. Nothing is saved. */
+export const aiTemplateFromDocument = (file, kind, instructions) => {
+  const form = new FormData()
+  form.append('file', file, file.name)
+  form.append('kind', kind)
+  if (instructions) form.append('instructions', instructions)
+  return http.post('/ai/template-from-document', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 180000,   // long documents can take a minute or more
+  }).then(r => r.data)
+}
 
 // ── Org Branding ────────────────────────────────────────────
 export const getBranding    = (orgId)           => http.get(`/organizations/${orgId}/branding`).then(r => r.data)
