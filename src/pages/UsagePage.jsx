@@ -216,6 +216,10 @@ export default function UsagePage() {
             current={apiCurrent} limit={config?.maxApiCallsPerMonth ?? -1} />
           <QuotaProgressBar label="Emails sent / month"
             current={emailCurrent} limit={-1} />
+          {config?.maxSmsPerMonth !== 0 && (
+            <QuotaProgressBar label="SMS reminders / month"
+              current={config?.currentSmsThisMonth ?? 0} limit={config?.maxSmsPerMonth ?? -1} />
+          )}
         </div>
 
         {/* Upgrade nudge — shown when any limited quota ≥ 80% */}

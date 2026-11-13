@@ -35,6 +35,11 @@ export default function GeneratePage() {
     }).catch(err => toast.error(err.message || 'Could not load template.'))
   }, [selectedId]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // A template shared with this org isn't in the org's own list — show it as an extra option.
+  const options = template && !templates.some(t => t.id === template.id)
+    ? [...templates, { ...template, name: `${template.name} (shared)` }]
+    : templates
+
   const parseJson = () => {
     try { setJsonError(null); return JSON.parse(jsonInput) }
     catch (e) { setJsonError('Invalid JSON: ' + e.message); return null }
@@ -105,15 +110,15 @@ export default function GeneratePage() {
                 onChange={e => setSelectedId(e.target.value)}
               >
                 <option value="">— Select a template —</option>
-                {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                {options.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
             ) : (
               /* Card grid picker */
               <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto pr-0.5">
-                {templates.length === 0 && (
+                {options.length === 0 && (
                   <p className="text-xs text-ink-4 py-2 text-center">No templates found</p>
                 )}
-                {templates.map(t => (
+                {options.map(t => (
                   <button
                     key={t.id}
                     onClick={() => setSelectedId(t.id)}

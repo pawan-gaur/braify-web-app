@@ -275,6 +275,8 @@ export const reviewOnboardingRequest  = (id, payload)    => http.put(`/onboardin
 // ── Organizations (Platform Admin) ─────────────────────────
 export const getOrganizations    = ()         => http.get('/organizations').then(r => r.data)
 export const searchOrganizations = (q)        => http.get('/organizations/search', { params: { q } }).then(r => r.data)
+/** Org admins find a share target by the exact email of someone in that organisation. */
+export const findShareTargetOrg  = (email)    => http.get('/sharing/target-org', { params: { email } }).then(r => r.data)
 export const createOrganization  = (payload)  => http.post('/organizations', payload).then(r => r.data)
 export const updateOrganization  = (id, p)    => http.put(`/organizations/${id}`, p).then(r => r.data)
 export const deleteOrganization  = (id)       => http.delete(`/organizations/${id}`)

@@ -1,7 +1,9 @@
 ﻿import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useToast } from '../context/ToastContext'
-import { getReceivedShares, getSentShares, revokeShare } from '../services/api'
+import { getReceivedShares, getSentShares, revokeShare, getEmailTemplate } from '../services/api'
+import TemplatePreviewButton from '../components/ui/TemplatePreviewButton'
+import { SendEmailModal } from './EmailTemplatesPage'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import useUrlState from '../hooks/useUrlState'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
@@ -43,16 +45,21 @@ function TypeIcon({ type }) {
 }
 
 /* ── Received share card ── */
-function ReceivedCard({ share, onUse }) {
+function ReceivedCard({ share }) {
   const navigate = useNavigate()
+  const toast = useToast()
+  const [sendTemplate, setSendTemplate] = useState(null)
+  const isEmail = share.templateType === 'EMAIL_TEMPLATE'
 
-  const handleAction = () => {
-    if (share.permission === 'VIEW') {
-      // VIEW — do nothing actionable without a preview modal; just show info
-      return
-    }
+  const handleAction = async () => {
     if (share.permission === 'USE') {
-      // Navigate to generate page with template pre-selected
+      if (isEmail) {
+        // Sent by (and counted for) your organisation.
+        try { setSendTemplate(await getEmailTemplate(share.templateId)) }
+        catch (e) { toast.error(e.message || 'Could not open the template') }
+        return
+      }
+      // Generated for (and counted against) your organisation.
       navigate(`/generate?templateId=${share.templateId}`)
     }
     if (share.permission === 'EDIT') {
@@ -65,9 +72,7 @@ function ReceivedCard({ share, onUse }) {
     }
   }
 
-  const actionLabel = share.permission === 'VIEW' ? 'Preview'
-    : share.permission === 'USE' ? 'Generate PDF'
-    : 'Open in Builder'
+  const actionLabel = share.permission === 'USE' ? (isEmail ? 'Send email' : 'Generate PDF') : 'Open in Builder'
 
   return (
     <div className="card p-5 flex flex-col gap-3">
@@ -90,6 +95,10 @@ function ReceivedCard({ share, onUse }) {
 
       <div className="flex items-center justify-between pt-1">
         <p className="text-[11px] text-gray-400">{fmtDate(share.sharedAt)}</p>
+        <div className="flex items-center gap-2">
+        {share.permission !== 'EDIT' && (
+          <TemplatePreviewButton kind={isEmail ? 'email' : 'pdf'} template={{ id: share.templateId, name: share.templateName }} />
+        )}
         {share.permission !== 'VIEW' && (
           <button
             onClick={handleAction}
@@ -100,7 +109,9 @@ function ReceivedCard({ share, onUse }) {
             {actionLabel}
           </button>
         )}
+        </div>
       </div>
+      {sendTemplate && <SendEmailModal template={sendTemplate} onClose={() => setSendTemplate(null)} />}
     </div>
   )
 }

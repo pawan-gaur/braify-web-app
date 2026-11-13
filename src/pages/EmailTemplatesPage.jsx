@@ -4,6 +4,7 @@ import { getEmailTemplates, getEmailTemplate, getInternalEmailTemplates, deleteE
 import TemplateUploadModal from '../components/templates/TemplateUploadModal'
 import AiTemplateFromDocumentModal from '../components/templates/AiTemplateFromDocumentModal'
 import TemplateCloneModal from '../components/templates/TemplateCloneModal'
+import ShareTemplateModal from '../components/ui/ShareTemplateModal'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import useUrlState from '../hooks/useUrlState'
 import { useAuth } from '../context/AuthContext'
@@ -80,7 +81,10 @@ function SortTh({ label, field, sortKey, onSort }) {
 export default function EmailTemplatesPage() {
   useDocumentTitle('Email Templates')
   const navigate = useNavigate()
-  const { can }  = useAuth()
+  const { can, user }  = useAuth()
+  // Sharing with other organisations is an org-admin action (the API enforces it too).
+  const canShare = user?.role === 'ORG_ADMIN' || user?.role === 'PLATFORM_ADMIN'
+  const [shareTemplate, setShareTemplate] = useState(null)
   const toast    = useToast()
 
   const [view,     setView]     = useView('braify-view-email-templates')
@@ -493,6 +497,15 @@ export default function EmailTemplatesPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M5 15V5a2 2 0 012-2h10"/>
                           </svg>
                         </button>
+                        {canShare && (
+                          <button onClick={() => setShareTemplate(t)}
+                            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 transition-colors"
+                            title="Share with another organisation">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                          </svg>
+                          </button>
+                        )}
                         {can('delete') && (
                           <button onClick={() => handleDelete(t.id, t.name)}
                             className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500 transition-colors"
@@ -524,6 +537,7 @@ export default function EmailTemplatesPage() {
               onEdit={() => navigate(`/email-builder/${t.id}`)}
               onDelete={can('delete') ? () => handleDelete(t.id, t.name) : null}
               onClone={() => setCloneSource(t)}
+              onShare={canShare ? () => setShareTemplate(t) : null}
               onVersions={() => setVersionTemplate(t)}
               onPreview={() => openPreview(t)}
               onSend={() => setSendTemplate(t)}
@@ -585,12 +599,16 @@ export default function EmailTemplatesPage() {
         onClose={() => setCloneSource(null)}
         onCloned={() => { setCloneSource(null); toast.success('Template cloned'); load() }}
       />
+      {shareTemplate && (
+        <ShareTemplateModal templateId={shareTemplate.id} templateType="EMAIL_TEMPLATE" templateName={shareTemplate.name}
+          onClose={() => setShareTemplate(null)} />
+      )}
     </div>
   )
 }
 
 /* ── Email Template Card ─────────────────────────────────────────────────── */
-function EmailTemplateCard({ template, onEdit, onDelete = null, onClone = null, onVersions, onPreview, onSend }) {
+function EmailTemplateCard({ template, onEdit, onDelete = null, onClone = null, onShare = null, onVersions, onPreview, onSend }) {
   const date = fmtDate(template.updatedAt)
 
   return (
@@ -763,6 +781,13 @@ function EmailTemplateCard({ template, onEdit, onDelete = null, onClone = null, 
             </svg>
           </button>
           {/* Delete — hidden for USER role */}
+          {onShare && (
+            <button className="btn btn-ghost btn-sm px-2" onClick={onShare} title="Share with another organisation">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                          </svg>
+            </button>
+          )}
           {onDelete && (
             <button className="btn btn-ghost btn-sm px-2 text-red-400 hover:bg-red-50 hover:text-red-600"
               onClick={onDelete} title="Delete">
@@ -780,7 +805,7 @@ function EmailTemplateCard({ template, onEdit, onDelete = null, onClone = null, 
 }
 
 /* ── Send Email Modal ────────────────────────────────────────────────────── */
-function SendEmailModal({ template, onClose }) {
+export function SendEmailModal({ template, onClose }) {
   const toast = useToast()
   const [to,           setTo]           = useState('')
   const [subject,      setSubject]      = useState(template.subject || '')
