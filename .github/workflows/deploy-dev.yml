@@ -3,7 +3,7 @@ name: CD — braify-web-app (dev)
 # Deploys the `develop` branch to the DEV EC2 instance.
 # Prod (deploy.yml) deploys `main`; this file deploys `develop`.
 # Uses DEV_-prefixed secrets so it targets a separate box from production:
-#   DEV_EC2_HOST · DEV_EC2_USERNAME · DEV_EC2_SSH_KEY · DEV_VITE_API_BASE_URL (optional)
+#   DEV_EC2_HOST · DEV_EC2_USERNAME · DEV_EC2_SSH_KEY · DEV_VITE_API_ORIGIN (optional)
 on:
   push:
     branches: [develop]
@@ -33,12 +33,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Lint (errors fail the deploy)
+        run: npm run lint
+
       - name: Build bundle
         run: npm run build
         env:
           # Frontend calls relative /api paths — Nginx on the dev box proxies them to
           # the backend on the same domain, so no absolute URL is normally needed.
-          VITE_API_BASE_URL: ${{ secrets.DEV_VITE_API_BASE_URL }}
+          VITE_API_ORIGIN: ${{ secrets.DEV_VITE_API_ORIGIN }}
 
       # ── 4. Prepare a new release dir (the live site keeps serving) ────
       # Each deploy goes to /var/www/braify-web-app-releases/<sha>; /var/www/braify-web-app

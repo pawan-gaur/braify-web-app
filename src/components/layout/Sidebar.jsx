@@ -1,7 +1,7 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 import { useApp } from '../../context/AppContext'
-import { useAuth, ROLES } from '../../context/AuthContext'
+import { useAuth, ROLES, roleAtLeast } from '../../context/AuthContext'
 import { FEATURES } from '../../config/features'
 import { getPendingOnboardingCount, signerGetCounts } from '../../services/api'
 import CommandPalette, { useCommandPalette } from '../ui/CommandPalette'
@@ -177,8 +177,6 @@ function Tip({ label, children }) {
   )
 }
 
-const ROLE_RANK = { PLATFORM_ADMIN: 4, ORG_ADMIN: 3, ADMIN: 2, USER: 1 }
-
 export default function Sidebar() {
   const { collapsed, setCollapsed } = useApp()
   const { user, hasFeature, isSigner } = useAuth()
@@ -230,12 +228,12 @@ export default function Sidebar() {
     // Signer-portal sessions only see the links flagged `signer`
     .map(s => isSigner ? { ...s, links: s.links.filter(l => l.signer) } : s)
     // Gate section by role
-    .filter(s => !s.minRole || (ROLE_RANK[user?.role] ?? 0) >= (ROLE_RANK[s.minRole] ?? 0))
+    .filter(s => !s.minRole || roleAtLeast(user?.role, s.minRole))
     .map(s => ({
       ...s,
       links: s.links
         // Gate link by role
-        .filter(l => isSigner || !l.minRole || (ROLE_RANK[user?.role] ?? 0) >= (ROLE_RANK[l.minRole] ?? 0))
+        .filter(l => isSigner || !l.minRole || roleAtLeast(user?.role, l.minRole))
         // Gate link by feature
         .filter(l => !l.feature || hasFeature(l.feature)),
     }))

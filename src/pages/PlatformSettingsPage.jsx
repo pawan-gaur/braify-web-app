@@ -25,8 +25,8 @@ const CATEGORIES = [
     to: '/settings/platform/messaging',
     title: 'Messaging providers',
     iconPath: 'M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z',
-    desc: 'Default SMS provider (Twilio, Vonage or any HTTP gateway) for organisations without their own.',
-    chips: ['SMS', 'Twilio', 'Vonage', 'Custom HTTP'],
+    desc: 'Default email (Resend, SendGrid, Mailgun, SMTP) and SMS (Twilio, Vonage, HTTP) providers for organisations without their own.',
+    chips: ['Email', 'SMS', 'SMTP', 'Twilio'],
   },
   {
     to: null, // future

@@ -4,7 +4,8 @@ import useDocumentTitle from '../hooks/useDocumentTitle'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import { AdminBadge } from '../components/platform/SettingsKit'
 import SmsProviderForm from '../components/settings/SmsProviderForm'
-import { getPlatformSmsConfig, updatePlatformSmsConfig, testPlatformSmsConfig } from '../services/api'
+import EmailProviderForm from '../components/settings/EmailProviderForm'
+import { getPlatformSmsConfig, updatePlatformSmsConfig, testPlatformSmsConfig, getPlatformEmailConfig, updatePlatformEmailConfig, testPlatformEmailConfig } from '../services/api'
 
 /** Platform default SMS provider — used by every organisation that hasn't set up its own. */
 export default function PlatformMessagingPage() {
@@ -20,11 +21,16 @@ export default function PlatformMessagingPage() {
         <AdminBadge />
       </div>
       <p className="text-sm text-ink-3 mb-8">
-        The default SMS provider for every organisation without its own. Used for e-sign SMS reminders
-        (Pro plan, when an organisation turns SMS on in its reminder settings).
+        The default email and SMS providers for every organisation without its own.
       </p>
+      <div className="card p-5 sm:p-6 mb-6">
+        <h2 className="text-[15px] font-bold text-ink dark:text-white mb-1">Default email provider</h2>
+        <p className="text-xs text-ink-3 mb-4">Used for all system mail (sign-in codes, invitations, password resets) and by organisations without their own provider.</p>
+        <EmailProviderForm platform noneLabel="Built-in (server environment)" load={getPlatformEmailConfig} save={updatePlatformEmailConfig} test={testPlatformEmailConfig} />
+      </div>
       <div className="card p-5 sm:p-6">
-        <h2 className="text-[15px] font-bold text-ink dark:text-white mb-4">Default SMS provider</h2>
+        <h2 className="text-[15px] font-bold text-ink dark:text-white mb-1">Default SMS provider</h2>
+        <p className="text-xs text-ink-3 mb-4">Used for e-sign reminders (Pro plan, when an organisation turns SMS on in its reminder settings).</p>
         <SmsProviderForm load={getPlatformSmsConfig} save={updatePlatformSmsConfig} test={testPlatformSmsConfig} />
       </div>
     </div>

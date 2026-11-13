@@ -39,7 +39,7 @@ const STATUS_COLORS = {
   PENDING:   'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300',
   IN_REVIEW: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
   PARTIALLY_SIGNED: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
-  SIGNED:    'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
+  SIGNED:    'bg-accent-100 text-accent-700 dark:bg-accent-900/40 dark:text-accent-300',
   COMPLETED: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
   EXPIRED:   'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
   CANCELLED: 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300',
@@ -266,7 +266,7 @@ function DocumentsTab() {
       setReactivateId(null)
       fetchDocs()   // status changes EXPIRED → PENDING/PARTIALLY_SIGNED
     } catch (err) {
-      showToast(err?.response?.data?.message || err.message, 'error')
+      showToast(err.message, 'error')
     } finally {
       setResending(null)
     }
@@ -396,7 +396,7 @@ function DocumentsTab() {
                     doc.status === 'PENDING'   ? 'bg-yellow-400' :
                     doc.status === 'IN_REVIEW' ? 'bg-blue-400' :
                     doc.status === 'PARTIALLY_SIGNED' ? 'bg-purple-400' :
-                    doc.status === 'SIGNED'    ? 'bg-indigo-400' :
+                    doc.status === 'SIGNED'    ? 'bg-accent-400' :
                     doc.status === 'CANCELLED' ? 'bg-red-400' :
                     doc.status === 'EXPIRED'   ? 'bg-orange-400' : 'bg-gray-300'
                   }`} />
@@ -672,7 +672,7 @@ function BatchDocumentsView({ batch, onBack }) {
       setReactivateId(null)
       fetchDocs()
     } catch (err) {
-      showToast(err?.response?.data?.message || err.message, 'error')
+      showToast(err.message, 'error')
     } finally {
       setResending(null)
     }

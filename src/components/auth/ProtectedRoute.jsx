@@ -36,6 +36,13 @@ export default function ProtectedRoute({ children, requiredRole }) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
+  // Required account setup: until the password is set / MFA is enrolled, every page except the
+  // profile sends the user there (signer-portal sessions have neither requirement).
+  if (user?.accountType !== 'SIGNER' && user?.role !== 'SIGNER' && location.pathname !== '/profile') {
+    if (user?.mustChangePassword) return <Navigate to="/profile?setup=password" replace />
+    if (user?.mustSetupMfa)       return <Navigate to="/profile?setup=mfa" replace />
+  }
+
   // Role gate (optional)
   if (requiredRole && user?.role !== requiredRole) {
     return (

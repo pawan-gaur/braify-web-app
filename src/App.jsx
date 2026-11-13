@@ -226,10 +226,10 @@ function Shell() {
           <Route path="/profile" element={<ProfilePage />} />
 
           {/* ── Settings ── */}
-          <Route path="/settings/platform"          element={<PlatformSettingsPage />} />
-          <Route path="/settings/platform/security" element={<PlatformSecurityPoliciesPage />} />
-          <Route path="/settings/platform/access"   element={<PlatformUserAccessPage />} />
-          <Route path="/settings/platform/messaging" element={<PlatformMessagingPage />} />
+          <Route path="/settings/platform"          element={<RoleRoute min={ROLES.PLATFORM_ADMIN}><PlatformSettingsPage /></RoleRoute>} />
+          <Route path="/settings/platform/security" element={<RoleRoute min={ROLES.PLATFORM_ADMIN}><PlatformSecurityPoliciesPage /></RoleRoute>} />
+          <Route path="/settings/platform/access"   element={<RoleRoute min={ROLES.PLATFORM_ADMIN}><PlatformUserAccessPage /></RoleRoute>} />
+          <Route path="/settings/platform/messaging" element={<RoleRoute min={ROLES.PLATFORM_ADMIN}><PlatformMessagingPage /></RoleRoute>} />
           <Route path="/settings/org-settings" element={<RoleRoute min={ROLES.ADMIN}><OrgSettingsPage /></RoleRoute>} />
           <Route path="/settings/api-keys"   element={<RoleRoute min={ROLES.ORG_ADMIN}><ApiKeysPage /></RoleRoute>} />
           <Route path="/settings/billing"    element={<RoleRoute min={ROLES.ORG_ADMIN}><BillingPage /></RoleRoute>} />

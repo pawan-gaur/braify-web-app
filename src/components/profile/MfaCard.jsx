@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { mfaStatus, mfaSetup, mfaEnable, mfaDisable, mfaRegenerate } from '../../services/api'
 import { useToast } from '../../context/ToastContext'
+import { useAuth } from '../../context/AuthContext'
 
-const errMsg = (e) => e?.response?.data?.message || e?.message || 'Something went wrong.'
+const errMsg = (e) => e?.message || 'Something went wrong.'
 
 /**
  * Two-factor authentication settings. Behaviour adapts to the org policy:
@@ -12,6 +13,7 @@ const errMsg = (e) => e?.response?.data?.message || e?.message || 'Something wen
  */
 export default function MfaCard() {
   const toast = useToast()
+  const { setUser } = useAuth()
   const [status,  setStatus]  = useState(null)   // { orgPolicy, enabled, enrolledAt, recoveryCodesRemaining }
   const [loading, setLoading] = useState(true)
   const [busy,    setBusy]    = useState(false)
@@ -43,6 +45,7 @@ export default function MfaCard() {
       setSetupData(null); setCode('')
       await load()
       toast.success('Two-factor authentication enabled.')
+      setUser?.(u => u && ({ ...u, mustSetupMfa: false }))
     } catch (e) { toast.error(errMsg(e)) }
     finally { setBusy(false) }
   }

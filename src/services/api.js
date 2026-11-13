@@ -2,8 +2,15 @@ import axios from 'axios'
 
 const TOKEN_KEY = 'pdf-builder-token'
 
+/**
+ * Backend origin. Empty (the default) = same origin: nginx (prod) or the Vite proxy (dev)
+ * forwards /api to the backend. Set VITE_API_ORIGIN only if the API lives on another domain.
+ */
+export const API_ORIGIN = (import.meta.env.VITE_API_ORIGIN || '').replace(/\/+$/, '')
+export const API_BASE   = `${API_ORIGIN}/api`
+
 export const http = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
   // Send the httpOnly refresh cookie to /api/auth/refresh (same-origin, harmless elsewhere).
   withCredentials: true,
@@ -50,7 +57,7 @@ const NO_REFRESH = [
 
 // Bare axios call (bypasses these interceptors) so the refresh request can't recurse.
 const requestRefresh = () =>
-  axios.post('/api/auth/refresh', {}, { withCredentials: true }).then(r => r.data?.token)
+  axios.post(`${API_BASE}/auth/refresh`, {}, { withCredentials: true }).then(r => r.data?.token)
 
 /** Terminal failure — clear the access token and send the user to /login. */
 const hardLogout = (message) => {
@@ -87,7 +94,7 @@ const isUnreachable = (err) => {
  * to the backend (not the static server).
  */
 export const pingHealth = () =>
-  axios.get('/api/health', { timeout: 5000, validateStatus: () => true })
+  axios.get(`${API_BASE}/health`, { timeout: 5000, validateStatus: () => true })
     .then(r => r.status < 500)
     .catch(() => false)
 
@@ -256,7 +263,6 @@ export const exportAuditLogs = (params = {}) =>
 export const verifyAuditIntegrity = () =>
   http.get('/audit-logs/verify').then(r => r.data)
 
-export const getTemplateAuditLogs = (id) => http.get(`/audit-logs/template/${id}`).then(r => r.data)
 
 // ── Dashboard ──────────────────────────────────────────────
 export const getDashboardStats = () => http.get('/dashboard').then(r => r.data)
@@ -268,7 +274,6 @@ export const getDashboardAnalytics = (days = 30) =>
 // ── Onboarding Requests ─────────────────────────────────────
 export const submitOnboardingRequest  = (data)           => http.post('/onboarding', data).then(r => r.data)
 export const getOnboardingRequests    = (status = null)  => http.get('/onboarding', { params: status ? { status } : {} }).then(r => r.data)
-export const getOnboardingRequest     = (id)             => http.get(`/onboarding/${id}`).then(r => r.data)
 export const getPendingOnboardingCount= ()               => http.get('/onboarding/count/pending').then(r => r.data)
 export const reviewOnboardingRequest  = (id, payload)    => http.put(`/onboarding/${id}/review`, payload).then(r => r.data)
 
@@ -290,7 +295,6 @@ export const getUsers       = ()                   => http.get('/users').then(r 
 export const searchUsers    = (q, orgId)           => http.get('/users/search', { params: { q, orgId } }).then(r => r.data)
 export const createUser     = (payload)            => http.post('/users', payload).then(r => r.data)
 export const updateUser     = (id, payload)        => http.put(`/users/${id}`, payload).then(r => r.data)
-export const deactivateUser = (id)                 => http.delete(`/users/${id}`)
 export const enableUser     = (id)                 => http.put(`/users/${id}/enable`)
 export const disableUser    = (id)                 => http.put(`/users/${id}/disable`)
 export const resendInvite   = (id)                 => http.post(`/users/${id}/resend-invite`)
@@ -307,7 +311,6 @@ export const forgotPassword      = (email)            => http.post('/auth/forgot
 export const resetPassword       = (token, password)  => http.post('/auth/reset-password', { token, password }).then(r => r.data)
 
 // ── MFA / 2FA ──────────────────────────────────────────────
-export const loginMfa        = (payload)    => http.post('/auth/login/mfa', payload).then(r => r.data)
 export const mfaSetup        = ()           => http.post('/auth/mfa/setup').then(r => r.data)
 export const mfaEnable       = (code)       => http.post('/auth/mfa/enable', { code }).then(r => r.data)
 export const mfaDisable      = (code)       => http.post('/auth/mfa/disable', { code })
@@ -316,7 +319,6 @@ export const mfaRegenerate   = (code)       => http.post('/auth/mfa/recovery-cod
 export const setOrgMfaPolicy = (id, policy) => http.put(`/organizations/${id}/mfa-policy`, { policy }).then(r => r.data)
 
 // ── Profile (self) ─────────────────────────────────────────
-export const getMyProfile    = ()        => http.get('/profile/me').then(r => r.data)
 export const updateProfile   = (payload) => http.put('/profile/me', payload).then(r => r.data)
 export const changePassword  = (payload) => http.put('/profile/me/password', payload).then(r => r.data)
 export const uploadAvatar    = (fileId)  => http.post('/profile/me/avatar', { fileId }).then(r => r.data)   // fileId from uploadToStorage(…, 'AVATAR'); null removes
@@ -373,6 +375,12 @@ export const testOrgSmsConfig       = (orgId, to)   => http.post(`/organizations
 export const getPlatformSmsConfig   = ()            => http.get('/platform/sms-config').then(r => r.data)
 export const updatePlatformSmsConfig = (body)       => http.put('/platform/sms-config', body).then(r => r.data)
 export const testPlatformSmsConfig  = (to)          => http.post('/platform/sms-config/test', { testRecipient: to }).then(r => r.data)
+export const getOrgEmailConfig        = (orgId)       => http.get(`/organizations/${orgId}/email-config`).then(r => r.data)
+export const updateOrgEmailConfig     = (orgId, body) => http.put(`/organizations/${orgId}/email-config`, body).then(r => r.data)
+export const testOrgEmailConfig       = (orgId, to)   => http.post(`/organizations/${orgId}/email-config/test`, { testRecipient: to }).then(r => r.data)
+export const getPlatformEmailConfig   = ()            => http.get('/platform/email-config').then(r => r.data)
+export const updatePlatformEmailConfig = (body)       => http.put('/platform/email-config', body).then(r => r.data)
+export const testPlatformEmailConfig  = (to)          => http.post('/platform/email-config/test', { testRecipient: to }).then(r => r.data)
 
 // ── Short links (SMS) — public ───────────────────────────────────────────────
 export const resolveShortLink = (code) => http.get(`/s/${encodeURIComponent(code)}`).then(r => r.data)
@@ -380,15 +388,12 @@ export const resolveShortLink = (code) => http.get(`/s/${encodeURIComponent(code
 // ── Bulk PDF generation ─────────────────────────────────────────────────────
 export const createPdfBulkJob   = (body)              => http.post('/pdf/bulk-jobs', body).then(r => r.data)
 export const listPdfBulkJobs    = (page = 0, size = 20) => http.get('/pdf/bulk-jobs', { params: { page, size } }).then(r => r.data)
-export const getPdfBulkJob      = (id)                => http.get(`/pdf/bulk-jobs/${id}`).then(r => r.data)
 export const getPdfBulkDownload = (id)                => http.get(`/pdf/bulk-jobs/${id}/download`).then(r => r.data)
 export const fetchPdfBulkZip    = (id)                => http.get(`/pdf/bulk-jobs/${id}/zip`, { responseType: 'blob' }).then(r => r.data)
 
 // ── E-sign templates (reusable PDF + field layout) ──────────────────────────
 export const esignListTemplates   = ()                     => http.get('/esign/templates').then(r => r.data)
-export const esignGetTemplate     = (id)                   => http.get(`/esign/templates/${id}`).then(r => r.data)
 export const esignSaveAsTemplate  = (docId, body)          => http.post(`/esign/templates/from-document/${docId}`, body).then(r => r.data)
-export const esignUpdateTemplate  = (id, body)             => http.put(`/esign/templates/${id}`, body).then(r => r.data)
 export const esignDeleteTemplate  = (id)                   => http.delete(`/esign/templates/${id}`)
 export const esignUseTemplate     = (id, body)             => http.post(`/esign/templates/${id}/use`, body).then(r => r.data)
 
@@ -407,10 +412,6 @@ export const esignGetBatch        = (batchId)                       =>
   http.get(`/esign/batches/${batchId}`).then(r => r.data)
 export const esignGetBatchDocuments = (batchId, { page = 0, size = 20 } = {}) =>
   http.get(`/esign/batches/${batchId}/documents?page=${page}&size=${size}`).then(r => r.data)
-export const esignInitBatch       = (label, totalRequested, allowClientUpload = false, allowedClientUploadFileTypes = []) =>
-  http.post('/esign/batches/init', { label, totalRequested, allowClientUpload, allowedClientUploadFileTypes }).then(r => r.data)
-export const esignFinalizeBatch   = (batchId, totalCreated, totalSent, totalFailed) =>
-  http.patch(`/esign/batches/${batchId}/finalize`, { totalCreated, totalSent, totalFailed }).then(r => r.data)
 
 // ── E-Sign (Client — uses signing JWT directly in header) ──
 export const esignOpenDocument    = (token)                => http.get(`/esign/sign/${token}`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.data)
@@ -423,8 +424,6 @@ export const esignUploadAttachment = (token, file) => {
   const fd = new FormData(); fd.append('file', file)
   return http.post(`/esign/sign/${token}/attachments`, fd, { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' } }).then(r => r.data)
 }
-export const esignDownloadClientAttachment = (token, attachmentId) =>
-  http.get(`/esign/sign/${token}/attachments/${attachmentId}`, { headers: { Authorization: `Bearer ${token}` }, responseType: 'blob' }).then(r => r.data)
 export const esignDownloadSignSource = (token) =>
   http.get(`/esign/sign/${token}/source-pdf`, { headers: { Authorization: `Bearer ${token}` }, responseType: 'blob' }).then(r => r.data)
 
@@ -447,7 +446,6 @@ export const listWebhookDeliveries = (orgId, id, page = 0) => http.get(`/organiz
 export const retryWebhookDelivery = (orgId, deliveryId) => http.post(`/organizations/${orgId}/webhooks/deliveries/${deliveryId}/retry`).then(r => r.data)
 
 // ── Billing (plan, trial, Stripe checkout / portal) ────────────────────────
-export const getEntitlements   = ()                 => http.get('/billing/entitlements').then(r => r.data)
 export const getBillingSummary = ()                 => http.get('/billing').then(r => r.data)
 export const startCheckout     = (interval = 'MONTH') => http.post('/billing/checkout', { interval }).then(r => r.data.url)
 export const openBillingPortal = ()                 => http.post('/billing/portal').then(r => r.data.url)
@@ -612,8 +610,6 @@ export const uploadToStorage = (file, purpose, filename, orgId) => {
   }).then(r => r.data)
 }
 
-/** Short-lived pre-signed download URL for a stored file: `{ url, expiresInSeconds }`. */
-export const getStorageUrl = (fileId) => http.get(`/storage/${fileId}/url`).then(r => r.data)
 
 /**
  * A base64 data URL as a Blob (for uploading PDFs the app built or fetched in the browser).
@@ -654,8 +650,6 @@ export const getFileDownloadUrl = (orgId, fileId) =>
 export const listFiles = (orgId, params = {}) =>
   http.get(`/organizations/${orgId}/files`, { params }).then(r => r.data)
 
-export const getFile = (orgId, fileId) =>
-  http.get(`/organizations/${orgId}/files/${fileId}`).then(r => r.data)
 
 export const deleteFile = (orgId, fileId) =>
   http.delete(`/organizations/${orgId}/files/${fileId}`)

@@ -183,7 +183,7 @@ function OverviewTab({ org, setOrg, orgId }) {
       setOrg(prev => ({ ...prev, mfaPolicy: policy }))
       toast.success(`MFA policy set to ${policy}.`)
     } catch (err) {
-      toast.error(err?.response?.data?.message || err.message || 'Failed to update MFA policy.')
+      toast.error(err.message || 'Failed to update MFA policy.')
     } finally {
       setMfaSaving(false)
     }

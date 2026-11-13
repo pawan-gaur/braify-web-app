@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { updateProfile, changePassword, uploadAvatar, uploadToStorage, getMyAuditLog } from '../services/api'
@@ -44,7 +45,18 @@ export default function ProfilePage() {
   const toast = useToast()
   const fileRef = useRef(null)
 
-  const [tab, setTab] = useState('info')  // 'info' | 'password' | 'activity'
+  // ?setup=password|mfa — sent here by ProtectedRoute until required setup is done.
+  const setup = new URLSearchParams(useLocation().search).get('setup')
+  const navigate = useNavigate()
+  const [tab, setTab] = useState(setup === 'password' ? 'password' : setup === 'mfa' ? 'security' : 'info')  // 'info' | 'password' | 'security' | 'activity'
+
+  // After the required password change: on to MFA if that's required too, else to the dashboard.
+  // (Not after enabling MFA — the recovery codes are on screen and must be saved first.)
+  useEffect(() => {
+    if (setup !== 'password' || !user || user.mustChangePassword) return
+    if (user.mustSetupMfa) setTab('security')
+    else navigate('/dashboard', { replace: true })
+  }, [setup, user?.mustChangePassword, user?.mustSetupMfa]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /* Info form */
   const [info, setInfo]         = useState({ firstName: user?.firstName || '', lastName: user?.lastName || '', bio: user?.bio || '' })
@@ -98,6 +110,7 @@ export default function ProfilePage() {
       await changePassword({ currentPassword: pw.currentPassword, newPassword: pw.newPassword })
       toast.success('Password changed successfully.')
       setPw({ currentPassword: '', newPassword: '', confirm: '' })
+      setUser(u => ({ ...u, mustChangePassword: false }))
     } catch (err) {
       toast.error(err.message || 'Failed to change password.')
     } finally {
@@ -170,6 +183,20 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {(user?.mustChangePassword || user?.mustSetupMfa) && (
+        <div className="alert-warning border rounded-xl px-4 py-3 text-sm mb-6">
+          {user?.mustChangePassword
+            ? 'Please set a new password before you continue.'
+            : 'Your organisation requires two-factor authentication. Set up an authenticator app on the Security tab to continue.'}
+        </div>
+      )}
+      {setup === 'mfa' && !user?.mustChangePassword && !user?.mustSetupMfa && (
+        <div className="alert-success border rounded-xl px-4 py-3 text-sm mb-6 flex items-center justify-between gap-3 flex-wrap">
+          <span>Two-factor authentication is on. Save your recovery codes, then continue.</span>
+          <button className="btn btn-primary btn-sm" onClick={() => navigate('/dashboard', { replace: true })}>Continue</button>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex gap-1 p-1 rounded-xl bg-ink-8 dark:bg-gray-800 border border-ink-7 dark:border-gray-700 mb-6 w-fit">
         {[
@@ -233,12 +260,12 @@ export default function ProfilePage() {
         <form onSubmit={handleChangePassword} className="card space-y-4">
           <h2 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Change Password</h2>
           <div>
-            <label className="form-label">Current Password *</label>
+            <label className="form-label">Current Password {user?.mustChangePassword ? '' : '*'}</label>
             <div className="relative">
               <input type={showPw ? 'text' : 'password'} className="form-input pr-10"
                 placeholder="Enter current password"
                 value={pw.currentPassword}
-                onChange={e => setPw(p => ({ ...p, currentPassword: e.target.value }))} required />
+                onChange={e => setPw(p => ({ ...p, currentPassword: e.target.value }))} required={!user?.mustChangePassword} />
               <button type="button" onClick={() => setShowPw(!showPw)}
                 className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

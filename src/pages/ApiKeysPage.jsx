@@ -755,6 +755,19 @@ function ApiReferenceTab() {
           </div>
         </div>
 
+        {/* Sub-section: API key */}
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 mt-5">Document listing — API key</p>
+        <div className="space-y-3 mb-6">
+          <EndpointDoc
+            method="GET" path="/api/external/esign/documents" title="List e-sign documents (API key)"
+            description="Paginated e-sign documents of your organisation, newest first. Optional status filter: DRAFT, PENDING, IN_REVIEW, PARTIALLY_SIGNED, SIGNED, COMPLETED, EXPIRED, CANCELLED. The key needs the E_SIGN feature."
+            requestBody={null}
+            responseBody={`{\n  "content": [\n    {\n      "id": "68x2a1b3c9e1234567890abc",\n      "title": "Contract Q2-2026",\n      "status": "COMPLETED",\n      "createdAt": "2026-05-20T10:00:00Z",\n      "sentAt": "2026-05-20T10:05:00Z",\n      "completedAt": "2026-05-21T09:12:00Z",\n      "expiresAt": "2026-05-27T10:05:00Z",\n      "bulkBatchId": null,\n      "signatories": [\n        { "name": "Jane Smith", "email": "jane@example.com", "signingOrder": 1, "status": "SIGNED", "signedAt": "2026-05-21T09:12:00Z" }\n      ]\n    }\n  ],\n  "page": 0, "size": 20, "totalElements": 1, "totalPages": 1\n}`}
+            curlExample={`curl "https://your-domain.com/api/external/esign/documents?page=0&size=20&status=COMPLETED" \\\n  -H "X-API-Key: brfy_…"`}
+            fetchExample={`const res = await fetch('https://your-domain.com/api/external/esign/documents?page=0&size=20', {\n  headers: { 'X-API-Key': apiKey }\n})\nconst page = await res.json()`}
+          />
+        </div>
+
         {/* Sub-section: Creator (JWT) */}
         <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 mt-5">Document Management — JWT Bearer Auth</p>
         <div className="space-y-3 mb-6">

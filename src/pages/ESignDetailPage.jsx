@@ -19,7 +19,7 @@ const STATUS_COLORS = {
   PENDING:   'bg-yellow-100 text-yellow-700',
   IN_REVIEW: 'bg-blue-100 text-blue-700',
   PARTIALLY_SIGNED: 'bg-purple-100 text-purple-700',
-  SIGNED:    'bg-indigo-100 text-indigo-700',
+  SIGNED:    'bg-accent-100 text-accent-700',
   COMPLETED: 'bg-green-100 text-green-700',
   EXPIRED:   'bg-orange-100 text-orange-700',
   CANCELLED: 'bg-red-100 text-red-600',
@@ -31,7 +31,7 @@ const EVENT_ICONS = {
   DOCUMENT_SENT:          { path: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',                                        color: 'text-purple-500' },
   LINK_OPENED:            { path: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1',         color: 'text-blue-400'   },
   DOCUMENT_VIEWED:        { path: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z', color: 'text-blue-600'   },
-  SIGNING_STARTED:        { path: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',                    color: 'text-indigo-500' },
+  SIGNING_STARTED:        { path: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',                    color: 'text-accent-500' },
   FIELD_SIGNED:           { path: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',                                                                                               color: 'text-green-500'  },
   DOCUMENT_SUBMITTED:     { path: 'M3 19v-8.93a2 2 0 01.89-1.664l7-4.666a2 2 0 012.22 0l7 4.666A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-1.14.76a2 2 0 01-2.22 0l-1.14-.76', color: 'text-green-600' },
   PDF_GENERATED:          { path: 'M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z', color: 'text-teal-500'   },
@@ -143,7 +143,7 @@ export default function ESignDetailPage() {
       setDoc(prev => ({ ...prev, ...updated }))
       showToast('Signing invitation resent', 'success')
     } catch (e) {
-      showToast(e?.response?.data?.message || e.message || 'Failed to resend', 'error')
+      showToast(e.message || 'Failed to resend', 'error')
     } finally {
       setDocBusy(false)
     }
@@ -157,7 +157,7 @@ export default function ESignDetailPage() {
       showToast(`Document reactivated — new signing link valid ${days} day${days > 1 ? 's' : ''}`, 'success')
       setReactivateOpen(false)
     } catch (e) {
-      showToast(e?.response?.data?.message || e.message || 'Failed to reactivate', 'error')
+      showToast(e.message || 'Failed to reactivate', 'error')
     } finally {
       setDocBusy(false)
     }
@@ -176,7 +176,7 @@ export default function ESignDetailPage() {
           : 'Finalization did not complete — please try again shortly', 'error')
       }
     } catch (e) {
-      showToast(e?.response?.data?.message || e.message || 'Failed to finalize', 'error')
+      showToast(e.message || 'Failed to finalize', 'error')
     } finally {
       setDocBusy(false)
     }
@@ -202,7 +202,7 @@ export default function ESignDetailPage() {
       setDoc(prev => ({ ...prev, ...updated }))
       showToast('Reminder sent to everyone still awaiting signature', 'success')
     } catch (e) {
-      showToast(e?.response?.data?.message || e.message || 'Failed to send reminder', 'error')
+      showToast(e.message || 'Failed to send reminder', 'error')
     } finally {
       setRemindBusy(false)
     }
@@ -215,7 +215,7 @@ export default function ESignDetailPage() {
       setDoc(prev => ({ ...prev, ...updated }))
       showToast(next ? 'Automatic reminders turned on' : 'Automatic reminders turned off', 'success')
     } catch (e) {
-      showToast(e?.response?.data?.message || e.message || 'Failed to update reminder setting', 'error')
+      showToast(e.message || 'Failed to update reminder setting', 'error')
     } finally {
       setReminderToggleBusy(false)
     }

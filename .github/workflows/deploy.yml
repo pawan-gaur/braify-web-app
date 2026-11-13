@@ -24,13 +24,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Lint (errors fail the deploy)
+        run: npm run lint
+
       - name: Build production bundle
         run: npm run build
         env:
           # The frontend calls relative /api paths — Nginx proxies them to
           # the backend on the same domain, so no absolute URL is needed.
-          # Set this only if you ever move to a separate API domain.
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          # Leave the secret unset (same origin); set it only if the API moves to another domain,
+          # e.g. https://api.braify.com (no trailing /api).
+          VITE_API_ORIGIN: ${{ secrets.VITE_API_ORIGIN }}
 
       # ── 4. Prepare a new release dir (the live site keeps serving) ────
       # Each deploy goes to /var/www/braify-web-app-releases/<sha>; /var/www/braify-web-app
