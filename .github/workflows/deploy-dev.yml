@@ -36,6 +36,9 @@ jobs:
       - name: Lint (errors fail the deploy)
         run: npm run lint
 
+      - name: Unit tests
+        run: npm test
+
       - name: Build bundle
         run: npm run build
         env:

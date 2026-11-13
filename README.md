@@ -22,6 +22,7 @@ cd ../braify-web-services && mvn spring-boot:run
 | `npm run build` | Production bundle in `dist/` |
 | `npm run preview` | Serve the built bundle locally |
 | `npm run lint` | ESLint. Errors fail CI; warnings are advisory |
+| `npm test` | Vitest unit tests (`src/**/*.test.{js,jsx}`, jsdom). They run in CI before every deploy |
 
 ## Configuration
 | Variable | Default | Purpose |
