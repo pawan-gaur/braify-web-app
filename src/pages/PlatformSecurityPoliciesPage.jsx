@@ -50,7 +50,7 @@ function ComplexityChip({ active, onClick, children }) {
 
 export default function PlatformSecurityPoliciesPage() {
   useDocumentTitle('Security policies')
-  const { user } = useAuth()
+  const { user, setUser } = useAuth()
   const toast = useToast()
 
   const [settings, setSettings] = useState(null)
@@ -88,6 +88,8 @@ export default function PlatformSecurityPoliciesPage() {
       setSettings(saved)
       setBaseline(JSON.stringify(saved))
       toast.success('Security policies saved — applied platform-wide.')
+      // A Platform Admin has no org, so without the platform requirement MFA is optional for them.
+      if (!saved?.security?.mfa?.required) setUser(u => u && ({ ...u, mustSetupMfa: false }))
     } catch {
       toast.error('Could not save security policies.')
     } finally {

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { updateProfile, changePassword, uploadAvatar, uploadToStorage, getMyAuditLog } from '../services/api'
@@ -187,7 +187,9 @@ export default function ProfilePage() {
         <div className="alert-warning border rounded-xl px-4 py-3 text-sm mb-6">
           {user?.mustChangePassword
             ? 'Please set a new password before you continue.'
-            : 'Your organisation requires two-factor authentication. Set up an authenticator app on the Security tab to continue.'}
+            : user?.role === 'PLATFORM_ADMIN'
+              ? <>Two-factor authentication is required platform-wide. Set up an authenticator app on the Security tab to continue, or turn the requirement off in <Link to="/settings/platform/security" className="font-semibold underline">Security Policies</Link>.</>
+              : 'Your organisation requires two-factor authentication. Set up an authenticator app on the Security tab to continue.'}
         </div>
       )}
       {setup === 'mfa' && !user?.mustChangePassword && !user?.mustSetupMfa && (
