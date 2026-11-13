@@ -1,7 +1,8 @@
 ﻿import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getTemplates, deleteTemplate, cloneTemplate, createTemplate } from '../services/api'
+import { getTemplates, deleteTemplate, cloneTemplate, createTemplate, getAiStatus } from '../services/api'
 import TemplateUploadModal from '../components/templates/TemplateUploadModal'
+import AiTemplateFromDocumentModal from '../components/templates/AiTemplateFromDocumentModal'
 import TemplateCloneModal from '../components/templates/TemplateCloneModal'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import useUrlState from '../hooks/useUrlState'
@@ -92,6 +93,8 @@ export default function TemplatesPage() {
   const [versionTemplate,  setVersionTemplate]  = useState(null)
   const [previewTemplate,  setPreviewTemplate]  = useState(null)
   const [uploadOpen,  setUploadOpen]  = useState(false)
+  const [aiOpen,      setAiOpen]      = useState(false)
+  const [aiAvailable, setAiAvailable] = useState(false)
   const [cloneSource, setCloneSource] = useState(null)
   const [loading,   setLoading]   = useState(true)
 
@@ -136,6 +139,7 @@ export default function TemplatesPage() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load() }, [load])
+  useEffect(() => { getAiStatus().then(s => setAiAvailable(!!s?.available)).catch(() => {}) }, [])
 
   const handleDelete = async (id, name) => {
     if (!confirm(`Delete template "${name}"?`)) return
@@ -174,6 +178,11 @@ export default function TemplatesPage() {
         </div>
         <div className="flex items-center gap-3">
           <ViewToggle view={view} onChange={setView} />
+          {aiAvailable && (
+            <button className="btn btn-secondary" onClick={() => setAiOpen(true)}>
+              Create with AI
+            </button>
+          )}
           <button className="btn btn-secondary" onClick={() => setUploadOpen(true)}>
             Upload HTML
           </button>
@@ -437,6 +446,12 @@ export default function TemplatesPage() {
         onClose={() => setUploadOpen(false)}
         onCreate={createTemplate}
         onCreated={(created) => { setUploadOpen(false); toast.success('Template created from HTML'); navigate(`/builder/${created.id}`) }}
+      />
+      <AiTemplateFromDocumentModal
+        open={aiOpen} kind="PDF"
+        onClose={() => setAiOpen(false)}
+        onCreate={createTemplate}
+        onCreated={(created) => { setAiOpen(false); toast.success('Template created with AI'); navigate(`/builder/${created.id}`) }}
       />
       <TemplateCloneModal
         open={!!cloneSource} source={cloneSource} cloneFn={cloneTemplate}

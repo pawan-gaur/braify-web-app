@@ -1,7 +1,8 @@
 ﻿import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getEmailTemplates, getEmailTemplate, getInternalEmailTemplates, deleteEmailTemplate, sendEmailTemplate, getGlobalPlaceholders, cloneEmailTemplate, createEmailTemplate } from '../services/api'
+import { getEmailTemplates, getEmailTemplate, getInternalEmailTemplates, deleteEmailTemplate, sendEmailTemplate, getGlobalPlaceholders, cloneEmailTemplate, createEmailTemplate, getAiStatus } from '../services/api'
 import TemplateUploadModal from '../components/templates/TemplateUploadModal'
+import AiTemplateFromDocumentModal from '../components/templates/AiTemplateFromDocumentModal'
 import TemplateCloneModal from '../components/templates/TemplateCloneModal'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import useUrlState from '../hooks/useUrlState'
@@ -101,6 +102,8 @@ export default function EmailTemplatesPage() {
   const [previewTemplate, setPreviewTemplate] = useState(null)
   const [sendTemplate,    setSendTemplate]    = useState(null)
   const [uploadOpen,      setUploadOpen]      = useState(false)
+  const [aiOpen,          setAiOpen]          = useState(false)
+  const [aiAvailable,     setAiAvailable]     = useState(false)
   const [cloneSource,     setCloneSource]     = useState(null)
 
   const tableSortKey    = q.sort
@@ -122,6 +125,7 @@ export default function EmailTemplatesPage() {
   }, [scope]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load() }, [load])
+  useEffect(() => { getAiStatus().then(s => setAiAvailable(!!s?.available)).catch(() => {}) }, [])
 
   const handleDelete = async (id, name) => {
     if (!confirm(`Delete email template "${name}"?`)) return
@@ -229,6 +233,11 @@ export default function EmailTemplatesPage() {
             </div>
           )}
           <ViewToggle view={view} onChange={setView} />
+          {aiAvailable && (
+            <button className="btn btn-secondary" onClick={() => setAiOpen(true)}>
+              Create with AI
+            </button>
+          )}
           <button className="btn btn-secondary" onClick={() => setUploadOpen(true)}>
             Upload HTML
           </button>
@@ -564,6 +573,12 @@ export default function EmailTemplatesPage() {
         onClose={() => setUploadOpen(false)}
         onCreate={createEmailTemplate}
         onCreated={(created) => { setUploadOpen(false); toast.success('Email template created from HTML'); navigate(`/email-builder/${created.id}`) }}
+      />
+      <AiTemplateFromDocumentModal
+        open={aiOpen} kind="Email"
+        onClose={() => setAiOpen(false)}
+        onCreate={createEmailTemplate}
+        onCreated={(created) => { setAiOpen(false); toast.success('Email template created with AI'); navigate(`/email-builder/${created.id}`) }}
       />
       <TemplateCloneModal
         open={!!cloneSource} source={cloneSource} cloneFn={cloneEmailTemplate}
