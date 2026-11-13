@@ -8,7 +8,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import SaveAsTemplateModal from '../components/esign/SaveAsTemplateModal'
-import { esignGetDocument, esignGetAudit, esignDownloadSigned, esignListAttachments, esignDownloadAttachment, esignResendSignatory, esignResendCopy, esignResendCopyTo, esignResendDocument, esignReactivateDocument, esignRemindNow, esignSetReminders, esignFinalizeDocument } from '../services/api'
+import { esignGetDocument, esignGetAudit, esignDownloadSigned, esignListAttachments, esignDownloadAttachment, esignResendSignatory, esignResendCopy, esignResendCopyTo, esignResendDocument, esignReactivateDocument, esignRemindNow, esignSetReminders, esignFinalizeDocument, esignRevokeViewLinks } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import { IconCheck } from '../components/ui/icons'
@@ -235,6 +235,17 @@ export default function ESignDetailPage() {
       showToast(e.message || 'Failed to resend the signed copy', 'error')
     } finally {
       setResendingCopy(false)
+    }
+  }
+
+  async function handleRevokeViewLinks() {
+    if (!window.confirm('Revoke the view-only links sent to CC recipients? Their emailed links stop working. Signing links are not affected.')) return
+    try {
+      const updated = await esignRevokeViewLinks(id)
+      setDoc(prev => ({ ...prev, ...updated }))
+      showToast('View-only links revoked', 'success')
+    } catch (e) {
+      showToast(e.message || 'Failed to revoke view links', 'error')
     }
   }
 
@@ -603,7 +614,18 @@ export default function ESignDetailPage() {
       {/* CC + copy recipients with delivery status */}
       {((doc.ccEmails?.length || 0) + (doc.completionCcEmails?.length || 0)) > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 mb-5 shadow-sm">
-          <h3 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3">Notifications</h3>
+          <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+            <h3 className="text-sm font-bold text-gray-700 dark:text-gray-200">Notifications</h3>
+            {doc.ccEmails?.length > 0 && !['DRAFT', 'CANCELLED'].includes(doc.status) && (
+              <button type="button" onClick={handleRevokeViewLinks} className="btn btn-ghost btn-sm text-danger"
+                      title="CC recipients' emailed view links stop working">
+                Revoke view links
+              </button>
+            )}
+          </div>
+          {doc.viewLinksRevokedAt && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">View-only links sent before {fmtDateTime(doc.viewLinksRevokedAt)} no longer open.</p>
+          )}
 
           {doc.ccEmails?.length > 0 && (() => {
             const notified = doc.status !== 'DRAFT'   // CC courtesy notice goes out when the doc is sent

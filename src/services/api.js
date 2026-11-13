@@ -340,6 +340,7 @@ export const esignGetDocument     = (id)                   => http.get(`/esign/d
 export const esignSaveFields      = (id, fields)           => http.put(`/esign/documents/${id}/fields`, fields).then(r => r.data)
 export const esignSendDocument    = (id, days = 7)         => http.post(`/esign/documents/${id}/send?tokenValidDays=${days}`).then(r => r.data)
 export const esignCancelDocument  = (id)                   => http.post(`/esign/documents/${id}/cancel`).then(r => r.data)
+export const esignRevokeViewLinks = (id)                   => http.post(`/esign/documents/${id}/revoke-view-links`).then(r => r.data)
 export const esignResendDocument  = (id, days = 7)         => http.post(`/esign/documents/${id}/resend?tokenValidDays=${days}`).then(r => r.data)
 export const esignReactivateDocument = (id, days = 7)      => http.post(`/esign/documents/${id}/reactivate?tokenValidDays=${days}`).then(r => r.data)
 export const esignFinalizeDocument   = (id)                => http.post(`/esign/documents/${id}/finalize`).then(r => r.data)
