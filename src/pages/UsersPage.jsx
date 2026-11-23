@@ -1,21 +1,17 @@
-﻿import { useState, useEffect, useCallback } from 'react'
-import { getUsers, searchUsers, getOrganizations, createUser, updateUser, enableUser, disableUser, resendInvite } from '../services/api'
+import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { getUsers, searchUsers, getOrganizations, enableUser, disableUser, resendInvite } from '../services/api'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import { useToast } from '../context/ToastContext'
 import { useAuth, ROLES } from '../context/AuthContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import ViewToggle, { useView } from '../components/ui/ViewToggle'
 import useUrlState from '../hooks/useUrlState'
+import UserFormModal from '../components/users/UserFormModal'
 
 const CRUMBS = [
   { label: 'Dashboard', to: '/' },
   { label: 'Users' },
-]
-
-const ROLE_OPTIONS = [
-  { value: 'ORG_ADMIN', label: 'Org Admin' },
-  { value: 'ADMIN',     label: 'Admin' },
-  { value: 'USER',      label: 'User' },
 ]
 
 const ROLE_BADGE = {
@@ -58,13 +54,13 @@ export default function UsersPage() {
   const [query,    setQuery]    = useState(q.search)   // input text; debounced into the URL
   const [showForm, setShowForm] = useState(false)
   const [editUser, setEditUser] = useState(null)
-  const [saving,   setSaving]   = useState(false)
   const [resendingId, setResendingId] = useState(null)
-
-  const [form, setForm] = useState({
-    email: '', firstName: '', lastName: '',
-    role: 'USER', organizationId: '', sendInvite: true,
-  })
+  const navigate = useNavigate()
+  /** Opens the user's profile — ignores clicks that started on a button or link inside the row/card. */
+  const openProfile = (e, u) => {
+    if (e.target.closest('button, a, input, select')) return
+    navigate(u.id === me?.id ? '/profile' : `/users/${u.id}`)
+  }
 
   /* Load orgs for filter/form */
   useEffect(() => {
@@ -108,38 +104,9 @@ export default function UsersPage() {
     return () => clearTimeout(t)
   }, [query, q.search]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const openCreate = () => {
-    setEditUser(null)
-    setForm({ email: '', firstName: '', lastName: '', role: 'USER', organizationId: me?.organizationId || '', sendInvite: true })
-    setShowForm(true)
-  }
-  const openEdit = (u) => {
-    setEditUser(u)
-    setForm({ email: u.email, firstName: u.firstName, lastName: u.lastName, role: u.role, organizationId: u.organizationId || '', sendInvite: false })
-    setShowForm(true)
-  }
-  const closeForm = () => { setShowForm(false); setEditUser(null) }
-
-  const handleSave = async (e) => {
-    e.preventDefault()
-    if (!form.email || !form.firstName || !form.lastName) { toast.error('Email, first name and last name are required.'); return }
-    setSaving(true)
-    try {
-      if (editUser) {
-        await updateUser(editUser.id, form)
-        toast.success('User updated.')
-      } else {
-        await createUser(form)
-        toast.success(form.sendInvite ? 'User created — invite email sent.' : 'User created.')
-      }
-      closeForm()
-      load(query, orgFilter)
-    } catch (err) {
-      toast.error(err.message || 'Failed to save user.')
-    } finally {
-      setSaving(false)
-    }
-  }
+  const openCreate = () => { setEditUser(null); setShowForm(true) }
+  const openEdit   = (u) => { setEditUser(u); setShowForm(true) }
+  const closeForm  = () => { setShowForm(false); setEditUser(null) }
 
   const handleDisable = async (u) => {
     if (!confirm(`Disable "${u.firstName} ${u.lastName}"? Their active sessions will be revoked immediately.`)) return
@@ -248,7 +215,8 @@ export default function UsersPage() {
         /* ── Grid view ── */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredUsers.map(u => (
-            <div key={u.id} className="card p-5 flex flex-col gap-3">
+            <div key={u.id} onClick={e => openProfile(e, u)} title="View profile"
+              className="card card-hover p-5 flex flex-col gap-3 cursor-pointer">
               <div className="flex items-start gap-3">
                 <Avatar user={u} size="sm" />
                 <div className="flex-1 min-w-0">
@@ -322,7 +290,8 @@ export default function UsersPage() {
             </thead>
             <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
               {filteredUsers.map(u => (
-                <tr key={u.id} className="hover:bg-ink-8 dark:hover:bg-gray-700/30 transition-colors group">
+                <tr key={u.id} onClick={e => openProfile(e, u)} title="View profile"
+                  className="hover:bg-ink-8 dark:hover:bg-gray-700/30 transition-colors group cursor-pointer">
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
                       <Avatar user={u} />
@@ -396,77 +365,14 @@ export default function UsersPage() {
 
       {/* Create / Edit Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={closeForm}>
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6"
-            onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-base font-bold text-gray-800 dark:text-gray-100">
-                {editUser ? 'Edit User' : 'Invite New User'}
-              </h2>
-              <button onClick={closeForm}
-                className="w-8 h-8 flex items-center justify-center rounded-xl text-ink-4 hover:bg-ink-8 dark:hover:bg-gray-700">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-              </button>
-            </div>
-
-            <form onSubmit={handleSave} className="space-y-4">
-              {!editUser && (
-                <div>
-                  <label className="form-label">Email *</label>
-                  <input type="email" className="form-input" placeholder="user@company.com"
-                    value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required />
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="form-label">First Name *</label>
-                  <input className="form-input" placeholder="Jane"
-                    value={form.firstName} onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} required />
-                </div>
-                <div>
-                  <label className="form-label">Last Name *</label>
-                  <input className="form-input" placeholder="Smith"
-                    value={form.lastName} onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} required />
-                </div>
-              </div>
-              <div>
-                <label className="form-label">Role *</label>
-                <select className="form-select" value={form.role}
-                  onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
-                  {ROLE_OPTIONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-                </select>
-              </div>
-              {isPlatformAdmin && (
-                <div>
-                  <label className="form-label">Organization</label>
-                  <select className="form-select" value={form.organizationId}
-                    onChange={e => setForm(f => ({ ...f, organizationId: e.target.value }))}>
-                    <option value="">— Select Organization —</option>
-                    {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
-                  </select>
-                </div>
-              )}
-              {!editUser && (
-                <label className="flex items-center gap-3 p-3 rounded-xl border border-ink-7 dark:border-gray-700 cursor-pointer">
-                  <input type="checkbox" className="rounded" checked={form.sendInvite}
-                    onChange={e => setForm(f => ({ ...f, sendInvite: e.target.checked }))} />
-                  <div>
-                    <p className="text-sm font-medium text-ink-2 dark:text-gray-300">Send email invitation</p>
-                    <p className="text-xs text-ink-4">User receives a link valid for 7 days to set their password.</p>
-                  </div>
-                </label>
-              )}
-              <div className="flex gap-3 pt-2">
-                <button type="button" onClick={closeForm} className="btn btn-secondary flex-1">Cancel</button>
-                <button type="submit" disabled={saving} className="btn btn-primary flex-1">
-                  {saving ? 'Saving…' : editUser ? 'Save Changes' : 'Send Invitation'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <UserFormModal
+          editUser={editUser}
+          isPlatformAdmin={isPlatformAdmin}
+          orgs={orgs}
+          defaultOrgId={me?.organizationId || ''}
+          onClose={closeForm}
+          onSaved={() => load(query, orgFilter)}
+        />
       )}
     </div>
   )

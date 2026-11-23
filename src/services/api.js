@@ -292,6 +292,8 @@ export const updateOrgFeatures = (id, feats)  => http.put(`/organizations/${id}/
 
 // ── Users (Platform Admin / Org Admin / Admin) ─────────────
 export const getUsers       = ()                   => http.get('/users').then(r => r.data)
+export const getUser        = (id)                 => http.get(`/users/${id}`).then(r => r.data)
+export const getUserSummary = (id)                 => http.get(`/users/${id}/summary`).then(r => r.data)
 export const searchUsers    = (q, orgId)           => http.get('/users/search', { params: { q, orgId } }).then(r => r.data)
 export const createUser     = (payload)            => http.post('/users', payload).then(r => r.data)
 export const updateUser     = (id, payload)        => http.put(`/users/${id}`, payload).then(r => r.data)
@@ -323,6 +325,7 @@ export const updateProfile   = (payload) => http.put('/profile/me', payload).the
 export const changePassword  = (payload) => http.put('/profile/me/password', payload).then(r => r.data)
 export const uploadAvatar    = (fileId)  => http.post('/profile/me/avatar', { fileId }).then(r => r.data)   // fileId from uploadToStorage(…, 'AVATAR'); null removes
 export const getMyAuditLog   = ()        => http.get('/profile/me/audit').then(r => r.data)
+export const getMySummary    = ()        => http.get('/profile/me/summary').then(r => r.data)   // same shape as getUserSummary
 
 // ── E-Sign (Creator) ───────────────────────────────────────
 export const esignBulkCreate = (documents, sendImmediately = true, label, allowClientUpload = false, allowedClientUploadFileTypes = []) =>

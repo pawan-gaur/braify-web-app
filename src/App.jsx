@@ -32,6 +32,7 @@ const EmailTemplatesPage     = lazy(() => import('./pages/EmailTemplatesPage'))
 const EmailBuilderPage       = lazy(() => import('./pages/EmailBuilderPage'))
 const OrganizationsPage      = lazy(() => import('./pages/OrganizationsPage'))
 const UsersPage              = lazy(() => import('./pages/UsersPage'))
+const UserDetailPage         = lazy(() => import('./pages/UserDetailPage'))
 const SessionsPage           = lazy(() => import('./pages/SessionsPage'))
 const ProfilePage            = lazy(() => import('./pages/ProfilePage'))
 const AcceptInvitePage       = lazy(() => import('./pages/AcceptInvitePage'))
@@ -216,6 +217,7 @@ function Shell() {
           <Route path="/admin/organizations/:orgId" element={<RoleRoute min={ROLES.PLATFORM_ADMIN}><OrgDetailPage /></RoleRoute>} />
           <Route path="/onboarding-requests"        element={<RoleRoute min={ROLES.PLATFORM_ADMIN}><OnboardingRequestsPage /></RoleRoute>} />
           <Route path="/users"                 element={<RoleRoute min={ROLES.ADMIN}><UsersPage /></RoleRoute>} />
+          <Route path="/users/:id"             element={<RoleRoute min={ROLES.ADMIN}><UserDetailPage /></RoleRoute>} />
           <Route path="/sessions"              element={<SessionsPage />} />
 
           {/* ── Signer inbox (documents sent to my email for signature) ── */}
