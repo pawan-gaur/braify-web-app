@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import PdfPageCanvas from '../components/esign/PdfPageCanvas'
 import { esignBulkCreate, getTemplates, generatePdfAsBase64, getEmailTemplates, uploadToStorage, dataUrlToBlob } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
@@ -9,7 +10,6 @@ import { IconCheck, IconX, IconChevronRight } from '../components/ui/icons'
 import { listUrl } from '../hooks/useUrlState'
 import { compressPdfIfLarge } from '../utils/compressPdf'
 // pdf.js + its worker load lazily the first time a PDF is rendered.
-import { getPdfjs } from '../utils/pdfjsLoader'
 
 const CRUMBS = [
   { label: 'Dashboard', to: '/' },
@@ -317,59 +317,6 @@ const STATUS_LABEL = {
   skipped:      'Skipped',
 }
 
-/* ─────────────────────────────────────────────────────────────────── */
-/* PdfPageCanvas — renders one PDF page to a <canvas> via pdfjs-dist.  */
-/* Scales to fill container width; reports total page count.           */
-/* ─────────────────────────────────────────────────────────────────── */
-
-function PdfPageCanvas({ base64DataUrl, pageNumber, onPageCountChange }) {
-  const canvasRef = useRef(null)
-
-  useEffect(() => {
-    if (!base64DataUrl || !canvasRef.current) return
-    let cancelled = false
-    let renderTask = null   // in-flight page.render(); cancelled on cleanup so a re-run can reuse the canvas
-
-    ;(async () => {
-      try {
-        const b64   = base64DataUrl.includes(',') ? base64DataUrl.split(',')[1] : base64DataUrl
-        const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0))
-        const pdfjsLib = await getPdfjs()
-        if (cancelled) return
-        const pdf   = await pdfjsLib.getDocument({ data: bytes }).promise
-        if (cancelled) return
-
-        onPageCountChange?.(pdf.numPages)
-
-        const safePageNum = Math.min(Math.max(pageNumber || 1, 1), pdf.numPages)
-        const page        = await pdf.getPage(safePageNum)
-        if (cancelled) return
-
-        const canvas    = canvasRef.current
-        if (!canvas) return
-        const container = canvas.parentElement
-        const width     = container ? (container.clientWidth || 600) : 600
-        const viewport  = page.getViewport({ scale: 1 })
-        const scale     = width / viewport.width
-        const scaled    = page.getViewport({ scale })
-
-        canvas.width  = scaled.width
-        canvas.height = scaled.height
-
-        const ctx = canvas.getContext('2d')
-        ctx.clearRect(0, 0, canvas.width, canvas.height)
-        renderTask = page.render({ canvasContext: ctx, viewport: scaled })
-        await renderTask.promise
-      } catch (err) {
-        if (!cancelled && err?.name !== 'RenderingCancelledException') console.error('PDF render error:', err)
-      }
-    })()
-
-    return () => { cancelled = true; renderTask?.cancel() }
-  }, [base64DataUrl, pageNumber])
-
-  return <canvas ref={canvasRef} className="block w-full" />
-}
 
 /* ─────────────────────────────────────────────────────────────────── */
 /* Shared Tailwind snippets                                              */
@@ -1812,7 +1759,7 @@ export default function ESignBulkPage() {
                   {/* PDF page rendered by pdfjs — OR placeholder */}
                   {previewB64 ? (
                     <PdfPageCanvas
-                      base64DataUrl={previewB64}
+                      source={previewB64}
                       pageNumber={pdfCurrentPage}
                       onPageCountChange={setPdfPageCount}
                     />

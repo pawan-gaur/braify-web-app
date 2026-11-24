@@ -28,7 +28,7 @@ const CATEGORIES = [
 const CATEGORY_LABEL = Object.fromEntries(CATEGORIES)
 
 const CATEGORY_COLOR = {
-  ESIGN_INVITATION: 'bg-indigo-100 text-indigo-700',
+  ESIGN_INVITATION: 'bg-accent-100 text-accent-700',
   ESIGN_REMINDER:   'bg-amber-100 text-amber-700',
   ESIGN_COMPLETION: 'bg-green-100 text-green-700',
   ESIGN_CC:         'bg-slate-100 text-slate-600',

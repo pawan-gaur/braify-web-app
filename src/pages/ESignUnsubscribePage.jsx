@@ -20,7 +20,7 @@ export default function ESignUnsubscribePage() {
   useEffect(() => {
     esignUnsubscribeReminders(token)
       .then(setInfo)
-      .catch(e => setError(e?.response?.data?.message || e.message || 'This link isn’t valid.'))
+      .catch(e => setError(e.message || 'This link isn’t valid.'))
       .finally(() => setLoading(false))
   }, [token])
 
@@ -30,7 +30,7 @@ export default function ESignUnsubscribePage() {
       const res = optOut ? await esignUnsubscribeReminders(token) : await esignResubscribeReminders(token)
       setInfo(res)
     } catch (e) {
-      setError(e?.response?.data?.message || e.message || 'Something went wrong. Please try again.')
+      setError(e.message || 'Something went wrong. Please try again.')
     } finally {
       setBusy(false)
     }

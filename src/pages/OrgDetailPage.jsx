@@ -183,7 +183,7 @@ function OverviewTab({ org, setOrg, orgId }) {
       setOrg(prev => ({ ...prev, mfaPolicy: policy }))
       toast.success(`MFA policy set to ${policy}.`)
     } catch (err) {
-      toast.error(err?.response?.data?.message || err.message || 'Failed to update MFA policy.')
+      toast.error(err.message || 'Failed to update MFA policy.')
     } finally {
       setMfaSaving(false)
     }
@@ -739,9 +739,10 @@ function UsageTab({ orgId }) {
           <h3 className="font-bold text-gray-800 dark:text-gray-100 mb-4">Quota Usage</h3>
           <div className="space-y-4">
             <QuotaProgressBar label="Users"         current={quota.currentUsers      ?? 0} limit={quota.maxUsers           ?? -1} />
-            <QuotaProgressBar label="Documents/mo"  current={quota.currentDocs       ?? 0} limit={quota.maxDocsPerMonth    ?? -1} />
+            <QuotaProgressBar label="Documents/mo"  current={(quota.currentDocsThisMonth ?? 0) + (quota.currentEsignThisMonth ?? 0)} limit={quota.maxDocsPerMonth ?? -1} />
             <QuotaProgressBar label="Storage"       current={quota.currentStorageMb  ?? 0} limit={quota.maxStorageMb       ?? -1} unit=" MB" />
-            <QuotaProgressBar label="API calls/mo"  current={quota.currentApiCalls   ?? 0} limit={quota.maxApiCallsPerMonth ?? -1} />
+            <QuotaProgressBar label="API calls/mo"  current={quota.currentApiCallsThisMonth ?? 0} limit={quota.maxApiCallsPerMonth ?? -1} />
+            <QuotaProgressBar label="SMS/mo"        current={quota.currentSmsThisMonth ?? 0} limit={quota.maxSmsPerMonth ?? -1} />
           </div>
         </div>
       )}

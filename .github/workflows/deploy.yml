@@ -24,42 +24,70 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Lint (errors fail the deploy)
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
       - name: Build production bundle
         run: npm run build
         env:
           # The frontend calls relative /api paths — Nginx proxies them to
           # the backend on the same domain, so no absolute URL is needed.
-          # Set this only if you ever move to a separate API domain.
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          # Leave the secret unset (same origin); set it only if the API moves to another domain,
+          # e.g. https://api.braify.com (no trailing /api).
+          VITE_API_ORIGIN: ${{ secrets.VITE_API_ORIGIN }}
 
-      # ── 4. Deploy dist/ to EC2 + Reload Nginx ─────────────────────────
-      - name: Deploy to EC2 and reload Nginx
+      # ── 4. Prepare a new release dir (the live site keeps serving) ────
+      # Each deploy goes to /var/www/braify-web-app-releases/<sha>; /var/www/braify-web-app
+      # is a symlink switched atomically after the upload, so there is no empty-site window
+      # and a rollback is one `ln -sfn` (see braify-web-services/ops/README.md).
+      - name: Prepare release directory
         uses: appleboy/ssh-action@v1.0.3
         with:
           host:     ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key:      ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # Clear old build
-            rm -rf /var/www/braify-web-app/*
+            set -e
+            REL=/var/www/braify-web-app-releases
+            sudo mkdir -p "$REL"
+            sudo chown "$USER":"$USER" "$REL"
+            rm -rf "$REL/${{ github.sha }}"
+            mkdir -p "$REL/${{ github.sha }}"
 
-      - name: Upload dist to EC2
+      # ── 5. Upload dist into the new release ────────────────────────────
+      - name: Upload dist
         uses: appleboy/scp-action@v0.1.7
         with:
           host:     ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key:      ${{ secrets.EC2_SSH_KEY }}
           source:   "dist/*"
-          target:   "/var/www/braify-web-app/"
+          target:   "/var/www/braify-web-app-releases/${{ github.sha }}/"
           strip_components: 1
 
-      # ── 5. Reload Nginx ────────────────────────────────────────────────
-      - name: Reload Nginx
+      # ── 6. Switch the live symlink, prune old releases, reload Nginx ───
+      - name: Activate release
         uses: appleboy/ssh-action@v1.0.3
         with:
           host:     ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key:      ${{ secrets.EC2_SSH_KEY }}
           script: |
+            set -e
+            REL=/var/www/braify-web-app-releases
+            NEW="$REL/${{ github.sha }}"
+            LIVE=/var/www/braify-web-app
+            test -s "$NEW/index.html" || { echo "index.html missing in $NEW — aborting, live site untouched"; exit 1; }
+            # One-time migration: the old plain directory becomes a kept release.
+            if [ -d "$LIVE" ] && [ ! -L "$LIVE" ]; then
+              sudo mv "$LIVE" "$REL/pre-symlink-$(date +%Y%m%d%H%M%S)"
+            fi
+            sudo ln -sfn "$NEW" "$LIVE.next"
+            sudo mv -Tf "$LIVE.next" "$LIVE"
+            # Keep the 5 newest releases (the live one is always among them).
+            cd "$REL" && ls -1dt */ | tail -n +6 | xargs -r sudo rm -rf
             sudo nginx -t && sudo systemctl reload nginx
-            echo "✅ Nginx reloaded — braify-web-app is live"
+            echo "✅ braify-web-app is live: $(readlink "$LIVE")"

@@ -588,10 +588,10 @@ export default function BulkEmailDetailPage() {
                         <button
                           onClick={() => setConfirmSegment('UNCLICKED')}
                           disabled={!!segmentBusy || nonClickers === 0}
-                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold border border-violet-300 text-violet-700 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold border border-accent-300 text-accent-700 dark:text-accent-400 hover:bg-accent-50 dark:hover:bg-accent-900/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         >
                           {segmentBusy === 'UNCLICKED'
-                            ? <span className="w-4 h-4 border-2 border-violet-400 border-t-transparent rounded-full animate-spin"/>
+                            ? <span className="w-4 h-4 border-2 border-accent-400 border-t-transparent rounded-full animate-spin"/>
                             : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5"/></svg>}
                           Email non-clickers ({nonClickers})
                         </button>
@@ -620,7 +620,7 @@ export default function BulkEmailDetailPage() {
                   <h2 className="text-sm font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">Opens &amp; clicks over time</h2>
                   <div className="flex items-center gap-4 text-xs">
                     <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-sky-400"/>Opens</span>
-                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-violet-500"/>Clicks</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm bg-accent-500"/>Clicks</span>
                   </div>
                 </div>
                 <TimelineChart points={analytics?.timeline || []} />
@@ -643,7 +643,7 @@ export default function BulkEmailDetailPage() {
                               {l.url}
                             </a>
                             <div className="h-1.5 mt-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                              <div className="h-full bg-violet-500 rounded-full" style={{ width: `${Math.round((l.clicks / max) * 100)}%` }} />
+                              <div className="h-full bg-accent-500 rounded-full" style={{ width: `${Math.round((l.clicks / max) * 100)}%` }} />
                             </div>
                           </div>
                           <span className="text-sm font-bold text-gray-700 dark:text-gray-200 tabular-nums shrink-0">{l.clicks.toLocaleString()}</span>
@@ -765,7 +765,7 @@ export default function BulkEmailDetailPage() {
                       {/* Clicked */}
                       <td className="px-5 py-3 whitespace-nowrap">
                         {r.clickCount > 0 ? (
-                          <span className="inline-flex items-center gap-1 text-violet-600 dark:text-violet-400 text-xs font-semibold" title={r.lastClickedAt ? `Last clicked ${fmtDate(r.lastClickedAt)}` : ''}>
+                          <span className="inline-flex items-center gap-1 text-accent-600 dark:text-accent-400 text-xs font-semibold" title={r.lastClickedAt ? `Last clicked ${fmtDate(r.lastClickedAt)}` : ''}>
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg>
                             {r.clickCount > 1 ? `×${r.clickCount}` : 'Yes'}
                           </span>
@@ -977,7 +977,7 @@ function pctOf(fraction) {
 
 const CHIP_TONES = {
   sky:    'bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-300',
-  violet: 'bg-violet-50 text-violet-700 dark:bg-violet-900/20 dark:text-violet-300',
+  violet: 'bg-accent-50 text-accent-700 dark:bg-accent-900/20 dark:text-accent-300',
   rose:   'bg-rose-50 text-rose-700 dark:bg-rose-900/20 dark:text-rose-300',
   gray:   'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
 }
@@ -994,7 +994,7 @@ function EngagementChip({ label, value, sub, tone = 'gray' }) {
 
 const TILE_TONES = {
   sky:     { bar: 'bg-sky-500',     text: 'text-sky-600 dark:text-sky-400'         },
-  violet:  { bar: 'bg-violet-500',  text: 'text-violet-600 dark:text-violet-400'   },
+  violet:  { bar: 'bg-accent-500',  text: 'text-accent-600 dark:text-accent-400'   },
   emerald: { bar: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400' },
   rose:    { bar: 'bg-rose-500',    text: 'text-rose-600 dark:text-rose-400'       },
 }
@@ -1028,7 +1028,7 @@ function TimelineChart({ points }) {
             <div className="flex items-end gap-0.5 h-full w-full justify-center">
               <div className="w-2.5 bg-sky-400 rounded-t transition-all" title={`${p.opens} opens`}
                    style={{ height: `${Math.max(2, (p.opens / max) * 100)}%` }} />
-              <div className="w-2.5 bg-violet-500 rounded-t transition-all" title={`${p.clicks} clicks`}
+              <div className="w-2.5 bg-accent-500 rounded-t transition-all" title={`${p.clicks} clicks`}
                    style={{ height: `${Math.max(2, (p.clicks / max) * 100)}%` }} />
             </div>
             <span className="text-[9px] text-gray-400 whitespace-nowrap -rotate-45 origin-top-left mt-1 h-6">

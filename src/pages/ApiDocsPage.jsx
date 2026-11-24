@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState, useCallback, lazy, Suspense } from 'react'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
+import { API_ORIGIN } from '../services/api'
 
 /**
  * Live API documentation page for Organisation-related endpoints.
@@ -34,7 +35,7 @@ const CRUMBS = [
 
 // In dev, Vite proxies /v3/** → http://localhost:8080/v3/**
 // In prod, point directly at the deployed backend origin via VITE_API_ORIGIN env var.
-const BACKEND_ORIGIN = import.meta.env.VITE_API_ORIGIN ?? ''
+const BACKEND_ORIGIN = API_ORIGIN
 
 const API_GROUPS = [
   {

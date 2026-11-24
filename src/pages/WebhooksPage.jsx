@@ -26,11 +26,14 @@ const EVENT_LABELS = {
 
 const VERIFY_SNIPPET = `// Node.js — verify the Braify-Signature header (use the raw request body)
 const crypto = require('crypto')
+// After a secret rotation the header carries two v1= values for 24h — accept either.
 function verify(rawBody, header, secret) {
-  const parts = Object.fromEntries(header.split(',').map(p => p.split('=')))
-  const expected = crypto.createHmac('sha256', secret).update(parts.t + '.' + rawBody).digest('hex')
-  const ok = crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(parts.v1))
-  return ok && Math.abs(Date.now() / 1000 - Number(parts.t)) < 300   // reject replays older than 5 min
+  const parts = header.split(',').map(p => p.split('='))
+  const t = parts.find(([k]) => k === 't')?.[1]
+  const expected = crypto.createHmac('sha256', secret).update(t + '.' + rawBody).digest('hex')
+  const ok = parts.some(([k, v]) => k === 'v1' && v.length === expected.length
+    && crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(v)))
+  return ok && Math.abs(Date.now() / 1000 - Number(t)) < 300   // reject replays older than 5 min
 }`
 
 /**
@@ -112,6 +115,7 @@ export default function WebhooksPage() {
         <div className="alert-success border rounded-xl px-4 py-4 mb-6 text-sm">
           <p className="font-semibold">Signing secret for {secret.url}</p>
           <p className="mt-1">Copy it now — it won’t be shown again. Use it to verify the <code>Braify-Signature</code> header.</p>
+          {secret.rotated && <p className="mt-1">The previous secret keeps working for 24 hours, so you can update your receiver without missing events.</p>}
           <div className="flex items-center gap-2 mt-3">
             <code className="flex-1 truncate bg-white/70 dark:bg-black/20 rounded-lg px-3 py-2 font-mono text-xs">{secret.value}</code>
             <button className="btn btn-secondary btn-sm" onClick={() => { navigator.clipboard?.writeText(secret.value); toast.success('Copied') }}>Copy</button>
@@ -163,8 +167,13 @@ export default function WebhooksPage() {
                     {ep.events?.length ? `${ep.events.length} event${ep.events.length === 1 ? '' : 's'}` : 'All events'}
                     {ep.lastDeliveryAt ? ` · last delivery ${fmtDateTime(ep.lastDeliveryAt)} (${ep.lastStatusCode ?? 'no response'})` : ''}
                   </p>
-                  {ep.consecutiveFailures > 0 && (
-                    <p className="text-xs text-danger mt-1">{ep.consecutiveFailures} failed deliveries in a row — check the endpoint.</p>
+                  {ep.disabledReason ? (
+                    <p className="text-xs text-danger mt-1">{ep.disabledReason} Fix the endpoint, then click Enable.</p>
+                  ) : ep.consecutiveFailures > 0 && (
+                    <p className="text-xs text-danger mt-1">{ep.consecutiveFailures} failed deliveries in a row — check the endpoint. It is switched off automatically after 20.</p>
+                  )}
+                  {ep.previousSecretExpiresAt && (
+                    <p className="text-xs text-ink-4 mt-1">Previous secret still accepted until {fmtDateTime(ep.previousSecretExpiresAt)}.</p>
                   )}
                 </div>
                 <span className={`badge ${ep.active ? 'badge-success' : 'badge-gray'}`}>{ep.active ? 'Active' : 'Disabled'}</span>
@@ -176,9 +185,9 @@ export default function WebhooksPage() {
                   {ep.active ? 'Disable' : 'Enable'}
                 </button>
                 <button className="btn btn-ghost btn-sm" onClick={async () => {
-                  if (!window.confirm('Rotate the signing secret? Your receiver must switch to the new secret.')) return
+                  if (!window.confirm('Rotate the signing secret? Deliveries are signed with both the new and the old secret for 24 hours, then only the new one.')) return
                   const s = await act(() => rotateWebhookSecret(orgId, ep.id))
-                  if (s) setSecret({ url: ep.url, value: s })
+                  if (s) setSecret({ url: ep.url, value: s, rotated: true })
                 }}>Rotate secret</button>
                 <button className="btn btn-ghost btn-sm text-danger" onClick={() => {
                   if (window.confirm('Delete this endpoint? Pending deliveries will stop.')) act(() => deleteWebhook(orgId, ep.id), 'Endpoint deleted')
@@ -224,6 +233,8 @@ export default function WebhooksPage() {
           Each event is POSTed as JSON <code>{'{ id, type, createdAt, orgId, data }'}</code> with headers
           <code> Braify-Event</code>, <code>Braify-Delivery</code> and <code>Braify-Signature: t=…,v1=…</code>.
           Failed deliveries are retried for about a day (1m → 12h). Return any 2xx status to acknowledge.
+          An endpoint is switched off after 20 failed deliveries in a row (org admins are notified).
+          For 24 hours after a secret rotation the header carries two <code>v1=</code> signatures (new and old secret).
         </p>
         <pre className="mt-3 text-xs bg-ink-8 dark:bg-gray-900 rounded-xl p-4 overflow-x-auto"><code>{VERIFY_SNIPPET}</code></pre>
       </div>

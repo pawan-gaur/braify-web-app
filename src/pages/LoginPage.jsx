@@ -46,7 +46,7 @@ export default function LoginPage() {
   const firstName  = lastUser?.name?.split(' ')[0] || ''
   const emailToUse = (remembered ? lastUser.email : email).trim()
 
-  const errMsg = (err) => err?.response?.data?.message || err?.message || 'Something went wrong.'
+  const errMsg = (err) => err?.message || 'Something went wrong.'
 
   // Resend countdown
   useEffect(() => {

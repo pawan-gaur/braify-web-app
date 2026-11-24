@@ -1,8 +1,10 @@
 ﻿import { useState, useEffect } from 'react'
 import { useAuth, ROLES as USER_ROLES } from '../context/AuthContext'
+import { ALL_FEATURES } from '../config/features'
 import { useToast } from '../context/ToastContext'
-import { getBranding, updateBranding, getCloudConfig, updateCloudConfig, getEsignReminderPolicy, updateEsignReminderPolicy, getOrgSmsConfig, updateOrgSmsConfig, testOrgSmsConfig } from '../services/api'
+import { getBranding, updateBranding, getCloudConfig, updateCloudConfig, getEsignReminderPolicy, updateEsignReminderPolicy, getOrgSmsConfig, updateOrgSmsConfig, testOrgSmsConfig, getOrgEmailConfig, updateOrgEmailConfig, testOrgEmailConfig } from '../services/api'
 import SmsProviderForm from '../components/settings/SmsProviderForm'
+import EmailProviderForm from '../components/settings/EmailProviderForm'
 import { Link } from 'react-router-dom'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
@@ -16,15 +18,13 @@ const CRUMBS = [
   { label: 'Organization Settings' },
 ]
 
-const DEFAULT_PRIMARY = '#6366f1'
-const DEFAULT_ACCENT  = '#818cf8'
+// Braify design tokens (tailwind.config.js brand / accent).
+const DEFAULT_PRIMARY = '#0066FF'
+const DEFAULT_ACCENT  = '#6D52E8'
 
 /* ── Feature / role meta ─────────────────────────────────────── */
-const FEATURES = [
-  { key: 'PDF_TEMPLATES',   label: 'PDF Templates',   path: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', description: 'Create and generate PDF documents' },
-  { key: 'EMAIL_TEMPLATES', label: 'Email Templates', path: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',               description: 'Send branded email campaigns'  },
-  { key: 'E_SIGN',          label: 'E-Sign',          path: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z', description: 'Electronic signature workflow'  },
-]
+// From the shared feature list, so every feature (incl. File Storage) gets role access controls.
+const FEATURES = ALL_FEATURES.map(f => ({ key: f.key, label: f.label, path: f.icon, description: f.description }))
 
 const ROLES = [
   { key: 'ORG_ADMIN', label: 'Org Admin', locked: true,  desc: 'Always has full access' },
@@ -34,6 +34,7 @@ const ROLES = [
 
 /* ── Theme presets ───────────────────────────────────────────── */
 const PRESETS = [
+  { name: 'Braify',  primary: '#0066FF', accent: '#6D52E8' },
   { name: 'Indigo',  primary: '#6366f1', accent: '#818cf8' },
   { name: 'Blue',    primary: '#3b82f6', accent: '#60a5fa' },
   { name: 'Violet',  primary: '#7c3aed', accent: '#a78bfa' },
@@ -182,7 +183,7 @@ export default function OrgSettingsPage() {
       })
       toast.success('Reminder policy saved.')
     } catch (err) {
-      toast.error(err?.response?.data?.message || err.message || 'Failed to save reminder policy.')
+      toast.error(err.message || 'Failed to save reminder policy.')
     } finally {
       setSavingReminders(false)
     }
@@ -254,7 +255,8 @@ export default function OrgSettingsPage() {
       : []),
     { id: 'cloud',    label: 'Cloud Storage',  icon: 'M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z' },
     ...(orgId && [USER_ROLES.ORG_ADMIN, USER_ROLES.PLATFORM_ADMIN].includes(user?.role)
-      ? [{ id: 'sms', label: 'SMS', icon: 'M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z' }]
+      ? [{ id: 'email', label: 'Email', icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
+         { id: 'sms', label: 'SMS', icon: 'M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z' }]
       : []),
   ]
 
@@ -321,6 +323,20 @@ export default function OrgSettingsPage() {
           onSave={handleSaveReminders}
           smsAllowed={bulkEnabled}
         />
+      )}
+
+      {/* ── Tab: Email provider ── */}
+      {activeTab === 'email' && (
+        <div className="max-w-2xl card p-6">
+          <h2 className="text-sm font-bold text-gray-700 dark:text-gray-200">Email provider</h2>
+          <p className="text-xs text-ink-3 mt-1 mb-5">
+            Send bulk campaigns, template emails and e-sign invitations from your own domain through Resend,
+            SendGrid, Mailgun or your SMTP server. Leave it on “Platform default” to use Braify's sender.
+            Sign-in codes, invitations and password resets always come from Braify.
+          </p>
+          <EmailProviderForm noneLabel="Platform default"
+            load={() => getOrgEmailConfig(orgId)} save={body => updateOrgEmailConfig(orgId, body)} test={to => testOrgEmailConfig(orgId, to)} />
+        </div>
       )}
 
       {/* ── Tab: SMS provider ── */}

@@ -470,7 +470,7 @@ export default function BulkEmailJobsPage() {
                     {job.sentCount > 0 && (
                       <div className="flex items-center gap-3 text-[11px] text-gray-500 dark:text-gray-400">
                         <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-sky-400"/>{rate(job.openedCount, job.sentCount)}% opened</span>
-                        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-violet-500"/>{rate(job.clickedCount, job.sentCount)}% clicked</span>
+                        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-accent-500"/>{rate(job.clickedCount, job.sentCount)}% clicked</span>
                       </div>
                     )}
                     {job.status === 'SCHEDULED' && job.scheduledAt && (
