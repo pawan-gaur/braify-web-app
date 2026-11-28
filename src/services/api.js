@@ -303,6 +303,7 @@ export const resendInvite   = (id)                 => http.post(`/users/${id}/re
 export const resetUserMfa   = (id)                 => http.post(`/users/${id}/mfa/reset`)
 export const unlockUser     = (id)                 => http.post(`/users/${id}/unlock`)
 export const signOutUserEverywhere = (id)          => http.post(`/users/${id}/sessions/revoke`).then(r => r.data)   // { ended }
+export const transferUserEsign = (id, toUserId)    => http.post(`/users/${id}/transfer-esign`, { toUserId }).then(r => r.data)   // { documents, batches }
 
 // ── Sessions ───────────────────────────────────────────────
 export const getSessions          = ()   => http.get('/sessions').then(r => r.data)
