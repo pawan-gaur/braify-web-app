@@ -53,6 +53,7 @@ function buildCommands(navigate, ctx) {
   if (isPlatformAdmin) {
     add({ id: 'pa-orgs',         group: 'Platform', label: 'Organizations',     action: () => navigate('/organizations'),       icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5' })
     add({ id: 'pa-onboarding',   group: 'Platform', label: 'Onboarding requests', action: () => navigate('/onboarding-requests'), icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2' })
+    add({ id: 'pa-support',   group: 'Platform', label: 'Support tickets', action: () => navigate('/support-tickets'), icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2' })
   }
 
   // Personal

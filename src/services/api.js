@@ -278,6 +278,19 @@ export const getOnboardingRequests    = (status = null)  => http.get('/onboardin
 export const getPendingOnboardingCount= ()               => http.get('/onboarding/count/pending').then(r => r.data)
 export const reviewOnboardingRequest  = (id, payload)    => http.put(`/onboarding/${id}/review`, payload).then(r => r.data)
 
+// ── Support tickets (Platform Admin) ───────────────────────
+// Raised automatically for unexpected server errors; see feature/support in the backend.
+const dropEmpty = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== '' && v !== null && v !== undefined))
+export const supportTicketsList        = (params = {})       => http.get('/support-tickets', { params: dropEmpty(params) }).then(r => r.data)
+export const supportTicketsSummary     = ()                  => http.get('/support-tickets/summary').then(r => r.data)
+export const supportTicketAssignees    = ()                  => http.get('/support-tickets/assignees').then(r => r.data)
+export const supportTicketLookup       = (reference)         => http.get('/support-tickets/lookup', { params: { reference } }).then(r => r.data)
+export const supportTicketGet          = (id)                => http.get(`/support-tickets/${id}`).then(r => r.data)
+export const supportTicketOccurrences  = (id, { page = 0, size = 20 } = {}) => http.get(`/support-tickets/${id}/occurrences`, { params: { page, size } }).then(r => r.data)
+export const supportTicketSetStatus    = (id, status)        => http.patch(`/support-tickets/${id}/status`, { status }).then(r => r.data)
+export const supportTicketAssign       = (id, assigneeId)    => http.patch(`/support-tickets/${id}/assignee`, { assigneeId: assigneeId || null }).then(r => r.data)
+export const supportTicketAddNote      = (id, text)          => http.post(`/support-tickets/${id}/notes`, { text }).then(r => r.data)
+
 // ── Organizations (Platform Admin) ─────────────────────────
 export const getOrganizations    = ()         => http.get('/organizations').then(r => r.data)
 export const searchOrganizations = (q)        => http.get('/organizations/search', { params: { q } }).then(r => r.data)

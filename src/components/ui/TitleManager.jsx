@@ -53,6 +53,8 @@ const TITLE_MAP = [
   { exact:  '/organizations',           title: 'Organizations' },
   { prefix: '/admin/organizations/',    title: 'Organization Detail' },
   { exact:  '/onboarding-requests',     title: 'Onboarding Requests' },
+  { exact:  '/support-tickets',         title: 'Support Tickets' },
+  { prefix: '/support-tickets/',        title: 'Support Ticket' },
   { exact:  '/users',                   title: 'Users' },
   { exact:  '/sessions',                title: 'Sessions' },
 

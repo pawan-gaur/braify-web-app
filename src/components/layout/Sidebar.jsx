@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useApp } from '../../context/AppContext'
 import { useAuth, ROLES, roleAtLeast } from '../../context/AuthContext'
 import { FEATURES } from '../../config/features'
-import { getPendingOnboardingCount, signerGetCounts } from '../../services/api'
+import { getPendingOnboardingCount, signerGetCounts, supportTicketsSummary } from '../../services/api'
 import CommandPalette, { useCommandPalette } from '../ui/CommandPalette'
 import { BraiLogo } from './PublicNavbar'
 
@@ -80,6 +80,12 @@ const NAV_SECTIONS = [
         minRole: ROLES.PLATFORM_ADMIN,
         pendingBadge: true,
         icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 8h6m-6 4h3',
+      },
+      {
+        to: '/support-tickets', label: 'Support tickets',
+        minRole: ROLES.PLATFORM_ADMIN,
+        ticketsBadge: true,
+        icon: 'M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z',
       },
       {
         to: '/users', label: 'Users',
@@ -182,6 +188,7 @@ export default function Sidebar() {
   const { user, hasFeature, isSigner } = useAuth()
   const navigate = useNavigate()
   const [pendingOnboarding, setPendingOnboarding] = useState(0)
+  const [openTickets, setOpenTickets] = useState(0)
   const [pendingSignatures, setPendingSignatures] = useState(0)
   const { pathname } = useLocation()
   const palette = useCommandPalette()
@@ -196,6 +203,19 @@ export default function Sidebar() {
     fetch()
     const interval = setInterval(fetch, 60_000)
     return () => clearInterval(interval)
+  }, [user?.role])
+
+  // Open support tickets (new / reopened errors) for PLATFORM_ADMIN.
+  useEffect(() => {
+    if (user?.role !== ROLES.PLATFORM_ADMIN) return
+    let cancelled = false
+    const fetch = () =>
+      supportTicketsSummary()
+        .then(d => { if (!cancelled) setOpenTickets(Number(d?.counts?.OPEN) || 0) })
+        .catch(() => {})
+    fetch()
+    const interval = setInterval(fetch, 60_000)
+    return () => { cancelled = true; clearInterval(interval) }
   }, [user?.role])
 
   // Documents awaiting MY signature — refreshed every minute and on navigation
@@ -362,6 +382,7 @@ export default function Sidebar() {
                     link={link}
                     collapsed={collapsed}
                     badge={link.pendingBadge ? pendingOnboarding
+                         : link.ticketsBadge ? openTickets
                          : link.signaturesBadge ? pendingSignatures : 0}
                   />
                 ))}
