@@ -12,6 +12,7 @@
  * Route: /bulk-email/send
  */
 import { useState, useEffect } from 'react'
+import { SHEET_READ_OPTS, displayTextForDatesAndPercents } from '../utils/sheet'
 import { useNavigate } from 'react-router-dom'
 import {
   getEmailTemplates, getTemplates,
@@ -242,8 +243,8 @@ export default function BulkEmailSendPage() {
     const reader = new FileReader()
     reader.onload = (e) => {
       try {
-        const wb     = XLSX.read(e.target.result, { type: 'binary' })
-        const ws     = wb.Sheets[wb.SheetNames[0]]
+        const wb     = XLSX.read(e.target.result, { type: 'binary', ...SHEET_READ_OPTS })
+        const ws     = displayTextForDatesAndPercents(XLSX, wb.Sheets[wb.SheetNames[0]])
         const parsed = XLSX.utils.sheet_to_json(ws, { defval: '' })
         if (!parsed.length) { showToast('XLSX file appears to be empty', 'error'); return }
 
@@ -289,7 +290,7 @@ export default function BulkEmailSendPage() {
 
         // ── Parse Sheet 2 (if present) ──────────────────────────────────────────
         if (wb.SheetNames.length > 1) {
-          const ws2     = wb.Sheets[wb.SheetNames[1]]
+          const ws2     = displayTextForDatesAndPercents(XLSX, wb.Sheets[wb.SheetNames[1]])
           const parsed2 = XLSX.utils.sheet_to_json(ws2, { defval: '' })
           if (parsed2.length > 0) {
             const cols2 = Object.keys(parsed2[0])

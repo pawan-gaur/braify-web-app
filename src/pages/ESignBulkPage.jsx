@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo, useEffect } from 'react'
+import { SHEET_READ_OPTS, displayTextForDatesAndPercents } from '../utils/sheet'
 import { useNavigate } from 'react-router-dom'
 import PdfPageCanvas from '../components/esign/PdfPageCanvas'
 import { esignBulkCreate, esignRenderSource, getTemplates, generatePdfAsBase64, getEmailTemplates, uploadToStorage, dataUrlToBlob } from '../services/api'
@@ -61,8 +62,8 @@ async function parseExcelFile(file) {
     reader.onload = e => {
       try {
         const data    = new Uint8Array(e.target.result)
-        const wb      = XLSX.read(data, { type: 'array' })
-        const ws      = wb.Sheets[wb.SheetNames[0]]
+        const wb      = XLSX.read(data, { type: 'array', ...SHEET_READ_OPTS })
+        const ws      = displayTextForDatesAndPercents(XLSX, wb.Sheets[wb.SheetNames[0]])
         const rawRows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
         if (!rawRows.length || rawRows[0].every(c => c === ''))
           throw new Error('Sheet appears to be empty')
