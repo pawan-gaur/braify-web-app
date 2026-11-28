@@ -251,7 +251,7 @@ export default function UsagePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
             <UsageHistoryChart history={history} field="docsGenerated" label="PDFs generated" color="#2F5BF0" />
             <UsageHistoryChart history={history} field="esignSent"     label="E-Sign documents sent" color="#6D52E8" />
-            <UsageHistoryChart history={history} field="storageMb"     label="Storage used" color="#10b981" unit=" MB" />
+            <UsageHistoryChart history={history} field="storageMb"     label="Uploaded (MB)" color="#10b981" unit=" MB" />
             <UsageHistoryChart history={history} field="apiCalls"      label="API calls" color="#f59e0b" />
           </div>
 
@@ -262,7 +262,7 @@ export default function UsagePage() {
                   <th className="text-left py-2 px-3 text-gray-500 font-semibold">Month</th>
                   <th className="text-right py-2 px-3 text-gray-500 font-semibold">PDFs</th>
                   <th className="text-right py-2 px-3 text-gray-500 font-semibold">E-Sign</th>
-                  <th className="text-right py-2 px-3 text-gray-500 font-semibold">Storage (MB)</th>
+                  <th className="text-right py-2 px-3 text-gray-500 font-semibold">Uploaded (MB)</th>
                   <th className="text-right py-2 px-3 text-gray-500 font-semibold">API Calls</th>
                   <th className="text-right py-2 px-3 text-gray-500 font-semibold">SMS</th>
                 </tr>
