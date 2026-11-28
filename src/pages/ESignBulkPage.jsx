@@ -510,6 +510,9 @@ export default function ESignBulkPage() {
 
   /* ── Derived: enabled sources in priority order ─────────────────── */
   const activeSources = sourcePriority.filter(s => enabledSources[s])
+  // Fields can only be placed on a PDF preview (single PDF or template source).
+  const canPlaceFields    = !!(enabledSources.single || enabledSources.template)
+  const hasSignatureField = bulkFields.some(f => f.fieldType === 'SIGNATURE')
 
   function toggleSource(src) {
     setEnabledSources(s => ({ ...s, [src]: !s[src] }))
@@ -741,6 +744,7 @@ export default function ESignBulkPage() {
     if (step === 0) return excelRows.length > 0
     if (step === 1) {
       if (!activeSources.length) return false
+      if (!hasSignatureField) return false   // the server refuses to send without one
       return activeSources.every(s => step1SourceReady(s))
     }
     if (step === 2) return !!(mapping.title && mapping.clientEmail && mapping.clientName)
@@ -825,8 +829,21 @@ export default function ESignBulkPage() {
     // ── Phase 2: POST all documents in a single bulk request ──────────
     const resolvedLabel = batchName.trim() || (excelFileName ? excelFileName.replace(/\.[^.]+$/, '') : undefined)
     try {
-      await esignBulkCreate(resolvedDocs, true, resolvedLabel, allowClientUpload, allowedFileTypes)
-      showToast(`Bulk send complete — ${resolvedDocs.length} document${resolvedDocs.length !== 1 ? 's' : ''} created`, 'success')
+      const res = await esignBulkCreate(resolvedDocs, true, resolvedLabel, allowClientUpload, allowedFileTypes)
+      const failed = res?.totalFailed ?? 0
+      const sent   = res?.totalSent ?? resolvedDocs.length
+      if (failed > 0 && sent === 0) {
+        // Nothing went out — stay here and show why.
+        const reasons = (res?.results || []).filter(r => !r.success).slice(0, 5)
+          .map(r => `Row ${r.rowIndex + 1} (${r.clientEmail || r.title}): ${r.error}`)
+        setProcessError(`No documents were sent. ${reasons.join(' · ')}`)
+        return
+      }
+      if (failed > 0) {
+        showToast(`${sent} document${sent !== 1 ? 's' : ''} sent, ${failed} failed — open the batch on the E-Sign page for details`, 'warning')
+      } else {
+        showToast(`Bulk send complete — ${sent} document${sent !== 1 ? 's' : ''} sent`, 'success')
+      }
       navigate(listUrl('/esign'))
     } catch (err) {
       setProcessError('Failed to create bulk batch: ' + err.message)
@@ -1701,6 +1718,18 @@ export default function ESignBulkPage() {
         </div>
 
         {/* ── Signature Field Placement ────────────────────────────── */}
+        {enabledSources.api && !canPlaceFields && (
+          <div className="alert-warning border rounded-xl px-4 py-3 text-sm">
+            Signature fields are placed on a preview of the document. Add a <b>Single PDF</b> or
+            <b> Template</b> source as well (it can be a sample with the same layout) to place them —
+            documents can't be sent without a Signature field.
+          </div>
+        )}
+        {canPlaceFields && !hasSignatureField && (
+          <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
+            Place at least one <b>Signature</b> field to continue — every document needs one.
+          </p>
+        )}
         {(enabledSources.single || enabledSources.template) && (
           <div className="rounded-xl border-2 border-dashed border-accent-200 dark:border-accent-700
                           bg-accent-50/30 dark:bg-accent-900/10 p-4 space-y-4">
