@@ -94,9 +94,9 @@ export default function PlatformUserAccessPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <SettingsGroup iconPath={ICON_USER_PLUS} title="Sign-up &amp; verification"
-          footnote="With self-signup off, only admins can create users. Email verification blocks access until the address is confirmed.">
+          footnote="With self-signup off, new organisations come only from Contact sales (approved by a Platform Admin) or are created by admins. Contact sales is always open.">
           <SettingRow title="Allow self-signup"
-            desc="Let people request an account without an invite.">
+            desc="Anyone can create an organisation instantly at /get-started (with a trial). The server can also switch this off with SIGNUP_ENABLED=false.">
             <Toggle checked={acc.allowSelfSignup} onChange={set('allowSelfSignup')} label="Allow self-signup" />
           </SettingRow>
           <SettingRow title="Require email verification"
