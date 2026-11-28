@@ -23,6 +23,7 @@ const CATEGORIES = [
   ['TEMPLATE_SEND',    'Template send'],
   ['ONBOARDING',       'Onboarding'],
   ['API_EMAIL',        'API email'],
+  ['INVOICE',          'Invoice'],
   ['OTHER',            'Other'],
 ]
 const CATEGORY_LABEL = Object.fromEntries(CATEGORIES)
@@ -38,6 +39,7 @@ const CATEGORY_COLOR = {
   TEMPLATE_SEND:    'bg-cyan-100 text-cyan-700',
   ONBOARDING:       'bg-pink-100 text-pink-700',
   API_EMAIL:        'bg-fuchsia-100 text-fuchsia-700',
+  INVOICE:          'bg-emerald-100 text-emerald-700',
   OTHER:            'bg-gray-100 text-gray-600',
 }
 

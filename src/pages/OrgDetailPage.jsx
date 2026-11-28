@@ -21,6 +21,7 @@ import PlanBadge from '../components/ui/PlanBadge'
 import QuotaProgressBar from '../components/ui/QuotaProgressBar'
 import { ALL_FEATURES, FEATURE_META } from '../config/features'
 import { fmtDate, fmtDateTime, fmtRelative } from '../utils/date'
+import OrgInvoicingTab from '../components/invoicing/OrgInvoicingTab'
 import useUrlState, { listUrl } from '../hooks/useUrlState'
 
 /* ── Spinner ── */
@@ -46,7 +47,7 @@ const FEATURE_BADGE = {
   E_SIGN:          { label: 'E-Sign',          cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' },
 }
 
-const TABS = ['Overview', 'Features', 'API Keys', 'Usage', 'Subscription', 'Users', 'Activity']
+const TABS = ['Overview', 'Features', 'API Keys', 'Usage', 'Subscription', 'Invoicing', 'Users', 'Activity']
 
 /* ─────────────────────────────────────────────────────────────── */
 export default function OrgDetailPage() {
@@ -159,6 +160,7 @@ export default function OrgDetailPage() {
       {activeTab === 'API Keys'      && <ApiKeysTab       org={org} orgId={orgId} />}
       {activeTab === 'Usage'         && <UsageTab         orgId={orgId} />}
       {activeTab === 'Subscription'  && <SubscriptionTab  org={org} setOrg={setOrg} orgId={orgId} />}
+      {activeTab === 'Invoicing'     && <OrgInvoicingTab  org={org} orgId={orgId} />}
       {activeTab === 'Users'         && <UsersTab         orgId={orgId} />}
       {activeTab === 'Activity'      && <ActivityTab      orgId={orgId} />}
     </div>

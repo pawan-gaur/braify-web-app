@@ -6,6 +6,8 @@ import { useToast } from '../context/ToastContext'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import { fmtDate } from '../utils/date'
 import { getBillingSummary, startCheckout, openBillingPortal } from '../services/api'
+import BillingDetailsCard from '../components/invoicing/BillingDetailsCard'
+import MyInvoicesCard from '../components/invoicing/MyInvoicesCard'
 
 const CRUMBS = [{ label: 'Dashboard', to: '/dashboard' }, { label: 'Billing' }]
 
@@ -125,6 +127,9 @@ export default function BillingPage() {
           <Link to="/usage" className="btn btn-ghost">View usage</Link>
         </div>
       </div>
+
+      <MyInvoicesCard />
+      <BillingDetailsCard />
 
       {isStripe && data?.status === 'PAST_DUE' && (
         <div className="alert-error border rounded-xl px-4 py-3 text-sm mb-6">
