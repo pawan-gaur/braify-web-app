@@ -72,10 +72,25 @@ export default function SignatureCaptureModal({ open, kind = 'SIGNATURE', upload
     hasDrawn.current = false
   }
 
+  // Any image the browser can open (WebP, GIF, SVG, …) is re-encoded as PNG — the server only
+  // accepts PNG/JPEG, which are what the signed-PDF stamping can embed.
   function handleUpload(file) {
     if (!file) return
     const reader = new FileReader()
-    reader.onload = () => setUploaded(reader.result)
+    reader.onload = () => {
+      const img = new Image()
+      img.onload = () => {
+        const max = 1200
+        const scale = Math.min(1, max / Math.max(img.width, img.height))
+        const c = document.createElement('canvas')
+        c.width = Math.max(1, Math.round(img.width * scale))
+        c.height = Math.max(1, Math.round(img.height * scale))
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height)
+        setUploaded(c.toDataURL('image/png'))
+      }
+      img.onerror = () => setUploaded(null)
+      img.src = reader.result
+    }
     reader.readAsDataURL(file)
   }
 

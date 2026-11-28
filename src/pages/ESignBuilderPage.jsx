@@ -747,7 +747,13 @@ export default function ESignBuilderPage({ initialDocStatus }) {
   async function handleSend() {
     setSending(true)
     try {
-      await esignSendDocument(docId, form.tokenValidDays)
+      const sent = await esignSendDocument(docId, form.tokenValidDays)
+      if (sent?.sendWarning) {
+        // Sent (and counted), but some invitation emails failed — open the document to Resend.
+        navigate(`/esign/${docId}`)
+        showToast(sent.sendWarning, 'warning')
+        return
+      }
       navigate(listUrl('/esign'))
       const recipientNote = signatories.length > 1
         ? `${signatories.length} signatories`
@@ -1452,8 +1458,9 @@ export default function ESignBuilderPage({ initialDocStatus }) {
               </svg>
               <span>
                 This document is <strong>{(initialDocStatus || doc?.status)?.replace('_', ' ')}</strong>.
-                You can update field placements — the client's signing link will still work.
-                Use <strong>Resend</strong> on the list page to issue a fresh link if needed.
+                You can update field placements until a signer starts filling them in. Signers who
+                already have the document open need to reload it. Use <strong>Resend</strong> on the
+                list page to issue a fresh link if needed.
               </span>
             </div>
           )}
