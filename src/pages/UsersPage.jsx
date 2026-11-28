@@ -223,7 +223,7 @@ export default function UsersPage() {
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-ink dark:text-gray-200 truncate">
                     {u.firstName} {u.lastName}
-                    {u.mustChangePassword && (
+                    {u.invitePending && (
                       <span className="ml-2 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-bold">
                         INVITE PENDING
                       </span>
@@ -254,7 +254,7 @@ export default function UsersPage() {
                   className="text-xs px-2.5 py-1 rounded-lg border border-ink-7 dark:border-gray-600 text-ink-3 hover:border-primary hover:text-primary transition-colors">
                   Edit
                 </button>
-                {u.mustChangePassword && (
+                {u.invitePending && (
                   <button onClick={() => handleResendInvite(u)} disabled={resendingId === u.id}
                     className="text-xs px-2.5 py-1 rounded-lg border border-amber-200 text-amber-600 hover:bg-amber-50 hover:border-amber-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     {resendingId === u.id ? 'Sending…' : 'Resend Invite'}
@@ -299,7 +299,7 @@ export default function UsersPage() {
                       <div>
                         <p className="font-medium text-ink dark:text-gray-200">
                           {u.firstName} {u.lastName}
-                          {u.mustChangePassword && (
+                          {u.invitePending && (
                             <span className="ml-2 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-bold">
                               INVITE PENDING
                             </span>
@@ -334,7 +334,7 @@ export default function UsersPage() {
                                    text-ink-3 hover:border-primary hover:text-primary transition-colors">
                         Edit
                       </button>
-                      {u.mustChangePassword && (
+                      {u.invitePending && (
                         <button onClick={() => handleResendInvite(u)} disabled={resendingId === u.id}
                           className="text-xs px-2.5 py-1 rounded-lg border border-amber-200
                                      text-amber-600 hover:bg-amber-50 hover:border-amber-400 transition-colors

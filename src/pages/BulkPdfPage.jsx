@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { SHEET_READ_OPTS, displayTextForDatesAndPercents } from '../utils/sheet'
 import { Link, useSearchParams } from 'react-router-dom'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import FileDropZone from '../components/ui/FileDropZone'
@@ -30,8 +31,8 @@ async function parseSheet(file) {
     const reader = new FileReader()
     reader.onload = e => {
       try {
-        const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' })
-        const raw = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' })
+        const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array', ...SHEET_READ_OPTS })
+        const raw = XLSX.utils.sheet_to_json(displayTextForDatesAndPercents(XLSX, wb.Sheets[wb.SheetNames[0]]), { header: 1, defval: '' })
         if (raw.length < 2) throw new Error('The sheet needs a header row and at least one data row.')
         const headers = raw[0].map(h => String(h).trim())
         const rows = raw.slice(1)

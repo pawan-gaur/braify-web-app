@@ -135,21 +135,11 @@ export default function PlatformSecurityPoliciesPage() {
             desc="Mandatory for all users on first login and every session.">
             <Toggle checked={sec.mfa.required} onChange={set('mfa', 'required')} label="MFA required" />
           </SettingRow>
-          <SettingRow title="TOTP authenticator app"
-            desc="Google Authenticator, Authy, 1Password.">
-            <Toggle checked={sec.mfa.totp}
-              onChange={(v) => { if (v || sec.mfa.emailOtp) set('mfa', 'totp')(v) }} label="TOTP" />
-          </SettingRow>
-          <SettingRow title="Email one-time passcode"
-            desc="Fallback for users without an authenticator.">
-            <Toggle checked={sec.mfa.emailOtp}
-              onChange={(v) => { if (v || sec.mfa.totp) set('mfa', 'emailOtp')(v) }} label="Email OTP" />
-          </SettingRow>
         </SettingsGroup>
 
         {/* ── Password policy ── */}
         <SettingsGroup iconPath={ICON_LOCK} title="Password policy"
-          footnote="Applies to every Braify user. Existing users are prompted to update at next login if their password doesn't meet the policy.">
+          footnote="Applies whenever a password is set or changed. Existing passwords are checked when they next change; an expired password must be changed at sign-in.">
           <SettingRow title="Minimum length" desc="Characters required.">
             <SelectField value={sec.password.minLength} numeric options={len}
               onChange={set('password', 'minLength')} />
