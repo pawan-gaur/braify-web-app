@@ -570,8 +570,12 @@ export const previewPdfBlob = async (templateId, data) => {
   return URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }))
 }
 
+/** Renders a template into an e-sign source file on the server → { fileId } (bulk e-sign rows). */
+export const esignRenderSource = (templateId, data) =>
+  http.post('/esign/documents/render-source', { templateId, data }).then(r => r.data)
+
 /** Same as previewPdfBlob but returns a base64 data-URL instead of an object URL.
- *  Used by the Bulk E-Sign flow to embed the generated PDF into each document. */
+ *  For on-screen previews only (field placement) — the output is watermarked PREVIEW. */
 export const generatePdfAsBase64 = async (templateId, data) => {
   const response = await http.post(
     '/preview-pdf',

@@ -434,9 +434,10 @@ export default function ESignBuilderPage({ initialDocStatus }) {
           return { sourceType: 'UPLOAD', sourceFileId: await uploadSourcePdf(b64, pdfFileName), previewBase64: b64 }
         } else if (src === 'template') {
           if (!selectedTemplateId) throw new Error('No template selected')
+          // On-screen preview only (watermarked). The server renders the real signing source from
+          // the template itself, so no "PREVIEW" mark ends up in the signed document.
           const previewB64 = await generatePdfAsBase64(selectedTemplateId, {})
-          // Send the rendered PDF too — the backend stores it as the signing source.
-          return { sourceType: 'TEMPLATE', templateId: selectedTemplateId, pdfBase64: previewB64, previewBase64: previewB64 }
+          return { sourceType: 'TEMPLATE', templateId: selectedTemplateId, previewBase64: previewB64 }
         } else {
           if (!fileApi.url) throw new Error('No API URL configured')
           const b64 = await shrinkPdf(await fetchFileAsBase64(fileApi.url, buildAuthHeaders(fileApi)))

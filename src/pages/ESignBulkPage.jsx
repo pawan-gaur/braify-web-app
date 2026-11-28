@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PdfPageCanvas from '../components/esign/PdfPageCanvas'
-import { esignBulkCreate, getTemplates, generatePdfAsBase64, getEmailTemplates, uploadToStorage, dataUrlToBlob } from '../services/api'
+import { esignBulkCreate, esignRenderSource, getTemplates, generatePdfAsBase64, getEmailTemplates, uploadToStorage, dataUrlToBlob } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import FileDropZone from '../components/ui/FileDropZone'
@@ -799,7 +799,8 @@ export default function ESignBulkPage() {
               const col = placeholderMapping[p]
               data[p] = col ? (row.rawRow[col] || '') : ''
             })
-            sourceFileId = await toStoredPdf(await generatePdfAsBase64(selectedTemplateId, data), i, `${row.title || 'document'}.pdf`)
+            // Rendered + stored on the server (the preview endpoint is watermarked "PREVIEW").
+            sourceFileId = (await esignRenderSource(selectedTemplateId, data)).fileId
           } else {
             const url = buildApiUrl(fileApi.url, row.rawRow)
             sourceFileId = await toStoredPdf(await fetchFileAsBase64(url, buildAuthHeaders(fileApi)), i, `${row.title || 'document'}.pdf`)
