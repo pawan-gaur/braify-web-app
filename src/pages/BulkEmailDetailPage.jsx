@@ -484,11 +484,18 @@ export default function BulkEmailDetailPage() {
             </div>
 
             {/* Stats row */}
-            <div className="grid grid-cols-3 gap-3 mt-5">
+            <div className={`grid gap-3 mt-5 ${job.ccSentCount > 0 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'}`}>
               <StatCard value={job.sentCount}   label="Sent"    color="green" />
+              {job.ccSentCount > 0 && <StatCard value={job.ccSentCount} label="CC copies" color="green" />}
               <StatCard value={job.failedCount} label="Failed"  color="red"   />
               <StatCard value={job.pendingCount} label="Pending" color="gray"  />
             </div>
+            {job.ccSentCount > 0 && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                {(job.sentCount + job.ccSentCount).toLocaleString()} emails delivered in total: {job.sentCount.toLocaleString()} recipients
+                and {job.ccSentCount.toLocaleString()} CC copies. Open and click rates are per recipient.
+              </p>
+            )}
           </div>
 
           {/* Timeline */}
