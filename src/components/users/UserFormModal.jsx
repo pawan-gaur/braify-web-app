@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { createUser, updateUser } from '../../services/api'
 import { useToast } from '../../context/ToastContext'
+import { useAuth } from '../../context/AuthContext'
+import { assignableRoles } from '../../utils/userPermissions'
 
 export const ROLE_OPTIONS = [
   { value: 'ORG_ADMIN', label: 'Org Admin' },
@@ -21,6 +23,12 @@ export const ROLE_OPTIONS = [
  */
 export default function UserFormModal({ editUser, isPlatformAdmin, orgs = [], defaultOrgId = '', onClose, onSaved }) {
   const toast = useToast()
+  const { user: me } = useAuth()
+  const isSelf = !!editUser && editUser.id === me?.id
+  // Only roles this user may give out (an Admin can't create Org Admins); keep the current
+  // role visible when editing someone whose role you couldn't assign yourself.
+  const allowed = assignableRoles(me?.role)
+  const roleOptions = ROLE_OPTIONS.filter(r => allowed.includes(r.value) || r.value === editUser?.role)
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState(() => editUser
     ? { email: editUser.email, firstName: editUser.firstName, lastName: editUser.lastName,
@@ -87,9 +95,10 @@ export default function UserFormModal({ editUser, isPlatformAdmin, orgs = [], de
           </div>
           <div>
             <label className="form-label">Role *</label>
-            <select className="form-select" value={form.role}
+            <select className="form-select" value={form.role} disabled={isSelf}
+              title={isSelf ? "You can't change your own role" : undefined}
               onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
-              {ROLE_OPTIONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+              {roleOptions.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
             </select>
           </div>
           {isPlatformAdmin && (
@@ -103,14 +112,9 @@ export default function UserFormModal({ editUser, isPlatformAdmin, orgs = [], de
             </div>
           )}
           {!editUser && (
-            <label className="flex items-center gap-3 p-3 rounded-xl border border-ink-7 dark:border-gray-700 cursor-pointer">
-              <input type="checkbox" className="rounded" checked={form.sendInvite}
-                onChange={e => setForm(f => ({ ...f, sendInvite: e.target.checked }))} />
-              <div>
-                <p className="text-sm font-medium text-ink-2 dark:text-gray-300">Send email invitation</p>
-                <p className="text-xs text-ink-4">User receives a link valid for 7 days to set their password.</p>
-              </div>
-            </label>
+            <p className="text-xs text-ink-4 p-3 rounded-xl border border-ink-7 dark:border-gray-700">
+              They'll get an email invitation with a link (valid for 7 days) to set their password.
+            </p>
           )}
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose} className="btn btn-secondary flex-1">Cancel</button>

@@ -434,9 +434,10 @@ export default function ESignBuilderPage({ initialDocStatus }) {
           return { sourceType: 'UPLOAD', sourceFileId: await uploadSourcePdf(b64, pdfFileName), previewBase64: b64 }
         } else if (src === 'template') {
           if (!selectedTemplateId) throw new Error('No template selected')
+          // On-screen preview only (watermarked). The server renders the real signing source from
+          // the template itself, so no "PREVIEW" mark ends up in the signed document.
           const previewB64 = await generatePdfAsBase64(selectedTemplateId, {})
-          // Send the rendered PDF too — the backend stores it as the signing source.
-          return { sourceType: 'TEMPLATE', templateId: selectedTemplateId, pdfBase64: previewB64, previewBase64: previewB64 }
+          return { sourceType: 'TEMPLATE', templateId: selectedTemplateId, previewBase64: previewB64 }
         } else {
           if (!fileApi.url) throw new Error('No API URL configured')
           const b64 = await shrinkPdf(await fetchFileAsBase64(fileApi.url, buildAuthHeaders(fileApi)))
@@ -747,7 +748,13 @@ export default function ESignBuilderPage({ initialDocStatus }) {
   async function handleSend() {
     setSending(true)
     try {
-      await esignSendDocument(docId, form.tokenValidDays)
+      const sent = await esignSendDocument(docId, form.tokenValidDays)
+      if (sent?.sendWarning) {
+        // Sent (and counted), but some invitation emails failed — open the document to Resend.
+        navigate(`/esign/${docId}`)
+        showToast(sent.sendWarning, 'warning')
+        return
+      }
       navigate(listUrl('/esign'))
       const recipientNote = signatories.length > 1
         ? `${signatories.length} signatories`
@@ -1452,8 +1459,9 @@ export default function ESignBuilderPage({ initialDocStatus }) {
               </svg>
               <span>
                 This document is <strong>{(initialDocStatus || doc?.status)?.replace('_', ' ')}</strong>.
-                You can update field placements — the client's signing link will still work.
-                Use <strong>Resend</strong> on the list page to issue a fresh link if needed.
+                You can update field placements until a signer starts filling them in. Signers who
+                already have the document open need to reload it. Use <strong>Resend</strong> on the
+                list page to issue a fresh link if needed.
               </span>
             </div>
           )}

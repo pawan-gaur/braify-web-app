@@ -197,6 +197,8 @@ function OverviewTab({ org, setOrg, orgId }) {
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error('Name is required.'); return }
+    if (org.active && !form.active && !confirm(
+      `Deactivate "${org.name}"?\n\nIts users are signed out and can't sign in, and its API keys, webhooks and scheduled sends stop until you reactivate it.`)) return
     setSaving(true)
     try {
       const updated = await updateOrganization(orgId, {
@@ -816,6 +818,8 @@ function SubscriptionTab({ org, setOrg, orgId }) {
 
   if (loading) return <Spinner />
 
+  const stripeLive = data?.billingManagedBy === 'STRIPE' && ['ACTIVE', 'PAST_DUE', 'INCOMPLETE'].includes(data?.billingStatus)
+
   return (
     <div className="space-y-5">
       {/* Current plan summary */}
@@ -844,8 +848,24 @@ function SubscriptionTab({ org, setOrg, orgId }) {
               {data?.planExpiresAt ? fmtDate(data.planExpiresAt) : 'Never'}
             </p>
           </div>
+          {data?.billingManagedBy && (
+            <div>
+              <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1">Billing</p>
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                {data.billingManagedBy === 'STRIPE' ? 'Stripe' : data.billingManagedBy === 'TRIAL' ? 'Trial' : 'Manual'}
+                {data.billingStatus && data.billingStatus !== 'NONE' ? ` · ${data.billingStatus.toLowerCase().replace('_', ' ')}` : ''}
+              </p>
+            </div>
+          )}
         </div>
       </div>
+
+      {stripeLive && (
+        <div className="alert-warning border rounded-xl px-4 py-3 text-sm">
+          This organisation pays through Stripe (subscription <code>{data.stripeSubscriptionId}</code>). Change or
+          cancel the plan in the Stripe dashboard — Braify updates automatically. Manual plan changes are disabled.
+        </div>
+      )}
 
       {/* Plan selection */}
       <div className="card p-6">
@@ -884,7 +904,7 @@ function SubscriptionTab({ org, setOrg, orgId }) {
         </div>
 
         <div className="flex justify-end mt-5">
-          <button onClick={handleSave} disabled={saving} className="btn btn-primary px-8">
+          <button onClick={handleSave} disabled={saving || stripeLive} className="btn btn-primary px-8">
             {saving ? 'Saving…' : 'Assign Plan'}
           </button>
         </div>

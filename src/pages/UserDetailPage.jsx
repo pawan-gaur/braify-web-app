@@ -1,20 +1,19 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
-import { getUser, getUserSummary, getOrganizations, enableUser, disableUser, resendInvite } from '../services/api'
+import { getUser, getUserSummary, getOrganizations, enableUser, disableUser, resendInvite, resetUserMfa, unlockUser, signOutUserEverywhere, transferUserEsign, getUsers } from '../services/api'
 import { useAuth, ROLES } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import { listUrl } from '../hooks/useUrlState'
 import UserFormModal from '../components/users/UserFormModal'
+import { canManageUser } from '../utils/userPermissions'
 import {
   ProfileSidebar, ProfileOverview, ActivityTimeline, UnderlineTabs, StatusPill,
   ROLE_LABEL, PROFILE_ICONS as I, Ico,
 } from '../components/profile/ProfileParts'
 import { FEATURES } from '../config/features'
 import { fmtDate } from '../utils/date'
-
-const RANK = { PLATFORM_ADMIN: 4, ORG_ADMIN: 3, ADMIN: 2, USER: 1 }
 
 /**
  * /users/:id — profile of another user (Admin+). Same layout as /profile, read-only, with the
@@ -33,6 +32,7 @@ export default function UserDetailPage() {
   const [editing, setEditing] = useState(false)
   const [orgs, setOrgs]       = useState([])
   const [busy, setBusy]       = useState(false)
+  const [transferring, setTransferring] = useState(false)
 
   useDocumentTitle(user ? `${user.firstName} ${user.lastName}` : 'User')
 
@@ -67,8 +67,8 @@ export default function UserDetailPage() {
     )
   }
 
-  // Same rule as the backend: Platform Admin manages anyone, others only lower roles.
-  const canManage = !!user && (isPlatformAdmin || (RANK[me?.role] ?? 0) > (RANK[user.role] ?? 0))
+  // Same rule as the backend (utils/userPermissions).
+  const canManage = canManageUser(me, user)
 
   const run = async (fn, ok) => {
     setBusy(true)
@@ -78,7 +78,11 @@ export default function UserDetailPage() {
   }
   const doResend  = () => run(() => resendInvite(user.id), `Invitation re-sent to ${user.email}.`)
   const doDisable = () => {
-    if (!confirm(`Disable "${user.firstName} ${user.lastName}"? Their active sessions will be revoked immediately.`)) return
+    const owned = summary?.esign?.total ?? 0
+    const hint = owned > 0 && canTransfer
+      ? `\n\nThey created ${owned} e-sign document${owned === 1 ? '' : 's'} — only the creator and signers can open those PDFs. Use "Transfer e-sign documents" first so a colleague keeps access.`
+      : ''
+    if (!confirm(`Disable "${user.firstName} ${user.lastName}"? Their active sessions will be revoked immediately.${hint}`)) return
     run(() => disableUser(user.id), 'User disabled and sessions revoked.')
   }
   const doEnable  = () => {
@@ -86,9 +90,25 @@ export default function UserDetailPage() {
     run(() => enableUser(user.id), 'User enabled.')
   }
 
+  const doResetMfa = () => {
+    if (!confirm(`Reset two-factor authentication for ${user.firstName}?\n\nUse this when they've lost their authenticator and recovery codes. They're signed out and, if 2FA is required, set it up again at next sign-in.`)) return
+    run(() => resetUserMfa(user.id), 'Two-factor authentication reset.')
+  }
+  const doUnlock  = () => run(() => unlockUser(user.id), 'Account unlocked.')
+  const doSignOut = () => {
+    if (!confirm(`Sign ${user.firstName} out of every device?`)) return
+    run(() => signOutUserEverywhere(user.id), 'Signed out everywhere.')
+  }
+  const locked = !!summary?.lockedUntil
+  const canTransfer = canManage && (me?.role === 'ORG_ADMIN' || me?.role === 'PLATFORM_ADMIN') && !!user?.organizationId
+
   const moreItems = canManage ? [
     { label: 'Edit user', icon: I.pen, onClick: () => setEditing(true) },
-    ...(user?.mustChangePassword ? [{ label: 'Resend invite', icon: I.mail, onClick: doResend, disabled: busy }] : []),
+    ...(user?.invitePending ? [{ label: 'Resend invite', icon: I.mail, onClick: doResend, disabled: busy }] : []),
+    ...(locked ? [{ label: 'Unlock account', icon: I.key, onClick: doUnlock, disabled: busy }] : []),
+    ...(summary?.mfaEnabled ? [{ label: 'Reset two-factor', icon: I.shield, onClick: doResetMfa, disabled: busy }] : []),
+    ...(summary?.activeSessions > 0 ? [{ label: 'Sign out everywhere', icon: I.device, onClick: doSignOut, disabled: busy }] : []),
+    ...(canTransfer ? [{ label: 'Transfer e-sign documents…', icon: I.doc, onClick: () => setTransferring(true) }] : []),
     user?.active
       ? { label: 'Disable user', icon: I.shield, onClick: doDisable, danger: true, disabled: busy }
       : { label: 'Enable user',  icon: I.check,  onClick: doEnable, disabled: busy },
@@ -127,12 +147,13 @@ export default function UserDetailPage() {
                   <span className="badge badge-brand text-[11px]">{ROLE_LABEL[user.role] || user.role}</span>
                   {user.organizationName && <span className="badge badge-violet text-[11px]">{user.organizationName}</span>}
                   <StatusPill active={user.active} />
-                  {user.mustChangePassword && <span className="badge badge-warning text-[11px]">Invite pending</span>}
+                  {user.invitePending && <span className="badge badge-warning text-[11px]">Invite pending</span>}
+                  {locked && <span className="badge badge-danger text-[11px]">Locked</span>}
                 </div>
               </div>
               {canManage && (
                 <div className="flex items-center gap-2 flex-wrap">
-                  {user.mustChangePassword && (
+                  {user.invitePending && (
                     <button onClick={doResend} disabled={busy} className="btn btn-outline btn-sm">Resend invite</button>
                   )}
                   <button onClick={() => setEditing(true)} className="btn btn-outline btn-sm gap-1.5">
@@ -171,6 +192,11 @@ export default function UserDetailPage() {
         </div>
       )}
 
+      {transferring && user && (
+        <TransferEsignModal user={user} onClose={() => setTransferring(false)}
+          onDone={(r) => { setTransferring(false); toast.success(`Moved ${r.documents} document(s) and ${r.batches} bulk batch(es).`); load() }} />
+      )}
+
       {editing && user && (
         <UserFormModal
           editUser={user}
@@ -180,6 +206,55 @@ export default function UserDetailPage() {
           onSaved={load}
         />
       )}
+    </div>
+  )
+}
+
+/** Picks a colleague in the same org to receive a user's e-sign documents (offboarding). */
+function TransferEsignModal({ user, onClose, onDone }) {
+  const toast = useToast()
+  const [people, setPeople] = useState(null)
+  const [to, setTo]         = useState('')
+  const [busy, setBusy]     = useState(false)
+
+  useEffect(() => {
+    getUsers()
+      .then(list => setPeople(list.filter(u => u.organizationId === user.organizationId && u.active && u.id !== user.id)))
+      .catch(e => { toast.error(e.message); setPeople([]) })
+  }, [user.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const submit = async () => {
+    if (!to) return
+    setBusy(true)
+    try { onDone(await transferUserEsign(user.id, to)) }
+    catch (e) { toast.error(e.message || 'Transfer failed.') }
+    finally { setBusy(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4" role="dialog" aria-modal="true"
+        onClick={e => e.stopPropagation()}>
+        <h2 className="text-base font-bold text-gray-800 dark:text-gray-100">Transfer e-sign documents</h2>
+        <p className="text-sm text-ink-3">
+          Moves every e-sign document and bulk batch {user.firstName} created to a colleague, who becomes
+          the sender and can open the signed PDFs.
+        </p>
+        {people === null ? <p className="text-sm text-ink-4">Loading…</p> : people.length === 0 ? (
+          <p className="text-sm text-ink-4">There's no other active member in this organisation.</p>
+        ) : (
+          <select className="form-select" value={to} onChange={e => setTo(e.target.value)}>
+            <option value="">— Choose a colleague —</option>
+            {people.map(p => <option key={p.id} value={p.id}>{p.firstName} {p.lastName} ({p.email})</option>)}
+          </select>
+        )}
+        <div className="flex gap-3 pt-2">
+          <button type="button" onClick={onClose} className="btn btn-secondary flex-1">Cancel</button>
+          <button type="button" onClick={submit} disabled={!to || busy} className="btn btn-primary flex-1">
+            {busy ? 'Moving…' : 'Transfer'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

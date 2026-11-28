@@ -309,7 +309,7 @@ export function ProfileSidebar({ user, summary, avatarSlot, moreItems = [], acti
             <InfoRow icon={P.check} label="Status">
               <span className="inline-flex items-center gap-2 flex-wrap">
                 <StatusPill active={user?.active} />
-                {user?.mustChangePassword && <span className="badge badge-warning text-[10px]">Invite pending</span>}
+                {user?.invitePending && <span className="badge badge-warning text-[10px]">Invite pending</span>}
               </span>
             </InfoRow>
             {user?.bio && <InfoRow icon={P.user} label="Bio"><span className="font-normal">{user.bio}</span></InfoRow>}

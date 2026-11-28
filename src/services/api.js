@@ -209,6 +209,7 @@ export const deleteTemplate = (id) => http.delete(`/templates/${id}`)
 export const cloneTemplate  = (id, body = {}) => http.post(`/templates/${id}/clone`, body).then(r => r.data)
 
 // ── Email templates ────────────────────────────────────────
+export const resetEmailTemplateDefault = (id) => http.post(`/email-templates/${id}/reset-default`).then(r => r.data)   // system templates (Platform Admin)
 export const getEmailTemplates    = ()         => http.get('/email-templates').then(r => r.data)
 export const getInternalEmailTemplates = ()    => http.get('/email-templates/internal').then(r => r.data)
 export const getEmailTemplate     = (id)       => http.get(`/email-templates/${id}`).then(r => r.data)
@@ -300,6 +301,10 @@ export const updateUser     = (id, payload)        => http.put(`/users/${id}`, p
 export const enableUser     = (id)                 => http.put(`/users/${id}/enable`)
 export const disableUser    = (id)                 => http.put(`/users/${id}/disable`)
 export const resendInvite   = (id)                 => http.post(`/users/${id}/resend-invite`)
+export const resetUserMfa   = (id)                 => http.post(`/users/${id}/mfa/reset`)
+export const unlockUser     = (id)                 => http.post(`/users/${id}/unlock`)
+export const signOutUserEverywhere = (id)          => http.post(`/users/${id}/sessions/revoke`).then(r => r.data)   // { ended }
+export const transferUserEsign = (id, toUserId)    => http.post(`/users/${id}/transfer-esign`, { toUserId }).then(r => r.data)   // { documents, batches }
 
 // ── Sessions ───────────────────────────────────────────────
 export const getSessions          = ()   => http.get('/sessions').then(r => r.data)
@@ -325,6 +330,7 @@ export const updateProfile   = (payload) => http.put('/profile/me', payload).the
 export const changePassword  = (payload) => http.put('/profile/me/password', payload).then(r => r.data)
 export const uploadAvatar    = (fileId)  => http.post('/profile/me/avatar', { fileId }).then(r => r.data)   // fileId from uploadToStorage(…, 'AVATAR'); null removes
 export const getMyAuditLog   = ()        => http.get('/profile/me/audit').then(r => r.data)
+export const getSignupStatus = () => http.get('/auth/signup/status').then(r => r.data)   // { open }
 export const getMySummary    = ()        => http.get('/profile/me/summary').then(r => r.data)   // same shape as getUserSummary
 
 // ── E-Sign (Creator) ───────────────────────────────────────
@@ -531,6 +537,7 @@ export const updateBranding = (orgId, payload)  => http.put(`/organizations/${or
 // ── Org Cloud Config ────────────────────────────────────────
 export const getCloudConfig    = (orgId)          => http.get(`/organizations/${orgId}/cloud-config`).then(r => r.data)
 export const updateCloudConfig = (orgId, payload) => http.put(`/organizations/${orgId}/cloud-config`, payload).then(r => r.data)
+export const testCloudConfig   = (orgId)          => http.post(`/organizations/${orgId}/cloud-config/test`).then(r => r.data)   // { success, message } — tests the SAVED config
 
 // ── Template Sharing ────────────────────────────────────────
 export const shareTemplate        = (payload)     => http.post('/sharing', payload).then(r => r.data)
@@ -564,8 +571,12 @@ export const previewPdfBlob = async (templateId, data) => {
   return URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }))
 }
 
+/** Renders a template into an e-sign source file on the server → { fileId } (bulk e-sign rows). */
+export const esignRenderSource = (templateId, data) =>
+  http.post('/esign/documents/render-source', { templateId, data }).then(r => r.data)
+
 /** Same as previewPdfBlob but returns a base64 data-URL instead of an object URL.
- *  Used by the Bulk E-Sign flow to embed the generated PDF into each document. */
+ *  For on-screen previews only (field placement) — the output is watermarked PREVIEW. */
 export const generatePdfAsBase64 = async (templateId, data) => {
   const response = await http.post(
     '/preview-pdf',

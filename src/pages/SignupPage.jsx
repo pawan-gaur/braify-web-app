@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import AuthLayout from '../components/auth/AuthLayout'
 import { useAuth } from '../context/AuthContext'
 import useDocumentTitle from '../hooks/useDocumentTitle'
+import { getSignupStatus } from '../services/api'
 
 /**
  * Instant self-serve sign-up: details → emailed code → workspace created on the Free plan
@@ -21,6 +22,11 @@ export default function SignupPage() {
   const [error,    setError]    = useState(null)
   const [exists,   setExists]   = useState(false)
   const [cooldown, setCooldown] = useState(0)
+  const [open,     setOpen]     = useState(true)   // instant sign-up enabled by the platform
+
+  useEffect(() => {
+    getSignupStatus().then(s => setOpen(s?.open !== false)).catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (cooldown <= 0) return
@@ -90,7 +96,9 @@ export default function SignupPage() {
           </h1>
           <p className="text-[15px] text-gray-500 dark:text-gray-400 mt-2">
             {step === 'details'
-              ? 'Start free — PDF templates, email templates, e-signature and file storage. No credit card.'
+              ? (open
+                  ? 'Start free — PDF templates, email templates, e-signature and file storage. No credit card.'
+                  : 'PDF templates, email templates, e-signature and file storage for your team.')
               : <>We sent a 6-digit code to <span className="font-semibold text-gray-700 dark:text-gray-200">{form.email.trim()}</span>.</>}
           </p>
         </div>
@@ -102,7 +110,14 @@ export default function SignupPage() {
           </div>
         )}
 
-        {step === 'details' ? (
+        {!open && step === 'details' ? (
+          <div className="card text-center space-y-4">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              Instant sign-up isn't available right now. Tell us about your team and we'll set up your workspace.
+            </p>
+            <Link to="/contact-sales" className="btn btn-accent w-full justify-center">Contact sales</Link>
+          </div>
+        ) : step === 'details' ? (
           <form onSubmit={sendCode} className="space-y-4" noValidate>
             <div className="grid grid-cols-2 gap-3">
               <div>

@@ -12,6 +12,7 @@
  * Route: /bulk-email/send
  */
 import { useState, useEffect } from 'react'
+import { SHEET_READ_OPTS, displayTextForDatesAndPercents } from '../utils/sheet'
 import { useNavigate } from 'react-router-dom'
 import {
   getEmailTemplates, getTemplates,
@@ -118,6 +119,12 @@ function StepIndicator({ current }) {
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────
+/** "YYYY-MM-DDTHH:mm" in the browser's local time — the format a datetime-local input uses. */
+function localInputValue(d) {
+  const pad = n => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 export default function BulkEmailSendPage() {
   const { showToast } = useToast()
   const navigate      = useNavigate()
@@ -236,8 +243,8 @@ export default function BulkEmailSendPage() {
     const reader = new FileReader()
     reader.onload = (e) => {
       try {
-        const wb     = XLSX.read(e.target.result, { type: 'binary' })
-        const ws     = wb.Sheets[wb.SheetNames[0]]
+        const wb     = XLSX.read(e.target.result, { type: 'binary', ...SHEET_READ_OPTS })
+        const ws     = displayTextForDatesAndPercents(XLSX, wb.Sheets[wb.SheetNames[0]])
         const parsed = XLSX.utils.sheet_to_json(ws, { defval: '' })
         if (!parsed.length) { showToast('XLSX file appears to be empty', 'error'); return }
 
@@ -283,7 +290,7 @@ export default function BulkEmailSendPage() {
 
         // ── Parse Sheet 2 (if present) ──────────────────────────────────────────
         if (wb.SheetNames.length > 1) {
-          const ws2     = wb.Sheets[wb.SheetNames[1]]
+          const ws2     = displayTextForDatesAndPercents(XLSX, wb.Sheets[wb.SheetNames[1]])
           const parsed2 = XLSX.utils.sheet_to_json(ws2, { defval: '' })
           if (parsed2.length > 0) {
             const cols2 = Object.keys(parsed2[0])
@@ -338,7 +345,9 @@ export default function BulkEmailSendPage() {
       if (scheduleMode === 'later') {
         if (!scheduledAt) { setSendError('Pick a date and time to schedule the campaign'); setSending(false); return }
         if (new Date(scheduledAt).getTime() <= Date.now()) { setSendError('Scheduled time must be in the future'); setSending(false); return }
-        scheduledIso = scheduledAt   // "YYYY-MM-DDTHH:mm" — parsed as LocalDateTime by the backend
+        // The picker gives local wall-clock time; the backend compares in UTC (it runs in UTC),
+        // so send the UTC equivalent ("YYYY-MM-DDTHH:mm:ss", no zone suffix).
+        scheduledIso = new Date(scheduledAt).toISOString().slice(0, 19)
       }
 
       // An uploaded PDF goes to storage first; the job only references its id.
@@ -1082,10 +1091,15 @@ export default function BulkEmailSendPage() {
             </button>
           </div>
           {scheduleMode === 'later' && (
-            <input type="datetime-local" value={scheduledAt}
-              onChange={e => setScheduledAt(e.target.value)}
-              min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)}
-              className={`${INPUT} mt-2`} />
+            <>
+              <input type="datetime-local" value={scheduledAt}
+                onChange={e => setScheduledAt(e.target.value)}
+                min={localInputValue(new Date(Date.now() + 60_000))}
+                className={`${INPUT} mt-2`} />
+              <p className="text-[11px] text-gray-400 mt-1">
+                Your time zone: {Intl.DateTimeFormat().resolvedOptions().timeZone}
+              </p>
+            </>
           )}
         </div>
 

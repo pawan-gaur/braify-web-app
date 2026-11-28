@@ -148,7 +148,7 @@ export default function OrganizationsPage() {
   }
 
   const handleDelete = async (org) => {
-    if (!confirm(`Delete organization "${org.name}"? This is a soft delete.`)) return
+    if (!confirm(`Delete organization "${org.name}"?\n\nIts users are signed out and can no longer sign in, API keys and webhooks stop, scheduled sends pause, and a Stripe subscription is cancelled. Data is kept (soft delete).`)) return
     try {
       await deleteOrganization(org.id)
       toast.success('Organization deleted.')

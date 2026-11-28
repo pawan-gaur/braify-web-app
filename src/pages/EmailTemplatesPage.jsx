@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getEmailTemplates, getEmailTemplate, getInternalEmailTemplates, deleteEmailTemplate, sendEmailTemplate, getGlobalPlaceholders, cloneEmailTemplate, createEmailTemplate, getAiStatus } from '../services/api'
+import { resetEmailTemplateDefault, getEmailTemplates, getEmailTemplate, getInternalEmailTemplates, deleteEmailTemplate, sendEmailTemplate, getGlobalPlaceholders, cloneEmailTemplate, createEmailTemplate, getAiStatus } from '../services/api'
 import TemplateUploadModal from '../components/templates/TemplateUploadModal'
 import AiTemplateFromDocumentModal from '../components/templates/AiTemplateFromDocumentModal'
 import TemplateCloneModal from '../components/templates/TemplateCloneModal'
@@ -118,6 +118,12 @@ export default function EmailTemplatesPage() {
   const isPlatformAdmin = can('manageOrgs')
   const scope    = isPlatformAdmin && q.scope === 'system' ? 'system' : 'mine'
   const setScope = v => setQ({ scope: v })
+
+  const resetToDefault = async (t) => {
+    if (!confirm(`Reset "${t.name}" to the built-in version? Your edits to this system email are discarded.`)) return
+    try { await resetEmailTemplateDefault(t.id); toast.success('Reset to the built-in version.'); load() }
+    catch (e) { toast.error(e.message || 'Reset failed.') }
+  }
 
   const load = useCallback(() => {
     setLoading(true)
@@ -462,6 +468,14 @@ export default function EmailTemplatesPage() {
                     <td className="px-4 py-3.5 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">{date}</td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center justify-end gap-1">
+                        {t.customized && (
+                          <>
+                            <span className="badge badge-warning text-[10px]" title="Edited by a Platform Admin — kept across updates">Customised</span>
+                            <button onClick={() => resetToDefault(t)}
+                              className="px-2 py-1.5 text-xs font-semibold rounded-lg text-ink-3 hover:bg-ink-8 dark:hover:bg-gray-700"
+                              title="Replace your edits with the built-in version">Reset to default</button>
+                          </>
+                        )}
                         <button onClick={() => navigate(`/email-builder/${t.id}`)}
                           className="px-3 py-1.5 text-xs font-semibold rounded-lg text-white transition-all hover:opacity-90"
                           style={{ background: 'linear-gradient(135deg,#6D52E8,#6D52E8)' }}

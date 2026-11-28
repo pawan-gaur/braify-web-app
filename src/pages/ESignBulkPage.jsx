@@ -1,7 +1,8 @@
 import { useState, useRef, useMemo, useEffect } from 'react'
+import { SHEET_READ_OPTS, displayTextForDatesAndPercents } from '../utils/sheet'
 import { useNavigate } from 'react-router-dom'
 import PdfPageCanvas from '../components/esign/PdfPageCanvas'
-import { esignBulkCreate, getTemplates, generatePdfAsBase64, getEmailTemplates, uploadToStorage, dataUrlToBlob } from '../services/api'
+import { esignBulkCreate, esignRenderSource, getTemplates, generatePdfAsBase64, getEmailTemplates, uploadToStorage, dataUrlToBlob } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import FileDropZone from '../components/ui/FileDropZone'
@@ -18,6 +19,8 @@ const CRUMBS = [
 ]
 
 const STEPS = ['Upload Excel', 'PDF Source', 'Map Columns', 'Preview', 'Process']
+/** Server limit per bulk request (BulkCreateDocumentRequest @Size(max = 500)). */
+const MAX_BULK_ROWS = 500
 
 const BULK_FIELD_TYPES = [
   { type: 'SIGNATURE', label: 'Signature', color: '#7c3aed', bg: '#ede9fe' },
@@ -59,8 +62,8 @@ async function parseExcelFile(file) {
     reader.onload = e => {
       try {
         const data    = new Uint8Array(e.target.result)
-        const wb      = XLSX.read(data, { type: 'array' })
-        const ws      = wb.Sheets[wb.SheetNames[0]]
+        const wb      = XLSX.read(data, { type: 'array', ...SHEET_READ_OPTS })
+        const ws      = displayTextForDatesAndPercents(XLSX, wb.Sheets[wb.SheetNames[0]])
         const rawRows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
         if (!rawRows.length || rawRows[0].every(c => c === ''))
           throw new Error('Sheet appears to be empty')
@@ -510,6 +513,9 @@ export default function ESignBulkPage() {
 
   /* ── Derived: enabled sources in priority order ─────────────────── */
   const activeSources = sourcePriority.filter(s => enabledSources[s])
+  // Fields can only be placed on a PDF preview (single PDF or template source).
+  const canPlaceFields    = !!(enabledSources.single || enabledSources.template)
+  const hasSignatureField = bulkFields.some(f => f.fieldType === 'SIGNATURE')
 
   function toggleSource(src) {
     setEnabledSources(s => ({ ...s, [src]: !s[src] }))
@@ -738,9 +744,10 @@ export default function ESignBulkPage() {
   }
 
   function canGoNext() {
-    if (step === 0) return excelRows.length > 0
+    if (step === 0) return excelRows.length > 0 && excelRows.length <= MAX_BULK_ROWS
     if (step === 1) {
       if (!activeSources.length) return false
+      if (!hasSignatureField) return false   // the server refuses to send without one
       return activeSources.every(s => step1SourceReady(s))
     }
     if (step === 2) return !!(mapping.title && mapping.clientEmail && mapping.clientName)
@@ -793,7 +800,8 @@ export default function ESignBulkPage() {
               const col = placeholderMapping[p]
               data[p] = col ? (row.rawRow[col] || '') : ''
             })
-            sourceFileId = await toStoredPdf(await generatePdfAsBase64(selectedTemplateId, data), i, `${row.title || 'document'}.pdf`)
+            // Rendered + stored on the server (the preview endpoint is watermarked "PREVIEW").
+            sourceFileId = (await esignRenderSource(selectedTemplateId, data)).fileId
           } else {
             const url = buildApiUrl(fileApi.url, row.rawRow)
             sourceFileId = await toStoredPdf(await fetchFileAsBase64(url, buildAuthHeaders(fileApi)), i, `${row.title || 'document'}.pdf`)
@@ -825,8 +833,21 @@ export default function ESignBulkPage() {
     // ── Phase 2: POST all documents in a single bulk request ──────────
     const resolvedLabel = batchName.trim() || (excelFileName ? excelFileName.replace(/\.[^.]+$/, '') : undefined)
     try {
-      await esignBulkCreate(resolvedDocs, true, resolvedLabel, allowClientUpload, allowedFileTypes)
-      showToast(`Bulk send complete — ${resolvedDocs.length} document${resolvedDocs.length !== 1 ? 's' : ''} created`, 'success')
+      const res = await esignBulkCreate(resolvedDocs, true, resolvedLabel, allowClientUpload, allowedFileTypes)
+      const failed = res?.totalFailed ?? 0
+      const sent   = res?.totalSent ?? resolvedDocs.length
+      if (failed > 0 && sent === 0) {
+        // Nothing went out — stay here and show why.
+        const reasons = (res?.results || []).filter(r => !r.success).slice(0, 5)
+          .map(r => `Row ${r.rowIndex + 1} (${r.clientEmail || r.title}): ${r.error}`)
+        setProcessError(`No documents were sent. ${reasons.join(' · ')}`)
+        return
+      }
+      if (failed > 0) {
+        showToast(`${sent} document${sent !== 1 ? 's' : ''} sent, ${failed} failed — open the batch on the E-Sign page for details`, 'warning')
+      } else {
+        showToast(`Bulk send complete — ${sent} document${sent !== 1 ? 's' : ''} sent`, 'success')
+      }
       navigate(listUrl('/esign'))
     } catch (err) {
       setProcessError('Failed to create bulk batch: ' + err.message)
@@ -964,9 +985,20 @@ export default function ESignBulkPage() {
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 {excelRows.length} rows · {excelHeaders.length} columns
               </p>
-              <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400
-                               px-2 py-0.5 rounded-full font-medium">Ready</span>
+              {excelRows.length <= MAX_BULK_ROWS ? (
+                <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400
+                                 px-2 py-0.5 rounded-full font-medium">Ready</span>
+              ) : (
+                <span className="text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400
+                                 px-2 py-0.5 rounded-full font-medium">Too many rows</span>
+              )}
             </div>
+            {excelRows.length > MAX_BULK_ROWS && (
+              <p className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg px-4 py-2">
+                A bulk send can have at most {MAX_BULK_ROWS} rows — this sheet has {excelRows.length}.
+                Split it into smaller files and send each one separately.
+              </p>
+            )}
             <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
               <table className="min-w-full text-xs">
                 <thead className="bg-gray-50 dark:bg-gray-800">
@@ -1701,6 +1733,18 @@ export default function ESignBulkPage() {
         </div>
 
         {/* ── Signature Field Placement ────────────────────────────── */}
+        {enabledSources.api && !canPlaceFields && (
+          <div className="alert-warning border rounded-xl px-4 py-3 text-sm">
+            Signature fields are placed on a preview of the document. Add a <b>Single PDF</b> or
+            <b> Template</b> source as well (it can be a sample with the same layout) to place them —
+            documents can't be sent without a Signature field.
+          </div>
+        )}
+        {canPlaceFields && !hasSignatureField && (
+          <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
+            Place at least one <b>Signature</b> field to continue — every document needs one.
+          </p>
+        )}
         {(enabledSources.single || enabledSources.template) && (
           <div className="rounded-xl border-2 border-dashed border-accent-200 dark:border-accent-700
                           bg-accent-50/30 dark:bg-accent-900/10 p-4 space-y-4">

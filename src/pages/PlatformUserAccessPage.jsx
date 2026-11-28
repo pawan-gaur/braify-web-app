@@ -4,7 +4,7 @@ import { useAuth, ROLES } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
-import { Toggle, SelectField, SettingRow, SettingsGroup, InfoBanner } from '../components/platform/SettingsKit'
+import { Toggle, SettingRow, SettingsGroup, InfoBanner } from '../components/platform/SettingsKit'
 import { IconArrowLeft } from '../components/ui/icons'
 import {
   loadPlatformSettings, savePlatformSettings, DEFAULT_PLATFORM_SETTINGS,
@@ -13,10 +13,6 @@ import {
 const ICON_USER_PLUS = 'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM20 8v6M23 11h-6'
 const ICON_SLIDERS   = 'M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6'
 
-const roleOpts = [
-  { value: 'USER',  label: 'User' },
-  { value: 'ADMIN', label: 'Admin' },
-]
 
 export default function PlatformUserAccessPage() {
   useDocumentTitle('User access')
@@ -94,22 +90,15 @@ export default function PlatformUserAccessPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <SettingsGroup iconPath={ICON_USER_PLUS} title="Sign-up &amp; verification"
-          footnote="With self-signup off, only admins can create users. Email verification blocks access until the address is confirmed.">
+          footnote="With self-signup off, new organisations come only from Contact sales (approved by a Platform Admin) or are created by admins. Contact sales is always open.">
           <SettingRow title="Allow self-signup"
-            desc="Let people request an account without an invite.">
+            desc="Anyone can create an organisation instantly at /get-started (with a trial). The server can also switch this off with SIGNUP_ENABLED=false.">
             <Toggle checked={acc.allowSelfSignup} onChange={set('allowSelfSignup')} label="Allow self-signup" />
-          </SettingRow>
-          <SettingRow title="Require email verification"
-            desc="New users must confirm their email before first login.">
-            <Toggle checked={acc.requireEmailVerification} onChange={set('requireEmailVerification')} label="Require email verification" />
           </SettingRow>
         </SettingsGroup>
 
         <SettingsGroup iconPath={ICON_SLIDERS} title="User defaults"
           footnote="Defaults applied at user creation. Admins can still change a user's role and details afterwards.">
-          <SettingRow title="Default role" desc="Role assigned to a newly created user.">
-            <SelectField value={acc.defaultRole} options={roleOpts} onChange={set('defaultRole')} />
-          </SettingRow>
           <SettingRow title="Force password change on first login"
             desc="New users must set a new password before continuing.">
             <Toggle checked={acc.forcePasswordChangeOnFirstLogin} onChange={set('forcePasswordChangeOnFirstLogin')} label="Force password change" />
