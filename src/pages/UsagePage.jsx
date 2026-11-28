@@ -141,7 +141,8 @@ export default function UsagePage() {
                     <th className="text-right py-3 px-3 text-ink-3 font-semibold">Documents</th>
                     <th className="text-right py-3 px-3 text-ink-3 font-semibold">Storage</th>
                     <th className="text-right py-3 px-3 text-ink-3 font-semibold">API calls</th>
-                    <th className="text-right py-3 px-4 text-ink-3 font-semibold">Emails</th>
+                    <th className="text-right py-3 px-4 text-ink-3 font-semibold"
+                        title="Every email sent this month: bulk recipients and CC copies, e-sign emails to each signatory and CC, single and API sends, invites and system mail">Emails</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-ink-7/60 dark:divide-gray-800">
@@ -214,7 +215,7 @@ export default function UsagePage() {
             current={config?.currentStorageMb ?? 0} limit={config?.maxStorageMb ?? -1} unit=" MB" />
           <QuotaProgressBar label="API calls / month"
             current={apiCurrent} limit={config?.maxApiCallsPerMonth ?? -1} />
-          <QuotaProgressBar label="Emails sent / month"
+          <QuotaProgressBar label="Emails sent / month (incl. CC, e-sign & system emails)"
             current={emailCurrent} limit={-1} />
           {config?.maxSmsPerMonth !== 0 && (
             <QuotaProgressBar label="SMS reminders / month"
