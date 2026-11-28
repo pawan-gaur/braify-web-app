@@ -112,14 +112,9 @@ export default function UserFormModal({ editUser, isPlatformAdmin, orgs = [], de
             </div>
           )}
           {!editUser && (
-            <label className="flex items-center gap-3 p-3 rounded-xl border border-ink-7 dark:border-gray-700 cursor-pointer">
-              <input type="checkbox" className="rounded" checked={form.sendInvite}
-                onChange={e => setForm(f => ({ ...f, sendInvite: e.target.checked }))} />
-              <div>
-                <p className="text-sm font-medium text-ink-2 dark:text-gray-300">Send email invitation</p>
-                <p className="text-xs text-ink-4">User receives a link valid for 7 days to set their password.</p>
-              </div>
-            </label>
+            <p className="text-xs text-ink-4 p-3 rounded-xl border border-ink-7 dark:border-gray-700">
+              They'll get an email invitation with a link (valid for 7 days) to set their password.
+            </p>
           )}
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose} className="btn btn-secondary flex-1">Cancel</button>

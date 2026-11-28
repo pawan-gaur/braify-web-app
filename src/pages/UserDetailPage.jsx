@@ -104,7 +104,7 @@ export default function UserDetailPage() {
 
   const moreItems = canManage ? [
     { label: 'Edit user', icon: I.pen, onClick: () => setEditing(true) },
-    ...(user?.mustChangePassword ? [{ label: 'Resend invite', icon: I.mail, onClick: doResend, disabled: busy }] : []),
+    ...(user?.invitePending ? [{ label: 'Resend invite', icon: I.mail, onClick: doResend, disabled: busy }] : []),
     ...(locked ? [{ label: 'Unlock account', icon: I.key, onClick: doUnlock, disabled: busy }] : []),
     ...(summary?.mfaEnabled ? [{ label: 'Reset two-factor', icon: I.shield, onClick: doResetMfa, disabled: busy }] : []),
     ...(summary?.activeSessions > 0 ? [{ label: 'Sign out everywhere', icon: I.device, onClick: doSignOut, disabled: busy }] : []),
@@ -147,13 +147,13 @@ export default function UserDetailPage() {
                   <span className="badge badge-brand text-[11px]">{ROLE_LABEL[user.role] || user.role}</span>
                   {user.organizationName && <span className="badge badge-violet text-[11px]">{user.organizationName}</span>}
                   <StatusPill active={user.active} />
-                  {user.mustChangePassword && <span className="badge badge-warning text-[11px]">Invite pending</span>}
+                  {user.invitePending && <span className="badge badge-warning text-[11px]">Invite pending</span>}
                   {locked && <span className="badge badge-danger text-[11px]">Locked</span>}
                 </div>
               </div>
               {canManage && (
                 <div className="flex items-center gap-2 flex-wrap">
-                  {user.mustChangePassword && (
+                  {user.invitePending && (
                     <button onClick={doResend} disabled={busy} className="btn btn-outline btn-sm">Resend invite</button>
                   )}
                   <button onClick={() => setEditing(true)} className="btn btn-outline btn-sm gap-1.5">

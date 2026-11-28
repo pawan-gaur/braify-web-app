@@ -232,7 +232,7 @@ function Shell() {
           <Route path="/settings/platform/security" element={<RoleRoute min={ROLES.PLATFORM_ADMIN}><PlatformSecurityPoliciesPage /></RoleRoute>} />
           <Route path="/settings/platform/access"   element={<RoleRoute min={ROLES.PLATFORM_ADMIN}><PlatformUserAccessPage /></RoleRoute>} />
           <Route path="/settings/platform/messaging" element={<RoleRoute min={ROLES.PLATFORM_ADMIN}><PlatformMessagingPage /></RoleRoute>} />
-          <Route path="/settings/org-settings" element={<RoleRoute min={ROLES.ADMIN}><OrgSettingsPage /></RoleRoute>} />
+          <Route path="/settings/org-settings" element={<RoleRoute min={ROLES.ORG_ADMIN}><OrgSettingsPage /></RoleRoute>} />
           <Route path="/settings/api-keys"   element={<RoleRoute min={ROLES.ORG_ADMIN}><ApiKeysPage /></RoleRoute>} />
           <Route path="/settings/billing"    element={<RoleRoute min={ROLES.ORG_ADMIN}><BillingPage /></RoleRoute>} />
           <Route path="/settings/webhooks"   element={<RoleRoute min={ROLES.ORG_ADMIN}><WebhooksPage /></RoleRoute>} />
