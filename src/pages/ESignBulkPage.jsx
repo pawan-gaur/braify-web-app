@@ -18,6 +18,8 @@ const CRUMBS = [
 ]
 
 const STEPS = ['Upload Excel', 'PDF Source', 'Map Columns', 'Preview', 'Process']
+/** Server limit per bulk request (BulkCreateDocumentRequest @Size(max = 500)). */
+const MAX_BULK_ROWS = 500
 
 const BULK_FIELD_TYPES = [
   { type: 'SIGNATURE', label: 'Signature', color: '#7c3aed', bg: '#ede9fe' },
@@ -741,7 +743,7 @@ export default function ESignBulkPage() {
   }
 
   function canGoNext() {
-    if (step === 0) return excelRows.length > 0
+    if (step === 0) return excelRows.length > 0 && excelRows.length <= MAX_BULK_ROWS
     if (step === 1) {
       if (!activeSources.length) return false
       if (!hasSignatureField) return false   // the server refuses to send without one
@@ -981,9 +983,20 @@ export default function ESignBulkPage() {
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 {excelRows.length} rows · {excelHeaders.length} columns
               </p>
-              <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400
-                               px-2 py-0.5 rounded-full font-medium">Ready</span>
+              {excelRows.length <= MAX_BULK_ROWS ? (
+                <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400
+                                 px-2 py-0.5 rounded-full font-medium">Ready</span>
+              ) : (
+                <span className="text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400
+                                 px-2 py-0.5 rounded-full font-medium">Too many rows</span>
+              )}
             </div>
+            {excelRows.length > MAX_BULK_ROWS && (
+              <p className="text-sm text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg px-4 py-2">
+                A bulk send can have at most {MAX_BULK_ROWS} rows — this sheet has {excelRows.length}.
+                Split it into smaller files and send each one separately.
+              </p>
+            )}
             <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
               <table className="min-w-full text-xs">
                 <thead className="bg-gray-50 dark:bg-gray-800">
