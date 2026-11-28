@@ -8,7 +8,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import SaveAsTemplateModal from '../components/esign/SaveAsTemplateModal'
-import { esignGetDocument, esignGetAudit, esignDownloadSigned, esignListAttachments, esignDownloadAttachment, esignResendSignatory, esignResendCopy, esignResendCopyTo, esignResendDocument, esignReactivateDocument, esignRemindNow, esignSetReminders, esignFinalizeDocument, esignRevokeViewLinks } from '../services/api'
+import { esignGetDocument, esignGetAudit, esignDownloadSigned, esignListAttachments, esignDownloadAttachment, esignResendSignatory, esignRemoveSignatory, esignRestoreSignatory, esignResendCopy, esignResendCopyTo, esignResendDocument, esignReactivateDocument, esignRemindNow, esignSetReminders, esignFinalizeDocument, esignRevokeViewLinks } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import { IconCheck } from '../components/ui/icons'
@@ -72,6 +72,8 @@ export default function ESignDetailPage() {
   const [loading,     setLoading]     = useState(true)
   const [tab,         setTab]         = useState('overview') // overview | pdf | audit | attachments
   const [resendingSig, setResendingSig] = useState(null)     // signatoryId currently being resent
+  const [removing, setRemoving] = useState(null)              // signatory in the Remove dialog
+  const [restoringSig, setRestoringSig] = useState(null)      // signatoryId being restored
   const [resendingCopy, setResendingCopy] = useState(false)  // resending the final signed copy (all)
   const [resendingEmail, setResendingEmail] = useState(null) // recipient email currently being resent
   const [savingTemplate, setSavingTemplate] = useState(false)  // Save-as-template modal open
@@ -192,6 +194,30 @@ export default function ESignDetailPage() {
       showToast(e.message || 'Failed to resend invitation', 'error')
     } finally {
       setResendingSig(null)
+    }
+  }
+
+  async function handleRemoveSignatory(sig, reason) {
+    const updated = await esignRemoveSignatory(id, sig.id, reason)   // errors shown by the dialog
+    setDoc(prev => ({ ...prev, ...updated }))
+    setRemoving(null)
+    showToast(updated.status === 'SIGNED' || updated.status === 'COMPLETED'
+      ? `${sig.name || sig.email} removed — everyone left has signed, so the document is being completed.`
+      : `${sig.name || sig.email} removed. Their link no longer works.`, 'success')
+  }
+
+  async function handleRestoreSignatory(sig) {
+    if (!confirm(`Restore ${sig.name || sig.email}? They get a fresh signing link${doc.signingMode === 'SEQUENTIAL' ? ' when it is their turn' : ''}.`)) return
+    setRestoringSig(sig.id)
+    try {
+      const updated = await esignRestoreSignatory(id, sig.id)
+      setDoc(prev => ({ ...prev, ...updated }))
+      if (updated.sendWarning) showToast(updated.sendWarning, 'warning')
+      else showToast(`${sig.name || sig.email} restored.`, 'success')
+    } catch (e) {
+      showToast(e.message || 'Failed to restore', 'error')
+    } finally {
+      setRestoringSig(null)
     }
   }
 
@@ -542,7 +568,11 @@ export default function ESignDetailPage() {
       {doc.signatories?.length > 1 && (
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 mb-5 shadow-sm">
           <h3 className="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3">
-            Signatories ({doc.signatories.filter(s => s.status === 'SIGNED').length}/{doc.signatories.length} signed)
+            {(() => {
+              const active = doc.signatories.filter(s => s.status !== 'REMOVED')
+              const removedCount = doc.signatories.length - active.length
+              return <>Signatories ({active.filter(s => s.status === 'SIGNED').length}/{active.length} signed{removedCount > 0 ? ` · ${removedCount} removed` : ''})</>
+            })()}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {(() => {
@@ -550,13 +580,45 @@ export default function ESignDetailPage() {
               const canResend = ['PENDING', 'IN_REVIEW', 'PARTIALLY_SIGNED'].includes(doc.status)
               // In sequential mode only the current (first not-yet-signed) signatory can be re-invited.
               const currentSeqId = doc.signingMode === 'SEQUENTIAL'
-                ? sorted.find(s => s.status !== 'SIGNED')?.id
+                ? sorted.find(s => s.status !== 'SIGNED' && s.status !== 'REMOVED')?.id
                 : null
+              const awaitingCount = sorted.filter(s => s.status !== 'SIGNED' && s.status !== 'REMOVED').length
+              const anySigned = sorted.some(s => s.status === 'SIGNED')
               return sorted.map(s => {
                 const signed = s.status === 'SIGNED'
                 const viewed = s.status === 'VIEWED'
-                const eligible = canResend && !signed &&
+                const removed = s.status === 'REMOVED'
+                const eligible = canResend && !signed && !removed &&
                   (doc.signingMode !== 'SEQUENTIAL' || s.id === currentSeqId)
+                // Same rule as the server: never the last one left when nobody has signed.
+                const canRemove = canResend && !signed && !removed && (awaitingCount > 1 || anySigned)
+                if (removed) {
+                  return (
+                    <div key={s.id} className="flex items-center gap-2.5 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 px-3 py-2 bg-gray-50/60 dark:bg-gray-900/30">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-rose-300"/>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-400 line-through truncate">
+                          {doc.signingMode === 'SEQUENTIAL' && <span>{s.signingOrder}. </span>}{s.name}
+                        </p>
+                        <p className="text-xs text-gray-400 truncate">{s.email}</p>
+                        <p className="text-[11px] text-rose-600 dark:text-rose-400 truncate"
+                           title={s.removedReason ? `Reason: ${s.removedReason}` : undefined}>
+                          Removed by sender{s.removedAt ? ` · ${fmtDateTime(s.removedAt)}` : ''}{s.removedReason ? ` · ${s.removedReason}` : ''}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end shrink-0 gap-1">
+                        <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">Removed</span>
+                        {canResend && (
+                          <button onClick={() => handleRestoreSignatory(s)} disabled={restoringSig === s.id}
+                            className="text-xs font-semibold text-accent-600 dark:text-accent-400 hover:text-accent-700 disabled:opacity-50"
+                            title="Add them back with a fresh signing link">
+                            {restoringSig === s.id ? 'Restoring…' : 'Restore'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                }
                 return (
                   <div key={s.id} className="flex items-center gap-2.5 rounded-xl border border-gray-100 dark:border-gray-700 px-3 py-2">
                     <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${signed ? 'bg-green-500' : viewed ? 'bg-blue-400' : 'bg-gray-300'}`}/>
@@ -600,6 +662,13 @@ export default function ESignDetailPage() {
                               Resend
                             </>
                           )}
+                        </button>
+                      )}
+                      {canRemove && (
+                        <button onClick={() => setRemoving(s)}
+                          className="text-xs font-semibold text-rose-500 hover:text-rose-700 transition-colors"
+                          title={`Remove ${s.email} from this document`}>
+                          Remove
                         </button>
                       )}
                     </div>
@@ -907,6 +976,11 @@ export default function ESignDetailPage() {
         </div>
       )}
 
+      {removing && (
+        <RemoveSignatoryModal signatory={removing} sequential={doc.signingMode === 'SEQUENTIAL'}
+          onCancel={() => setRemoving(null)}
+          onConfirm={(reason) => handleRemoveSignatory(removing, reason)} />
+      )}
       <ReactivateModal
         open={reactivateOpen}
         title={doc.title}
@@ -1025,4 +1099,45 @@ function attFileIcon(contentType) {
   if (contentType?.includes('sheet') || contentType?.includes('excel'))
     return 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'
   return 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'
+}
+
+/** Confirms removing a signer (with an optional reason recorded in the audit trail). */
+function RemoveSignatoryModal({ signatory, sequential, onCancel, onConfirm }) {
+  const [reason, setReason] = useState('')
+  const [busy, setBusy]     = useState(false)
+  const [error, setError]   = useState('')
+  const who = signatory.name || signatory.email
+  const submit = async () => {
+    setBusy(true); setError('')
+    try { await onConfirm(reason.trim()) }
+    catch (e) { setError(e.message || 'Could not remove this signer.') }
+    finally { setBusy(false) }
+  }
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={busy ? undefined : onCancel}>
+      <div role="dialog" aria-modal="true" aria-labelledby="remove-signer-title"
+        className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4" onClick={e => e.stopPropagation()}>
+        <h2 id="remove-signer-title" className="text-base font-bold text-gray-800 dark:text-gray-100">Remove {who}?</h2>
+        <ul className="text-sm text-gray-600 dark:text-gray-300 list-disc pl-5 space-y-1">
+          <li>Their signing link stops working and the document disappears from their inbox. They aren't notified.</li>
+          <li>Their fields are dropped and won't appear on the signed PDF.</li>
+          {sequential && <li>If it's their turn, the next signer is invited.</li>}
+          <li>If everyone else has already signed, the document is completed straight away.</li>
+          <li>You can restore them later while the document is still out for signing.</li>
+        </ul>
+        <div>
+          <label className="form-label" htmlFor="remove-reason">Reason (optional, kept in the audit trail)</label>
+          <textarea id="remove-reason" className="form-input resize-none" rows={2} maxLength={500}
+            value={reason} onChange={e => setReason(e.target.value)} placeholder="e.g. Wrong person, no longer needs to sign" />
+        </div>
+        {error && <p className="text-sm text-rose-600">{error}</p>}
+        <div className="flex gap-3 pt-1">
+          <button type="button" className="btn btn-secondary flex-1" onClick={onCancel} disabled={busy}>Cancel</button>
+          <button type="button" className="btn flex-1 bg-rose-600 hover:bg-rose-700 text-white" onClick={submit} disabled={busy}>
+            {busy ? 'Removing…' : 'Remove signer'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }

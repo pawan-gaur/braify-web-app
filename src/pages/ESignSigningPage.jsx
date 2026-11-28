@@ -120,7 +120,14 @@ export default function ESignSigningPage() {
   const [pdfUrl,     setPdfUrl]     = useState(null)
   const [loading,    setLoading]    = useState(true)
   const [error,      setError]      = useState(null)
-  const [errorReason, setErrorReason] = useState(null)   // EXPIRED | ALREADY_SIGNED | CANCELLED | INVALID
+  const [errorReason, setErrorReason] = useState(null)   // EXPIRED | ALREADY_SIGNED | CANCELLED | REMOVED | INVALID
+  // Mid-session link errors (e.g. the sender removed this signer while the page was open) replace
+  // the page with the matching screen instead of a passing toast.
+  const failOrToast = (e) => {
+    const reason = e?.rawData?.reason
+    if (reason === 'REMOVED' || reason === 'CANCELLED') { setError(e.message); setErrorReason(reason); return }
+    toast.error(e.message)
+  }
   const [fields,     setFields]     = useState([])
   const [submitting, setSubmitting] = useState(false)
   const [submitted,  setSubmitted]  = useState(false)
@@ -190,7 +197,7 @@ export default function ESignSigningPage() {
       setDoc(updated)          // carries the new consentedAt on the signatory
       setConsented(true)
     } catch (e) {
-      toast.error(e.message)
+      failOrToast(e)
     } finally {
       setConsentBusy(false)
     }
@@ -372,7 +379,7 @@ export default function ESignSigningPage() {
       const checked = isChecked(field._signedValue ?? field.value)
       setApplyingId(field.id)
       signFieldWith(field, checked ? 'false' : 'true', 'TYPE')
-        .catch(e => toast.error(e.message))
+        .catch(failOrToast)
         .finally(() => setApplyingId(null))
       return
     }
@@ -382,7 +389,7 @@ export default function ESignSigningPage() {
     if (a) {
       setApplyingId(field.id)
       signFieldWith(field, a.value, a.method)
-        .catch(e => toast.error(e.message))
+        .catch(failOrToast)
         .finally(() => setApplyingId(null))
     } else {
       openModal(field)
@@ -461,7 +468,7 @@ export default function ESignSigningPage() {
       clearCanvas()
       setTypedText('')
     } catch (e) {
-      toast.error(e.message)
+      failOrToast(e)
     } finally {
       setSaving(false)
     }
@@ -487,7 +494,7 @@ export default function ESignSigningPage() {
       setShowSubmitConfirm(false)
       setSubmitted(true)
     } catch (e) {
-      toast.error(e.message)
+      failOrToast(e)
     } finally {
       setSubmitting(false)
     }
@@ -538,6 +545,9 @@ export default function ESignSigningPage() {
       CANCELLED:      { title: 'This document was cancelled',
                         body: 'The sender cancelled this document.',
                         hint: 'Contact the sender if you have any questions.',       done: false },
+      REMOVED:        { title: 'You no longer have access to this document',
+                        body: 'The sender removed you as a signer, so there is nothing for you to sign.',
+                        hint: 'Contact the sender if you think this is a mistake.',  done: false },
       INVALID:        { title: "This link isn't valid",
                         body: error || 'We couldn’t open this document.',
                         hint: 'Please contact the sender.',                          done: false },
