@@ -555,7 +555,7 @@ export default function AuditLogPage() {
     setVerifying(true)
     try {
       const r = await verifyAuditIntegrity()
-      const legacy = r.legacyUnverified ? ` (${r.legacyUnverified.toLocaleString()} legacy entries pre-date integrity hashing)` : ''
+      const legacy = r.legacyUnverified ? ` (${r.legacyUnverified.toLocaleString()} older entries were written before the current integrity format and can't be verified)` : ''
       if (r.intact) {
         toast.success(`Integrity verified — ${(r.checked ?? 0).toLocaleString()} records intact.${legacy}`)
       } else {
