@@ -358,6 +358,8 @@ export const esignResendDocument  = (id, days = 7)         => http.post(`/esign/
 export const esignReactivateDocument = (id, days = 7)      => http.post(`/esign/documents/${id}/reactivate?tokenValidDays=${days}`).then(r => r.data)
 export const esignFinalizeDocument   = (id)                => http.post(`/esign/documents/${id}/finalize`).then(r => r.data)
 export const esignResendSignatory = (id, signatoryId, days = 7) => http.post(`/esign/documents/${id}/signatories/${signatoryId}/resend?tokenValidDays=${days}`).then(r => r.data)
+export const esignRemoveSignatory  = (id, signatoryId, reason) => http.post(`/esign/documents/${id}/signatories/${signatoryId}/remove`, { reason: reason || null }).then(r => r.data)
+export const esignRestoreSignatory = (id, signatoryId)         => http.post(`/esign/documents/${id}/signatories/${signatoryId}/restore`).then(r => r.data)
 export const esignResendCopy      = (id)                   => http.post(`/esign/documents/${id}/resend-copy`).then(r => r.data)
 export const esignResendCopyTo    = (id, email)            => http.post(`/esign/documents/${id}/resend-copy/recipient?email=${encodeURIComponent(email)}`).then(r => r.data)
 export const emailLogsList = ({ page = 0, size = 20, orgId, category, status, recipientType, search, dateFrom, dateTo } = {}) => {

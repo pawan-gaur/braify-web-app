@@ -12,7 +12,9 @@ import { useToast } from '../../context/ToastContext'
 export default function SaveAsTemplateModal({ doc, onClose, openList = true }) {
   const navigate = useNavigate()
   const toast = useToast()
-  const signers = [...(doc.signatories?.length ? doc.signatories : [{ name: doc.clientName }])]
+  // Removed signers aren't part of the template (the server drops them the same way).
+  const active = (doc.signatories || []).filter(s => s.status !== 'REMOVED')
+  const signers = [...(active.length ? active : [{ name: doc.clientName }])]
     .sort((a, b) => (a.signingOrder || 0) - (b.signingOrder || 0))
   const [name, setName] = useState(doc.title || '')
   const [description, setDescription] = useState('')
