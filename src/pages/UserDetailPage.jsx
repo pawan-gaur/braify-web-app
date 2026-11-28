@@ -7,14 +7,13 @@ import useDocumentTitle from '../hooks/useDocumentTitle'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import { listUrl } from '../hooks/useUrlState'
 import UserFormModal from '../components/users/UserFormModal'
+import { canManageUser } from '../utils/userPermissions'
 import {
   ProfileSidebar, ProfileOverview, ActivityTimeline, UnderlineTabs, StatusPill,
   ROLE_LABEL, PROFILE_ICONS as I, Ico,
 } from '../components/profile/ProfileParts'
 import { FEATURES } from '../config/features'
 import { fmtDate } from '../utils/date'
-
-const RANK = { PLATFORM_ADMIN: 4, ORG_ADMIN: 3, ADMIN: 2, USER: 1 }
 
 /**
  * /users/:id — profile of another user (Admin+). Same layout as /profile, read-only, with the
@@ -67,8 +66,8 @@ export default function UserDetailPage() {
     )
   }
 
-  // Same rule as the backend: Platform Admin manages anyone, others only lower roles.
-  const canManage = !!user && (isPlatformAdmin || (RANK[me?.role] ?? 0) > (RANK[user.role] ?? 0))
+  // Same rule as the backend (utils/userPermissions).
+  const canManage = canManageUser(me, user)
 
   const run = async (fn, ok) => {
     setBusy(true)

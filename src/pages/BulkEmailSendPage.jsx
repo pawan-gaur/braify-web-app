@@ -118,6 +118,12 @@ function StepIndicator({ current }) {
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────
+/** "YYYY-MM-DDTHH:mm" in the browser's local time — the format a datetime-local input uses. */
+function localInputValue(d) {
+  const pad = n => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 export default function BulkEmailSendPage() {
   const { showToast } = useToast()
   const navigate      = useNavigate()
@@ -338,7 +344,9 @@ export default function BulkEmailSendPage() {
       if (scheduleMode === 'later') {
         if (!scheduledAt) { setSendError('Pick a date and time to schedule the campaign'); setSending(false); return }
         if (new Date(scheduledAt).getTime() <= Date.now()) { setSendError('Scheduled time must be in the future'); setSending(false); return }
-        scheduledIso = scheduledAt   // "YYYY-MM-DDTHH:mm" — parsed as LocalDateTime by the backend
+        // The picker gives local wall-clock time; the backend compares in UTC (it runs in UTC),
+        // so send the UTC equivalent ("YYYY-MM-DDTHH:mm:ss", no zone suffix).
+        scheduledIso = new Date(scheduledAt).toISOString().slice(0, 19)
       }
 
       // An uploaded PDF goes to storage first; the job only references its id.
@@ -1082,10 +1090,15 @@ export default function BulkEmailSendPage() {
             </button>
           </div>
           {scheduleMode === 'later' && (
-            <input type="datetime-local" value={scheduledAt}
-              onChange={e => setScheduledAt(e.target.value)}
-              min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)}
-              className={`${INPUT} mt-2`} />
+            <>
+              <input type="datetime-local" value={scheduledAt}
+                onChange={e => setScheduledAt(e.target.value)}
+                min={localInputValue(new Date(Date.now() + 60_000))}
+                className={`${INPUT} mt-2`} />
+              <p className="text-[11px] text-gray-400 mt-1">
+                Your time zone: {Intl.DateTimeFormat().resolvedOptions().timeZone}
+              </p>
+            </>
           )}
         </div>
 

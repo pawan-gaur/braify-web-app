@@ -325,6 +325,7 @@ export const updateProfile   = (payload) => http.put('/profile/me', payload).the
 export const changePassword  = (payload) => http.put('/profile/me/password', payload).then(r => r.data)
 export const uploadAvatar    = (fileId)  => http.post('/profile/me/avatar', { fileId }).then(r => r.data)   // fileId from uploadToStorage(…, 'AVATAR'); null removes
 export const getMyAuditLog   = ()        => http.get('/profile/me/audit').then(r => r.data)
+export const getSignupStatus = () => http.get('/auth/signup/status').then(r => r.data)   // { open }
 export const getMySummary    = ()        => http.get('/profile/me/summary').then(r => r.data)   // same shape as getUserSummary
 
 // ── E-Sign (Creator) ───────────────────────────────────────

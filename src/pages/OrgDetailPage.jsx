@@ -197,6 +197,8 @@ function OverviewTab({ org, setOrg, orgId }) {
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error('Name is required.'); return }
+    if (org.active && !form.active && !confirm(
+      `Deactivate "${org.name}"?\n\nIts users are signed out and can't sign in, and its API keys, webhooks and scheduled sends stop until you reactivate it.`)) return
     setSaving(true)
     try {
       const updated = await updateOrganization(orgId, {
