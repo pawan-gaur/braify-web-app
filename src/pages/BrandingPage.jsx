@@ -1340,22 +1340,13 @@ function CloudStorageTab({ managed, form, set, saving, onSave, onTest }) {
                 <input
                   type="number"
                   min="1"
+                  max="10"
                   className="form-input"
                   placeholder="10"
                   value={form.maxUploadSizeMb}
                   onChange={e => set('maxUploadSizeMb', e.target.value)}
                 />
-              </div>
-              <div>
-                <label className="form-label">Retention (Days)</label>
-                <input
-                  type="number"
-                  min="1"
-                  className="form-input"
-                  placeholder="365"
-                  value={form.retentionDays}
-                  onChange={e => set('retentionDays', e.target.value)}
-                />
+                <p className="text-[11px] text-ink-4 mt-1">Up to 10 MB (the platform's upload limit).</p>
               </div>
             </div>
 
