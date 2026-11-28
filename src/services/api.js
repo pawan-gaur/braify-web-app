@@ -209,6 +209,7 @@ export const deleteTemplate = (id) => http.delete(`/templates/${id}`)
 export const cloneTemplate  = (id, body = {}) => http.post(`/templates/${id}/clone`, body).then(r => r.data)
 
 // ── Email templates ────────────────────────────────────────
+export const resetEmailTemplateDefault = (id) => http.post(`/email-templates/${id}/reset-default`).then(r => r.data)   // system templates (Platform Admin)
 export const getEmailTemplates    = ()         => http.get('/email-templates').then(r => r.data)
 export const getInternalEmailTemplates = ()    => http.get('/email-templates/internal').then(r => r.data)
 export const getEmailTemplate     = (id)       => http.get(`/email-templates/${id}`).then(r => r.data)
