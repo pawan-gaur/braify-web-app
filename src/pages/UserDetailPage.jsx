@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
-import { getUser, getUserSummary, getOrganizations, enableUser, disableUser, resendInvite } from '../services/api'
+import { getUser, getUserSummary, getOrganizations, enableUser, disableUser, resendInvite, resetUserMfa, unlockUser, signOutUserEverywhere } from '../services/api'
 import { useAuth, ROLES } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import useDocumentTitle from '../hooks/useDocumentTitle'
@@ -85,9 +85,23 @@ export default function UserDetailPage() {
     run(() => enableUser(user.id), 'User enabled.')
   }
 
+  const doResetMfa = () => {
+    if (!confirm(`Reset two-factor authentication for ${user.firstName}?\n\nUse this when they've lost their authenticator and recovery codes. They're signed out and, if 2FA is required, set it up again at next sign-in.`)) return
+    run(() => resetUserMfa(user.id), 'Two-factor authentication reset.')
+  }
+  const doUnlock  = () => run(() => unlockUser(user.id), 'Account unlocked.')
+  const doSignOut = () => {
+    if (!confirm(`Sign ${user.firstName} out of every device?`)) return
+    run(() => signOutUserEverywhere(user.id), 'Signed out everywhere.')
+  }
+  const locked = !!summary?.lockedUntil
+
   const moreItems = canManage ? [
     { label: 'Edit user', icon: I.pen, onClick: () => setEditing(true) },
     ...(user?.mustChangePassword ? [{ label: 'Resend invite', icon: I.mail, onClick: doResend, disabled: busy }] : []),
+    ...(locked ? [{ label: 'Unlock account', icon: I.key, onClick: doUnlock, disabled: busy }] : []),
+    ...(summary?.mfaEnabled ? [{ label: 'Reset two-factor', icon: I.shield, onClick: doResetMfa, disabled: busy }] : []),
+    ...(summary?.activeSessions > 0 ? [{ label: 'Sign out everywhere', icon: I.device, onClick: doSignOut, disabled: busy }] : []),
     user?.active
       ? { label: 'Disable user', icon: I.shield, onClick: doDisable, danger: true, disabled: busy }
       : { label: 'Enable user',  icon: I.check,  onClick: doEnable, disabled: busy },
@@ -127,6 +141,7 @@ export default function UserDetailPage() {
                   {user.organizationName && <span className="badge badge-violet text-[11px]">{user.organizationName}</span>}
                   <StatusPill active={user.active} />
                   {user.mustChangePassword && <span className="badge badge-warning text-[11px]">Invite pending</span>}
+                  {locked && <span className="badge badge-danger text-[11px]">Locked</span>}
                 </div>
               </div>
               {canManage && (

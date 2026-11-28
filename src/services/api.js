@@ -300,6 +300,9 @@ export const updateUser     = (id, payload)        => http.put(`/users/${id}`, p
 export const enableUser     = (id)                 => http.put(`/users/${id}/enable`)
 export const disableUser    = (id)                 => http.put(`/users/${id}/disable`)
 export const resendInvite   = (id)                 => http.post(`/users/${id}/resend-invite`)
+export const resetUserMfa   = (id)                 => http.post(`/users/${id}/mfa/reset`)
+export const unlockUser     = (id)                 => http.post(`/users/${id}/unlock`)
+export const signOutUserEverywhere = (id)          => http.post(`/users/${id}/sessions/revoke`).then(r => r.data)   // { ended }
 
 // ── Sessions ───────────────────────────────────────────────
 export const getSessions          = ()   => http.get('/sessions').then(r => r.data)
