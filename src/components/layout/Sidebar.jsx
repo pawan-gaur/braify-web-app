@@ -82,6 +82,11 @@ const NAV_SECTIONS = [
         icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 8h6m-6 4h3',
       },
       {
+        to: '/invoicing', label: 'Invoicing',
+        minRole: ROLES.PLATFORM_ADMIN,
+        icon: 'M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z',
+      },
+      {
         to: '/support-tickets', label: 'Support tickets',
         minRole: ROLES.PLATFORM_ADMIN,
         ticketsBadge: true,

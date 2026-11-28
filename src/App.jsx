@@ -63,6 +63,8 @@ const GlobalPlaceholdersPage = lazy(() => import('./pages/GlobalPlaceholdersPage
 const FilesPage              = lazy(() => import('./pages/FilesPage'))
 const EmailActivityPage      = lazy(() => import('./pages/EmailActivityPage'))
 const SupportTicketsPage     = lazy(() => import('./pages/SupportTicketsPage'))
+const InvoicingPage          = lazy(() => import('./pages/InvoicingPage'))
+const InvoiceDetailPage      = lazy(() => import('./pages/InvoiceDetailPage'))
 const SupportTicketDetailPage = lazy(() => import('./pages/SupportTicketDetailPage'))
 const FeatureDetailPage      = lazy(() => import('./pages/FeatureDetailPage'))
 const PlatformSettingsPage         = lazy(() => import('./pages/PlatformSettingsPage'))
@@ -219,6 +221,8 @@ function Shell() {
           <Route path="/admin/organizations/:orgId" element={<RoleRoute min={ROLES.PLATFORM_ADMIN}><OrgDetailPage /></RoleRoute>} />
           <Route path="/onboarding-requests"        element={<RoleRoute min={ROLES.PLATFORM_ADMIN}><OnboardingRequestsPage /></RoleRoute>} />
           <Route path="/support-tickets"            element={<RoleRoute min={ROLES.PLATFORM_ADMIN}><SupportTicketsPage /></RoleRoute>} />
+          <Route path="/invoicing"                  element={<RoleRoute min={ROLES.PLATFORM_ADMIN}><InvoicingPage /></RoleRoute>} />
+          <Route path="/invoicing/invoices/:id"     element={<RoleRoute min={ROLES.PLATFORM_ADMIN}><InvoiceDetailPage /></RoleRoute>} />
           <Route path="/support-tickets/:id"        element={<RoleRoute min={ROLES.PLATFORM_ADMIN}><SupportTicketDetailPage /></RoleRoute>} />
           <Route path="/users"                 element={<RoleRoute min={ROLES.ADMIN}><UsersPage /></RoleRoute>} />
           <Route path="/users/:id"             element={<RoleRoute min={ROLES.ADMIN}><UserDetailPage /></RoleRoute>} />
