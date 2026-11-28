@@ -8,6 +8,7 @@ import Breadcrumbs from '../components/ui/Breadcrumbs'
 import ViewToggle, { useView } from '../components/ui/ViewToggle'
 import useUrlState from '../hooks/useUrlState'
 import UserFormModal from '../components/users/UserFormModal'
+import { canManageUser } from '../utils/userPermissions'
 
 const CRUMBS = [
   { label: 'Dashboard', to: '/' },
@@ -248,7 +249,7 @@ export default function UsersPage() {
 
               <p className="text-[11px] text-ink-4 mt-auto">Joined {fmtDate(u.createdAt)}</p>
 
-              <div className="flex items-center gap-1 pt-1 border-t border-ink-7 dark:border-gray-700">
+              {canManageUser(me, u) && <div className="flex items-center gap-1 pt-1 border-t border-ink-7 dark:border-gray-700">
                 <button onClick={() => openEdit(u)}
                   className="text-xs px-2.5 py-1 rounded-lg border border-ink-7 dark:border-gray-600 text-ink-3 hover:border-primary hover:text-primary transition-colors">
                   Edit
@@ -270,7 +271,7 @@ export default function UsersPage() {
                     Enable
                   </button>
                 )}
-              </div>
+              </div>}
             </div>
           ))}
         </div>
@@ -327,7 +328,7 @@ export default function UsersPage() {
                   </td>
                   <td className="px-5 py-3.5 text-xs text-ink-4">{fmtDate(u.createdAt)}</td>
                   <td className="px-4 py-3.5">
-                    <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                    {canManageUser(me, u) && <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                       <button onClick={() => openEdit(u)}
                         className="text-xs px-2.5 py-1 rounded-lg border border-ink-7 dark:border-gray-600
                                    text-ink-3 hover:border-primary hover:text-primary transition-colors">
@@ -354,7 +355,7 @@ export default function UsersPage() {
                           Enable
                         </button>
                       )}
-                    </div>
+                    </div>}
                   </td>
                 </tr>
               ))}
