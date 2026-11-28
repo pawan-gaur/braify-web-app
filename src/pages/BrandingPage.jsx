@@ -2,7 +2,7 @@
 import { useAuth, ROLES as USER_ROLES } from '../context/AuthContext'
 import { ALL_FEATURES } from '../config/features'
 import { useToast } from '../context/ToastContext'
-import { getBranding, updateBranding, getCloudConfig, updateCloudConfig, getEsignReminderPolicy, updateEsignReminderPolicy, getOrgSmsConfig, updateOrgSmsConfig, testOrgSmsConfig, getOrgEmailConfig, updateOrgEmailConfig, testOrgEmailConfig } from '../services/api'
+import { getBranding, updateBranding, getCloudConfig, updateCloudConfig, testCloudConfig, getEsignReminderPolicy, updateEsignReminderPolicy, getOrgSmsConfig, updateOrgSmsConfig, testOrgSmsConfig, getOrgEmailConfig, updateOrgEmailConfig, testOrgEmailConfig } from '../services/api'
 import SmsProviderForm from '../components/settings/SmsProviderForm'
 import EmailProviderForm from '../components/settings/EmailProviderForm'
 import { Link } from 'react-router-dom'
@@ -225,8 +225,10 @@ export default function OrgSettingsPage() {
         retentionDays:          cloudForm.retentionDays          ? Number(cloudForm.retentionDays)          : null,
         presignedUrlExpiration: cloudForm.presignedUrlExpiration ? Number(cloudForm.presignedUrlExpiration) : null,
       }
-      await updateCloudConfig(orgId, payload)
-      toast.success('Cloud storage configuration saved.')
+      const saved = await updateCloudConfig(orgId, payload)
+      // The server only saves after writing a test object to the bucket, so a save is a passed test.
+      toast.success(payload.cloud ? 'Connected and saved — new files will be stored in your bucket.' : 'Saved — using Braify managed storage.')
+      setManagedStorage(!!saved?.managedStorage || !payload.cloud)
     } catch (err) {
       toast.error(err.message || 'Failed to save cloud config.')
     } finally {
@@ -360,6 +362,7 @@ export default function OrgSettingsPage() {
           set={setCloud}
           saving={savingCloud}
           onSave={handleSaveCloud}
+          onTest={() => testCloudConfig(orgId)}
         />
       )}
     </div>
@@ -1031,8 +1034,16 @@ const CLOUD_PROVIDERS = [
 
 const COMMON_FILE_TYPES = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'txt', 'zip']
 
-function CloudStorageTab({ managed, form, set, saving, onSave }) {
+function CloudStorageTab({ managed, form, set, saving, onSave, onTest }) {
   const [fileTypeInput, setFileTypeInput] = useState('')
+  const [testing, setTesting]   = useState(false)
+  const [testResult, setTestResult] = useState(null)   // { success, message }
+  const runTest = async () => {
+    setTesting(true); setTestResult(null)
+    try { setTestResult(await onTest()) }
+    catch (e) { setTestResult({ success: false, message: e.message }) }
+    finally { setTesting(false) }
+  }
 
   const addFileType = (type) => {
     const normalized = type.trim().toLowerCase().replace(/^\./, '')
@@ -1060,6 +1071,29 @@ function CloudStorageTab({ managed, form, set, saving, onSave }) {
         <div className="alert-success border rounded-xl px-5 py-4 text-sm">
           <p className="font-semibold">Using Braify managed storage — no setup needed.</p>
           <p className="mt-1">Your files, e-sign documents and logo are stored securely by Braify. Configure your own bucket below only if you need data in your own cloud account; new files then go there, and existing files stay readable.</p>
+        </div>
+      )}
+
+      {/* Own bucket: test the saved connection; switching back to managed storage */}
+      {!managed && form.cloud && (
+        <div className="card p-4 flex items-start justify-between gap-4 flex-wrap">
+          <div className="text-sm text-ink-3 max-w-xl">
+            Saving checks that Braify can write to the bucket first, so a wrong key or bucket name is never
+            switched on. Files already stored stay readable if you change bucket later.
+            {testResult && (
+              <p className={`mt-2 font-medium ${testResult.success ? 'text-emerald-600' : 'text-rose-600'}`}>{testResult.message}</p>
+            )}
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <button type="button" className="btn btn-outline btn-sm" onClick={runTest} disabled={testing}>
+              {testing ? 'Testing…' : 'Test saved connection'}
+            </button>
+            <button type="button" className="btn btn-ghost btn-sm"
+              title="New files go back to Braify managed storage; files in your bucket stay readable"
+              onClick={() => { set('cloud', ''); set('bucket', '') }}>
+              Use managed storage instead
+            </button>
+          </div>
         </div>
       )}
 

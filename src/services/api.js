@@ -536,6 +536,7 @@ export const updateBranding = (orgId, payload)  => http.put(`/organizations/${or
 // ── Org Cloud Config ────────────────────────────────────────
 export const getCloudConfig    = (orgId)          => http.get(`/organizations/${orgId}/cloud-config`).then(r => r.data)
 export const updateCloudConfig = (orgId, payload) => http.put(`/organizations/${orgId}/cloud-config`, payload).then(r => r.data)
+export const testCloudConfig   = (orgId)          => http.post(`/organizations/${orgId}/cloud-config/test`).then(r => r.data)   // { success, message } — tests the SAVED config
 
 // ── Template Sharing ────────────────────────────────────────
 export const shareTemplate        = (payload)     => http.post('/sharing', payload).then(r => r.data)
