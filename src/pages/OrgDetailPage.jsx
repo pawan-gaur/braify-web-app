@@ -21,6 +21,7 @@ import PlanBadge from '../components/ui/PlanBadge'
 import QuotaProgressBar from '../components/ui/QuotaProgressBar'
 import { ALL_FEATURES, FEATURE_META } from '../config/features'
 import { fmtDate, fmtDateTime, fmtRelative } from '../utils/date'
+import useUrlState, { listUrl } from '../hooks/useUrlState'
 
 /* ── Spinner ── */
 function Spinner() {
@@ -55,7 +56,10 @@ export default function OrgDetailPage() {
 
   const [org,       setOrg]       = useState(null)
   const [loading,   setLoading]   = useState(true)
-  const [activeTab, setActiveTab] = useState('Overview')
+  // Active tab lives in the URL (?tab=Users) so Back returns to the same tab
+  const [q, setQ]   = useUrlState({ tab: 'Overview' })
+  const activeTab   = TABS.includes(q.tab) ? q.tab : 'Overview'
+  const setActiveTab = tab => setQ({ tab })
 
   useDocumentTitle(org ? org.name : 'Organization')
 
@@ -96,7 +100,7 @@ export default function OrgDetailPage() {
     return (
       <div className="max-w-5xl mx-auto px-6 py-8 text-center py-20">
         <p className="text-gray-500">Organization not found.</p>
-        <button className="btn btn-secondary mt-4" onClick={() => navigate('/organizations')}>
+        <button className="btn btn-secondary mt-4" onClick={() => navigate(listUrl('/organizations'))}>
           Back to Organizations
         </button>
       </div>
@@ -111,7 +115,7 @@ export default function OrgDetailPage() {
       <div className="flex items-start justify-between mt-4 mb-6 gap-4 flex-wrap">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate('/organizations')}
+            onClick={() => navigate(listUrl('/organizations'))}
             className="w-8 h-8 flex items-center justify-center rounded-xl text-ink-4 hover:bg-ink-8 dark:hover:bg-gray-700 transition-colors"
             title="Back"
           >
@@ -179,7 +183,7 @@ function OverviewTab({ org, setOrg, orgId }) {
       setOrg(prev => ({ ...prev, mfaPolicy: policy }))
       toast.success(`MFA policy set to ${policy}.`)
     } catch (err) {
-      toast.error(err?.response?.data?.message || err.message || 'Failed to update MFA policy.')
+      toast.error(err.message || 'Failed to update MFA policy.')
     } finally {
       setMfaSaving(false)
     }
@@ -294,10 +298,10 @@ function OverviewTab({ org, setOrg, orgId }) {
           <p className="text-sm text-gray-400 italic">No settings configured.</p>
         ) : (
           <div className="flex flex-wrap gap-6 items-start">
-            {(branding.logoUrl || branding.logoBase64) && (
+            {branding.logoUrl && (
               <div>
                 <p className="text-xs font-semibold text-gray-500 mb-2">Logo</p>
-                <img src={branding.logoUrl || branding.logoBase64} alt="Org logo"
+                <img src={branding.logoUrl} alt="Org logo"
                   className="h-12 max-w-[160px] object-contain rounded-lg border border-gray-100 dark:border-gray-700 p-1"/>
               </div>
             )}
@@ -735,9 +739,10 @@ function UsageTab({ orgId }) {
           <h3 className="font-bold text-gray-800 dark:text-gray-100 mb-4">Quota Usage</h3>
           <div className="space-y-4">
             <QuotaProgressBar label="Users"         current={quota.currentUsers      ?? 0} limit={quota.maxUsers           ?? -1} />
-            <QuotaProgressBar label="Documents/mo"  current={quota.currentDocs       ?? 0} limit={quota.maxDocsPerMonth    ?? -1} />
+            <QuotaProgressBar label="Documents/mo"  current={(quota.currentDocsThisMonth ?? 0) + (quota.currentEsignThisMonth ?? 0)} limit={quota.maxDocsPerMonth ?? -1} />
             <QuotaProgressBar label="Storage"       current={quota.currentStorageMb  ?? 0} limit={quota.maxStorageMb       ?? -1} unit=" MB" />
-            <QuotaProgressBar label="API calls/mo"  current={quota.currentApiCalls   ?? 0} limit={quota.maxApiCallsPerMonth ?? -1} />
+            <QuotaProgressBar label="API calls/mo"  current={quota.currentApiCallsThisMonth ?? 0} limit={quota.maxApiCallsPerMonth ?? -1} />
+            <QuotaProgressBar label="SMS/mo"        current={quota.currentSmsThisMonth ?? 0} limit={quota.maxSmsPerMonth ?? -1} />
           </div>
         </div>
       )}

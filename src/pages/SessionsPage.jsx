@@ -1,6 +1,7 @@
 ﻿import { useState, useEffect, useCallback } from 'react'
 import { getSessions, revokeSession, revokeOtherSessions } from '../services/api'
 import useDocumentTitle from '../hooks/useDocumentTitle'
+import useUrlState from '../hooks/useUrlState'
 import { useToast } from '../context/ToastContext'
 import { useAuth, ROLES } from '../context/AuthContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
@@ -81,7 +82,10 @@ export default function SessionsPage() {
   const [revokeAll, setRevokeAll] = useState(false)
 
   /* Group filter (for Platform Admin / Org Admin) */
-  const [filter, setFilter] = useState('all')  // 'all' | 'mine'
+  // Kept in the URL (?filter=mine) so Back restores it
+  const [q, setQ] = useUrlState({ filter: 'all' })
+  const filter    = q.filter   // 'all' | 'mine'
+  const setFilter = v => setQ({ filter: v })
   const [view, setView] = useView('braify-sessions-view')
 
   const load = useCallback(() => {

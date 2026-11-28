@@ -1,6 +1,8 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 
+const PLATFORM_SECURITY_PATH = '/settings/platform/security'
+
 /**
  * Wraps any route element with an auth guard.
  *
@@ -34,6 +36,16 @@ export default function ProtectedRoute({ children, requiredRole }) {
   if (!isAuthenticated) {
     // Redirect to /login, remembering the intended destination
     return <Navigate to="/login" state={{ from: location }} replace />
+  }
+
+  // Required account setup: until the password is set / MFA is enrolled, every page except the
+  // profile sends the user there (signer-portal sessions have neither requirement).
+  // A Platform Admin may still open Security Policies, where the platform-wide MFA requirement
+  // is switched on/off — otherwise they could never turn it off without enrolling first.
+  if (user?.accountType !== 'SIGNER' && user?.role !== 'SIGNER' && location.pathname !== '/profile') {
+    if (user?.mustChangePassword) return <Navigate to="/profile?setup=password" replace />
+    if (user?.mustSetupMfa && !(user?.role === 'PLATFORM_ADMIN' && location.pathname === PLATFORM_SECURITY_PATH))
+      return <Navigate to="/profile?setup=mfa" replace />
   }
 
   // Role gate (optional)

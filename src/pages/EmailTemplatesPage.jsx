@@ -1,18 +1,23 @@
-﻿import { useState, useEffect, useCallback, useMemo } from 'react'
+﻿import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getEmailTemplates, getInternalEmailTemplates, deleteEmailTemplate, sendEmailTemplate, getGlobalPlaceholders, cloneEmailTemplate, createEmailTemplate } from '../services/api'
+import { getEmailTemplates, getEmailTemplate, getInternalEmailTemplates, deleteEmailTemplate, sendEmailTemplate, getGlobalPlaceholders, cloneEmailTemplate, createEmailTemplate, getAiStatus } from '../services/api'
 import TemplateUploadModal from '../components/templates/TemplateUploadModal'
+import AiTemplateFromDocumentModal from '../components/templates/AiTemplateFromDocumentModal'
 import TemplateCloneModal from '../components/templates/TemplateCloneModal'
+import ShareTemplateModal from '../components/ui/ShareTemplateModal'
 import useDocumentTitle from '../hooks/useDocumentTitle'
+import useUrlState from '../hooks/useUrlState'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import ViewToggle, { useView } from '../components/ui/ViewToggle'
 import VersionHistoryModal from '../components/ui/VersionHistoryModal'
 import EmailPreviewModal from '../components/ui/EmailPreviewModal'
-import EmailLibraryModal from '../components/ui/EmailLibraryModal'
 import { IconArrowRight } from '../components/ui/icons'
 import { fmtDate } from '../utils/date'
+
+// ~80 kB of library template HTML — only fetched when the library modal is opened.
+const EmailLibraryModal = lazy(() => import('../components/ui/EmailLibraryModal'))
 
 const CRUMBS = [
   { label: 'Dashboard',       to: '/' },
@@ -76,28 +81,43 @@ function SortTh({ label, field, sortKey, onSort }) {
 export default function EmailTemplatesPage() {
   useDocumentTitle('Email Templates')
   const navigate = useNavigate()
-  const { can }  = useAuth()
+  const { can, user }  = useAuth()
+  // Sharing with other organisations is an org-admin action (the API enforces it too).
+  const canShare = user?.role === 'ORG_ADMIN' || user?.role === 'PLATFORM_ADMIN'
+  const [shareTemplate, setShareTemplate] = useState(null)
   const toast    = useToast()
 
   const [view,     setView]     = useView('braify-view-email-templates')
   const [templates,       setTemplates]       = useState([])
   const [loading,         setLoading]         = useState(true)
-  const [activeCategory,  setActiveCategory]  = useState('all')
-  const [search,          setSearch]          = useState('')
-  const [activeTags,      setActiveTags]      = useState([])
+  // Scope / category / search / tags / sort live in the URL so Back from a template restores them.
+  const [q, setQ] = useUrlState({ scope: 'mine', category: 'all', search: '', tags: '', sort: 'updatedAt_desc' })
+  const activeCategory    = q.category
+  const setActiveCategory = v => setQ({ category: v })
+  const search            = q.search
+  const setSearch         = v => setQ({ search: v })
+  const activeTags        = useMemo(() => (q.tags ? q.tags.split(',') : []), [q.tags])
+  const setActiveTags     = v => setQ(prev => {
+    const cur = prev.tags ? prev.tags.split(',') : []
+    return { tags: (typeof v === 'function' ? v(cur) : v).join(',') }
+  })
   const [showLibrary,     setShowLibrary]     = useState(false)
   const [versionTemplate, setVersionTemplate] = useState(null)
   const [previewTemplate, setPreviewTemplate] = useState(null)
   const [sendTemplate,    setSendTemplate]    = useState(null)
   const [uploadOpen,      setUploadOpen]      = useState(false)
+  const [aiOpen,          setAiOpen]          = useState(false)
+  const [aiAvailable,     setAiAvailable]     = useState(false)
   const [cloneSource,     setCloneSource]     = useState(null)
 
-  const [tableSortKey, setTableSortKey] = useState('updatedAt_desc')
+  const tableSortKey    = q.sort
+  const setTableSortKey = v => setQ({ sort: v })
 
   // Platform admins can switch between org templates ('mine') and the platform's
   // built-in system templates ('system' → INTERNAL, invite/reset/onboarding/e-sign).
   const isPlatformAdmin = can('manageOrgs')
-  const [scope, setScope] = useState('mine')
+  const scope    = isPlatformAdmin && q.scope === 'system' ? 'system' : 'mine'
+  const setScope = v => setQ({ scope: v })
 
   const load = useCallback(() => {
     setLoading(true)
@@ -109,6 +129,7 @@ export default function EmailTemplatesPage() {
   }, [scope]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load() }, [load])
+  useEffect(() => { getAiStatus().then(s => setAiAvailable(!!s?.available)).catch(() => {}) }, [])
 
   const handleDelete = async (id, name) => {
     if (!confirm(`Delete email template "${name}"?`)) return
@@ -163,6 +184,13 @@ export default function EmailTemplatesPage() {
   }, [visibleTemplates, tableSortKey])
 
   /* Navigate to builder with a library template pre-loaded */
+  // List items omit htmlContent/cssContent (slim payload) — load the full template to preview.
+  const openPreview = async (t) => {
+    if (t.htmlContent != null) { setPreviewTemplate(t); return }
+    try { setPreviewTemplate(await getEmailTemplate(t.id)) }
+    catch (err) { toast.error(err.message) }
+  }
+
   const handleLibrarySelect = (libTmpl) => {
     // "Start from scratch" and the "Standard — Branded" card both use the dynamic
     // org-branded starter (built in the builder from live Branding), not static HTML.
@@ -209,6 +237,11 @@ export default function EmailTemplatesPage() {
             </div>
           )}
           <ViewToggle view={view} onChange={setView} />
+          {aiAvailable && (
+            <button className="btn btn-secondary" onClick={() => setAiOpen(true)}>
+              Create with AI
+            </button>
+          )}
           <button className="btn btn-secondary" onClick={() => setUploadOpen(true)}>
             Upload HTML
           </button>
@@ -440,7 +473,7 @@ export default function EmailTemplatesPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
                           </svg>
                         </button>
-                        <button onClick={() => setPreviewTemplate(t)}
+                        <button onClick={() => openPreview(t)}
                           className="p-1.5 rounded-lg hover:bg-sky-50 dark:hover:bg-sky-900/30 text-gray-400 hover:text-sky-600 transition-colors"
                           title="Preview">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -464,6 +497,15 @@ export default function EmailTemplatesPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M5 15V5a2 2 0 012-2h10"/>
                           </svg>
                         </button>
+                        {canShare && (
+                          <button onClick={() => setShareTemplate(t)}
+                            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 transition-colors"
+                            title="Share with another organisation">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                          </svg>
+                          </button>
+                        )}
                         {can('delete') && (
                           <button onClick={() => handleDelete(t.id, t.name)}
                             className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500 transition-colors"
@@ -495,8 +537,9 @@ export default function EmailTemplatesPage() {
               onEdit={() => navigate(`/email-builder/${t.id}`)}
               onDelete={can('delete') ? () => handleDelete(t.id, t.name) : null}
               onClone={() => setCloneSource(t)}
+              onShare={canShare ? () => setShareTemplate(t) : null}
               onVersions={() => setVersionTemplate(t)}
-              onPreview={() => setPreviewTemplate(t)}
+              onPreview={() => openPreview(t)}
               onSend={() => setSendTemplate(t)}
             />
           ))}
@@ -505,10 +548,12 @@ export default function EmailTemplatesPage() {
 
       {/* Library modal */}
       {showLibrary && (
-        <EmailLibraryModal
-          onClose={() => setShowLibrary(false)}
-          onSelect={handleLibrarySelect}
-        />
+        <Suspense fallback={null}>
+          <EmailLibraryModal
+            onClose={() => setShowLibrary(false)}
+            onSelect={handleLibrarySelect}
+          />
+        </Suspense>
       )}
 
       {/* Version history modal */}
@@ -543,17 +588,27 @@ export default function EmailTemplatesPage() {
         onCreate={createEmailTemplate}
         onCreated={(created) => { setUploadOpen(false); toast.success('Email template created from HTML'); navigate(`/email-builder/${created.id}`) }}
       />
+      <AiTemplateFromDocumentModal
+        open={aiOpen} kind="Email"
+        onClose={() => setAiOpen(false)}
+        onCreate={createEmailTemplate}
+        onCreated={(created) => { setAiOpen(false); toast.success('Email template created with AI'); navigate(`/email-builder/${created.id}`) }}
+      />
       <TemplateCloneModal
         open={!!cloneSource} source={cloneSource} cloneFn={cloneEmailTemplate}
         onClose={() => setCloneSource(null)}
         onCloned={() => { setCloneSource(null); toast.success('Template cloned'); load() }}
       />
+      {shareTemplate && (
+        <ShareTemplateModal templateId={shareTemplate.id} templateType="EMAIL_TEMPLATE" templateName={shareTemplate.name}
+          onClose={() => setShareTemplate(null)} />
+      )}
     </div>
   )
 }
 
 /* ── Email Template Card ─────────────────────────────────────────────────── */
-function EmailTemplateCard({ template, onEdit, onDelete = null, onClone = null, onVersions, onPreview, onSend }) {
+function EmailTemplateCard({ template, onEdit, onDelete = null, onClone = null, onShare = null, onVersions, onPreview, onSend }) {
   const date = fmtDate(template.updatedAt)
 
   return (
@@ -726,6 +781,13 @@ function EmailTemplateCard({ template, onEdit, onDelete = null, onClone = null, 
             </svg>
           </button>
           {/* Delete — hidden for USER role */}
+          {onShare && (
+            <button className="btn btn-ghost btn-sm px-2" onClick={onShare} title="Share with another organisation">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                          </svg>
+            </button>
+          )}
           {onDelete && (
             <button className="btn btn-ghost btn-sm px-2 text-red-400 hover:bg-red-50 hover:text-red-600"
               onClick={onDelete} title="Delete">
@@ -743,7 +805,7 @@ function EmailTemplateCard({ template, onEdit, onDelete = null, onClone = null, 
 }
 
 /* ── Send Email Modal ────────────────────────────────────────────────────── */
-function SendEmailModal({ template, onClose }) {
+export function SendEmailModal({ template, onClose }) {
   const toast = useToast()
   const [to,           setTo]           = useState('')
   const [subject,      setSubject]      = useState(template.subject || '')

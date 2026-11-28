@@ -11,6 +11,7 @@ import { esignSuggestContacts } from '../services/api'
 
 let _cache = null        // resolved array of { name, email, useCount }
 let _promise = null      // in-flight fetch (deduped)
+let _generation = 0      // bumped on reset — a fetch from a previous session must not repopulate the cache
 const _subscribers = new Set()
 
 function notify() {
@@ -19,13 +20,22 @@ function notify() {
   _subscribers.forEach(fn => fn(_cache ? [..._cache] : []))
 }
 
+/** Forgets the cached address book (on logout) so the next user never sees the previous org's contacts. */
+export function resetEmailContacts() {
+  _generation++
+  _cache = null
+  _promise = null
+  notify()
+}
+
 /** Kicks off (or reuses) the one-time fetch. Returns a promise resolving to the list. */
 export function primeEmailContacts() {
   if (_cache) return Promise.resolve(_cache)
   if (!_promise) {
+    const gen = _generation
     _promise = esignSuggestContacts()
-      .then(list => { _cache = Array.isArray(list) ? list : []; notify(); return _cache })
-      .catch(() => { _cache = []; notify(); return _cache })
+      .then(list => { if (gen !== _generation) return []; _cache = Array.isArray(list) ? list : []; notify(); return _cache })
+      .catch(() => { if (gen !== _generation) return []; _cache = []; notify(); return _cache })
   }
   return _promise
 }

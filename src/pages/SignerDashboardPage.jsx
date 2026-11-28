@@ -45,7 +45,12 @@ export default function SignerDashboardPage() {
       signerListDocuments({ tab: 'SIGNED', size: PREVIEW }),
     ])
       .then(([a, s]) => { setAction(a); setSigned(s); setMustVerify(false) })
-      .catch(e => needsEmailVerification(e) ? setMustVerify(true) : setError(e.message))
+      .catch(e => {
+        if (needsEmailVerification(e)) { setMustVerify(true); return }
+        setError(e.message)
+        setAction(a => a ?? { items: [], counts: {} })   // stop the skeletons; the error banner explains
+        setSigned(s => s ?? { items: [] })
+      })
   }, [])
 
   useEffect(() => { load() }, [load])

@@ -12,6 +12,7 @@ import useDocumentTitle from '../hooks/useDocumentTitle'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import ViewToggle, { useView } from '../components/ui/ViewToggle'
+import useUrlState from '../hooks/useUrlState'
 import { ALL_FEATURES, FEATURE_META } from '../config/features'
 import PlanBadge from '../components/ui/PlanBadge'
 import QuotaProgressBar from '../components/ui/QuotaProgressBar'
@@ -50,7 +51,9 @@ export default function OrganizationsPage() {
 
   const [orgs,        setOrgs]        = useState([])
   const [loading,     setLoading]     = useState(true)
-  const [query,       setQuery]       = useState('')
+  // Search keyword lives in the URL (?search=) so Back from an org returns to the same results
+  const [q, setQ]                     = useUrlState({ search: '' })
+  const [query,       setQuery]       = useState(q.search)   // input text; debounced into the URL
   const [showForm,    setShowForm]    = useState(false)
   const [editOrg,     setEditOrg]     = useState(null)
   const [saving,      setSaving]      = useState(false)
@@ -77,6 +80,12 @@ export default function OrganizationsPage() {
     const t = setTimeout(() => load(query), 350)
     return () => clearTimeout(t)
   }, [query, load])
+
+  useEffect(() => {
+    if (query.trim() === q.search) return
+    const t = setTimeout(() => setQ({ search: query.trim() }), 350)
+    return () => clearTimeout(t)
+  }, [query, q.search]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const openCreate = () => {
     setEditOrg(null)
@@ -699,7 +708,7 @@ function QuotaModal({ org, onClose }) {
   const [config,  setConfig]  = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving,  setSaving]  = useState(false)
-  const [form,    setForm]    = useState({ maxUsers: '', maxDocsPerMonth: '', maxStorageMb: '', maxApiCallsPerMonth: '' })
+  const [form,    setForm]    = useState({ maxUsers: '', maxDocsPerMonth: '', maxStorageMb: '', maxApiCallsPerMonth: '', maxSmsPerMonth: '' })
 
   useEffect(() => {
     getQuotaConfig(org.id)
@@ -710,6 +719,7 @@ function QuotaModal({ org, onClose }) {
           maxDocsPerMonth:      d.maxDocsPerMonth    ?? '',
           maxStorageMb:         d.maxStorageMb       ?? '',
           maxApiCallsPerMonth:  d.maxApiCallsPerMonth ?? '',
+          maxSmsPerMonth:       d.maxSmsPerMonth     ?? '',
         })
       })
       .catch(() => {})
@@ -721,11 +731,14 @@ function QuotaModal({ org, onClose }) {
   const handleSave = async () => {
     setSaving(true)
     try {
+      // Blank = unlimited (-1); 0 is a real limit ("none allowed").
+      const limit = v => (v === '' || v === null || Number.isNaN(Number(v)) ? -1 : Number(v))
       await updateQuotaConfig(org.id, {
-        maxUsers:            Number(form.maxUsers)            || -1,
-        maxDocsPerMonth:     Number(form.maxDocsPerMonth)     || -1,
-        maxStorageMb:        Number(form.maxStorageMb)        || -1,
-        maxApiCallsPerMonth: Number(form.maxApiCallsPerMonth) || -1,
+        maxUsers:            limit(form.maxUsers),
+        maxDocsPerMonth:     limit(form.maxDocsPerMonth),
+        maxStorageMb:        limit(form.maxStorageMb),
+        maxApiCallsPerMonth: limit(form.maxApiCallsPerMonth),
+        maxSmsPerMonth:      limit(form.maxSmsPerMonth),
       })
       toast.success(`Quotas updated for ${org.name}.`)
       onClose()
@@ -780,21 +793,25 @@ function QuotaModal({ org, onClose }) {
                 <div className="space-y-3 p-4 bg-gray-50 dark:bg-gray-700/30 rounded-xl">
                   <p className="text-xs font-bold text-gray-600 dark:text-gray-300 mb-3">Current usage (this month)</p>
                   <QuotaProgressBar label="Users"          current={config.currentUsers      ?? 0} limit={config.maxUsers           ?? -1} />
-                  <QuotaProgressBar label="Documents/mo"   current={config.currentDocs       ?? 0} limit={config.maxDocsPerMonth    ?? -1} />
+                  <QuotaProgressBar label="Documents/mo"   current={(config.currentDocsThisMonth ?? 0) + (config.currentEsignThisMonth ?? 0)} limit={config.maxDocsPerMonth ?? -1} />
                   <QuotaProgressBar label="Storage"        current={config.currentStorageMb  ?? 0} limit={config.maxStorageMb       ?? -1} unit=" MB" />
-                  <QuotaProgressBar label="API calls/mo"   current={config.currentApiCalls   ?? 0} limit={config.maxApiCallsPerMonth ?? -1} />
+                  <QuotaProgressBar label="API calls/mo"   current={config.currentApiCallsThisMonth ?? 0} limit={config.maxApiCallsPerMonth ?? -1} />
+                  <QuotaProgressBar label="SMS/mo"         current={config.currentSmsThisMonth ?? 0} limit={config.maxSmsPerMonth ?? -1} />
                 </div>
               )}
 
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Set custom limits below. Use <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">-1</code> for unlimited.
-                Defaults are determined by the subscription plan.
+                Defaults are determined by the subscription plan. Saving here marks the limits as custom:
+                later automatic plan changes (Stripe, trial) only raise them to the new plan's defaults.
+                {config?.overridden && <span className="block mt-1 font-semibold">These limits are currently custom. Re-assign the plan to reset them.</span>}
               </p>
 
               {numInput('Max Users', 'maxUsers')}
               {numInput('Max Documents / month', 'maxDocsPerMonth')}
               {numInput('Max Storage', 'maxStorageMb', 'MB')}
               {numInput('Max API calls / month', 'maxApiCallsPerMonth')}
+              {numInput('Max SMS / month', 'maxSmsPerMonth')}
             </>
           )}
         </div>
@@ -854,10 +871,10 @@ function BrandingPreviewModal({ org, onClose }) {
           ) : (
             <div className="space-y-4">
               {/* Logo */}
-              {(branding.logoUrl || branding.logoBase64) && (
+              {branding.logoUrl && (
                 <div>
                   <p className="text-xs font-semibold text-gray-500 mb-2">Logo</p>
-                  <img src={branding.logoUrl || branding.logoBase64} alt="Org logo" className="h-12 max-w-full object-contain rounded-lg border border-gray-100 dark:border-gray-700 p-1" />
+                  <img src={branding.logoUrl} alt="Org logo" className="h-12 max-w-full object-contain rounded-lg border border-gray-100 dark:border-gray-700 p-1" />
                 </div>
               )}
               {/* Color */}

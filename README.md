@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# braify-web-app
 
-## Getting Started
+The React frontend for Braify. It covers PDF templates, email templates and bulk campaigns, e-signature, file storage and the platform admin. It talks to [`braify-web-services`](../braify-web-services), the Spring Boot backend.
 
-First, run the development server:
+**Stack:** React 18, Vite 5, Tailwind 3, react-router 6, axios, GrapesJS (template builders), pdf.js.
 
+## Run locally
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:5173
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The Vite dev server proxies `/api`, `/v3` and `/swagger-ui` to the backend on `http://localhost:8080`. Start the backend first:
+```bash
+cd ../braify-web-services && mvn spring-boot:run
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
+| Command | What it does |
+|---|---|
+| `npm run dev` | Dev server with hot reload |
+| `npm run build` | Production bundle in `dist/` |
+| `npm run preview` | Serve the built bundle locally |
+| `npm run lint` | ESLint. Errors fail CI; warnings are advisory |
+| `npm test` | Vitest unit tests (`src/**/*.test.{js,jsx}`, jsdom). They run in CI before every deploy |
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+## Configuration
+| Variable | Default | Purpose |
+|---|---|---|
+| `VITE_API_ORIGIN` | *(empty: same origin)* | Backend origin, only if the API is on another domain, e.g. `https://api.braify.com` (no `/api`). In production, nginx serves the app and proxies `/api` on the same domain. |
 
-## Learn More
+## Project layout
+- `src/pages/`: one component per route (`App.jsx` holds the routes and role guards).
+- `src/components/`: shared UI, grouped by feature.
+- `src/services/api.js`: every API call, as named exports returning `r.data`. The axios interceptor turns errors into `Error(message)` with `.status`.
+- `src/context/`: auth (user, features, roles), toasts, app layout state.
+- `src/hooks/useUrlState.js`: list pages keep page, filters, search and tab in the URL. Use `listUrl('/path')` for Back links.
+- `src/styles/global.css`: design-system classes (`.btn-*`, `.card`, `.form-input`, `.badge-*`). Follow `DESIGN_MIGRATION.md` for styling; the Dashboard is the reference page.
 
-To learn more about Next.js, take a look at the following resources:
+More detail is in `../architecture/FRONTEND.md`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+## Deploy
+GitHub Actions builds on push: `main` deploys to prod, `develop` deploys to dev. Each build is uploaded to `/var/www/braify-web-app-releases/<sha>/`, and the live symlink `/var/www/braify-web-app` is switched atomically. See `braify-web-services/ops/README.md` for rollback.

@@ -154,7 +154,7 @@ export default function GetStartedPage() {
       try { localStorage.removeItem(STORAGE_KEY) } catch {}
       setSubmitted(true)
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Something went wrong. Please try again.')
+      setError(err.message || 'Something went wrong. Please try again.')
     } finally {
       setLoading(false)
     }

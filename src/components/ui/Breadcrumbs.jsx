@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { listUrl } from '../../hooks/useUrlState'
 
 /**
  * Breadcrumbs
@@ -65,7 +66,7 @@ export default function Breadcrumbs({ items = [], dark = false }) {
               ) : (
                 /* Ancestor — clickable link */
                 <Link
-                  to={item.to}
+                  to={listUrl(item.to)}   /* back to the list as the user left it (page, filters) */
                   className={`text-xs font-medium leading-none transition-colors duration-150 no-underline ${
                     dark
                       ? 'text-sidebar-muted hover:text-white'

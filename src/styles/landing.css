@@ -21,7 +21,6 @@
 .lp-ring {
   animation: lp-ring 2.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
-.lp-ring-delay { animation-delay: 1.3s; }
 @keyframes lp-ring {
   0%   { opacity: 0.85; transform: scale(0.72); }
   100% { opacity: 0;    transform: scale(1.12); }
@@ -39,17 +38,6 @@
 .lp-spin-slow { animation: lp-spin 38s linear infinite; }
 @keyframes lp-spin {
   to { transform: rotate(360deg); }
-}
-
-/* Dot running along a horizontal rail */
-.lp-rail-run {
-  animation: lp-rail-run 6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
-}
-@keyframes lp-rail-run {
-  0%   { left: 0%;   opacity: 0; }
-  8%   { opacity: 1; }
-  92%  { opacity: 1; }
-  100% { left: 100%; opacity: 0; }
 }
 
 /* Short rise used when a status line swaps */
@@ -103,7 +91,7 @@
 @media (prefers-reduced-motion: reduce) {
   .lp-reveal { opacity: 1; transform: none; transition: none; }
   .lp-dash, .lp-ring, .lp-float, .lp-float-slow, .lp-spin-slow,
-  .lp-rail-run, .lp-drift, .lp-caret { animation: none; }
+  .lp-drift, .lp-caret { animation: none; }
   .lp-fill { animation: none; width: 70%; }
 }
 

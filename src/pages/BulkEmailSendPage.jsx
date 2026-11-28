@@ -13,10 +13,9 @@
  */
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import * as XLSX from 'xlsx'
 import {
   getEmailTemplates, getTemplates,
-  bulkEmailCreateJob,
+  bulkEmailCreateJob, uploadToStorage,
 } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
@@ -145,7 +144,6 @@ export default function BulkEmailSendPage() {
   const [attachmentType,        setAttachmentType]        = useState('NONE')
   const [includeExcelSheet,     setIncludeExcelSheet]     = useState(false)  // secondary attachment toggle
   const [uploadedPdfFile,       setUploadedPdfFile]       = useState(null)
-  const [uploadedPdfB64,        setUploadedPdfB64]        = useState('')
   const [pdfTemplates,          setPdfTemplates]          = useState([])
   const [pdfTemplatesLoading,   setPdfTemplatesLoading]   = useState(false)
   const [selectedPdfTemplateId, setSelectedPdfTemplateId] = useState('')
@@ -207,7 +205,7 @@ export default function BulkEmailSendPage() {
 
   const step2Valid = (() => {
     const primaryOk =
-        attachmentType === 'UPLOAD'       ? !!uploadedPdfB64
+        attachmentType === 'UPLOAD'       ? !!uploadedPdfFile
       : attachmentType === 'PDF_TEMPLATE' ? !!selectedPdfTemplateId
       : attachmentType === 'EXTERNAL_API' ? extApiUrl.trim().length > 0
       : attachmentType === 'EXCEL_SHEET'  ? excelSheetValid
@@ -229,8 +227,12 @@ export default function BulkEmailSendPage() {
   function goBack()    { setStep(s => Math.max(s - 1, 0)) }
 
   // ── XLSX upload ───────────────────────────────────────────────────────────
-  function handleXlsxFile(file) {
+  async function handleXlsxFile(file) {
     if (!file) return
+    // xlsx (~325 kB) is only needed once a sheet is dropped, not to render the page.
+    let XLSX
+    try { XLSX = await import('xlsx') }
+    catch (err) { showToast('Could not load the spreadsheet parser: ' + err.message, 'error'); return }
     const reader = new FileReader()
     reader.onload = (e) => {
       try {
@@ -320,9 +322,6 @@ export default function BulkEmailSendPage() {
     if (!file) return
     if (file.size > 10 * 1024 * 1024) { showToast('PDF file exceeds 10 MB', 'error'); return }
     setUploadedPdfFile(file)
-    const reader = new FileReader()
-    reader.onload = (e) => setUploadedPdfB64(e.target.result)
-    reader.readAsDataURL(file)
   }
 
   // ── Submit ────────────────────────────────────────────────────────────────
@@ -342,6 +341,11 @@ export default function BulkEmailSendPage() {
         scheduledIso = scheduledAt   // "YYYY-MM-DDTHH:mm" — parsed as LocalDateTime by the backend
       }
 
+      // An uploaded PDF goes to storage first; the job only references its id.
+      const uploadedPdfFileId = attachmentType === 'UPLOAD'
+        ? (await uploadToStorage(uploadedPdfFile, 'BULK_EMAIL_ATTACHMENT')).id
+        : undefined
+
       const payload = {
         label:           jobLabel.trim() || undefined,
         scheduledAt:     scheduledIso,
@@ -354,7 +358,7 @@ export default function BulkEmailSendPage() {
         attachmentType,
         includeExcelSheet: includeExcelSheet && attachmentType !== 'EXCEL_SHEET',
         ...(attachmentType === 'UPLOAD' && {
-          uploadedPdfBase64: uploadedPdfB64,
+          uploadedPdfFileId,
           uploadedPdfName:   uploadedPdfFile?.name,
         }),
         ...(attachmentType === 'PDF_TEMPLATE' && {

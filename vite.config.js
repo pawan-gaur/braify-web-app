@@ -1,8 +1,33 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+/**
+ * Preload the latin Inter Tight woff2 (imported via @fontsource-variable/inter-tight in
+ * main.jsx) so the browser fetches it with the HTML instead of after the CSS is parsed.
+ * Only the latin subset — latin-ext etc. stay on-demand via unicode-range.
+ */
+function preloadLatinFont() {
+  let base = '/'
+  return {
+    name: 'braify-preload-latin-font',
+    apply: 'build',
+    configResolved(config) { base = config.base },
+    transformIndexHtml(html, ctx) {
+      const asset = Object.values(ctx.bundle || {}).find(
+        f => f.type === 'asset' && /inter-tight-latin-wght-normal.*\.woff2$/.test(f.fileName)
+      )
+      if (!asset) return html
+      return [{
+        tag: 'link',
+        attrs: { rel: 'preload', as: 'font', type: 'font/woff2', crossorigin: '', href: `${base}${asset.fileName}` },
+        injectTo: 'head',
+      }]
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), preloadLatinFont()],
   // pdf.js ships an ES-module worker; emit bundled workers (?worker imports) as ES modules
   // so they resolve correctly in the production build.
   worker: {

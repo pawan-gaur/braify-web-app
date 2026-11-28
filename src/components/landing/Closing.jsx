@@ -45,7 +45,7 @@ export function FinalCta({ onStart, onPricing }) {
               <GradientText>PDF, email, e-sign &amp; analytics.</GradientText>
             </h2>
             <p className="mt-6 text-[17px] text-[#4A6670] max-w-xl mx-auto">
-              Start with our free plan — no credit card required. Pro is free during beta.
+              Start with our free plan — no credit card required. Every new workspace gets a 14-day Pro trial.
             </p>
             <div className="mt-9 flex items-center justify-center gap-3 flex-wrap">
               <GlowButton onClick={onStart}>Get started free</GlowButton>

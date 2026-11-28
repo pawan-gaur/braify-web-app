@@ -32,9 +32,15 @@ export default function InboxLink({ email, variant = 'button' }) {
         {isAuthenticated ? 'Back to my signatures' : 'View all documents sent to you'}
       </Link>
       {!isAuthenticated && (
-        <p className="text-xs text-gray-400 mt-2">
-          Sign in with a one-time code sent to your email — no password needed.
-        </p>
+        <>
+          <p className="text-xs text-gray-400 mt-2">
+            Sign in with a one-time code sent to your email — no password needed.
+          </p>
+          <p className="text-xs text-gray-400 mt-4">
+            Need signatures on your own documents?{' '}
+            <Link to="/get-started?ref=signer" className="font-semibold text-gray-500 underline hover:text-gray-700">Try Braify free</Link>
+          </p>
+        </>
       )}
     </div>
   )

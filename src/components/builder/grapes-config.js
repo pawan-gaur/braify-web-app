@@ -3,13 +3,41 @@
  * Defines: canvas style, device sizes, block categories, custom blocks.
  */
 
-export const EDITOR_CONFIG = (containerId) => ({
+/**
+ * @param {string}   containerId
+ * @param {object}   [opts]
+ * @param {(files: File[]) => Promise<string[]>} [opts.onUploadImages] - stores picked/dropped images,
+ *        adds them as assets and resolves to their URLs. Without it image upload is disabled —
+ *        images are never embedded as base64.
+ */
+export const EDITOR_CONFIG = (containerId, { onUploadImages } = {}) => ({
   container: `#${containerId}`,
   fromElement: false,
   height: '100%',
   width: 'auto',
   storageManager: false,
   undoManager: { trackChanges: true },
+
+  // ── Asset manager — images are uploaded to storage (never embedded as base64,
+  //    which used to bloat every template and version in the database).
+  assetManager: {
+    upload:        false,
+    embedAsBase64: false,
+    disableUpload: !onUploadImages,
+    // Called by the asset manager (file input) and by canvas drops — for a drop, GrapesJS passes
+    // `clb` and sets the dropped image's src from clb({ data: [{ src }] }). `this` is the uploader view.
+    uploadFile:    async function (e, clb) {
+      const files = [...(e.dataTransfer ? e.dataTransfer.files : e.target.files)]
+        .filter(f => f.type.startsWith('image/'))
+      if (!onUploadImages || !files.length) return
+      try {
+        const urls = await onUploadImages(files)
+        if (urls.length) clb?.({ data: urls.map(src => ({ src })) })
+      } finally {
+        this.onUploadEnd?.()
+      }
+    },
+  },
 
   // Setting frameContent to '' skips GrapesJS's document.write() call that
   // causes Chrome to treat the iframe as sandboxed (URL: about:srcdoc) and

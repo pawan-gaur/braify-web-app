@@ -156,7 +156,8 @@ export function AttentionPanel({ stats, isOrgAdmin, can, onNavigate, mySignature
     items.push({ tone: 'violet', title: `${pending} ${pending === 1 ? 'document is' : 'documents are'} awaiting signature`, action: 'View', to: '/esign' })
   if (isOrgAdmin && invites > 0)
     items.push({ tone: 'amber', title: `${invites} team ${invites === 1 ? 'invite hasn’t' : 'invites haven’t'} been accepted`, action: 'Manage', to: '/users' })
-  if (quota != null && quota >= 80)
+  // Usage is an org-admin page (the quota API is org-admin only).
+  if (isOrgAdmin && quota != null && quota >= 80)
     items.push({ tone: 'amber', title: `You’ve used ${quota}% of this month’s quota`, action: 'Usage', to: '/usage' })
   if (denied > 0)
     items.push({ tone: 'slate', title: `Access denied ×${denied} in recent activity`, action: 'Audit log', to: '/audit-log' })
@@ -211,7 +212,7 @@ export function attentionCount(stats, isOrgAdmin, can, mySignatures = 0) {
     mySignatures > 0,
     can.esign && overdue > 0, can.esign && pending > 0,
     isOrgAdmin && (stats?.pendingInvites ?? 0) > 0,
-    (stats?.docsQuotaPercent ?? 0) >= 80, denied,
+    isOrgAdmin && (stats?.docsQuotaPercent ?? 0) >= 80, denied,
   ].filter(Boolean).length
 }
 

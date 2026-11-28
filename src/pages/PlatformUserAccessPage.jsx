@@ -21,7 +21,7 @@ const roleOpts = [
 export default function PlatformUserAccessPage() {
   useDocumentTitle('User access')
   const { user } = useAuth()
-  const { addToast } = useToast()
+  const toast = useToast()
 
   const [settings, setSettings] = useState(null)
   const [baseline, setBaseline] = useState('')
@@ -56,9 +56,9 @@ export default function PlatformUserAccessPage() {
       const saved = await savePlatformSettings(settings)
       setSettings(saved)
       setBaseline(JSON.stringify(saved))
-      addToast({ type: 'success', message: 'User access settings saved — applied platform-wide.' })
+      toast.success('User access settings saved — applied platform-wide.')
     } catch {
-      addToast({ type: 'error', message: 'Could not save user access settings.' })
+      toast.error('Could not save user access settings.')
     } finally {
       setSaving(false)
     }

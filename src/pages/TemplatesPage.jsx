@@ -1,9 +1,12 @@
 ﻿import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getTemplates, deleteTemplate, cloneTemplate, createTemplate } from '../services/api'
+import { getTemplates, deleteTemplate, cloneTemplate, createTemplate, getAiStatus } from '../services/api'
 import TemplateUploadModal from '../components/templates/TemplateUploadModal'
+import AiTemplateFromDocumentModal from '../components/templates/AiTemplateFromDocumentModal'
 import TemplateCloneModal from '../components/templates/TemplateCloneModal'
+import ShareTemplateModal from '../components/ui/ShareTemplateModal'
 import useDocumentTitle from '../hooks/useDocumentTitle'
+import useUrlState from '../hooks/useUrlState'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
@@ -80,20 +83,29 @@ const PAGE_TABS = [
 export default function TemplatesPage() {
   useDocumentTitle('PDF Templates')
   const navigate = useNavigate()
-  const { can }  = useAuth()
+  const { can, user }  = useAuth()
+  // Sharing with other organisations is an org-admin action (the API enforces it too).
+  const canShare = user?.role === 'ORG_ADMIN' || user?.role === 'PLATFORM_ADMIN'
+  const [shareTemplate, setShareTemplate] = useState(null)
   const toast    = useToast()
   const [view,     setView]     = useView('braify-view-templates')
-  const [pageTab,  setPageTab]  = useState('mine')
+  // Tab / search / filter / sort live in the URL so Back from a template restores them.
+  const [q, setQ] = useUrlState({ tab: 'mine', search: '', paper: '', sort: 'updatedAt_desc' })
+  const pageTab    = PAGE_TABS.some(t => t.id === q.tab) ? q.tab : 'mine'
+  const setPageTab = t => setQ({ tab: t })
   const [templates,        setTemplates]        = useState([])
   const [versionTemplate,  setVersionTemplate]  = useState(null)
   const [previewTemplate,  setPreviewTemplate]  = useState(null)
   const [uploadOpen,  setUploadOpen]  = useState(false)
+  const [aiOpen,      setAiOpen]      = useState(false)
+  const [aiAvailable, setAiAvailable] = useState(false)
   const [cloneSource, setCloneSource] = useState(null)
   const [loading,   setLoading]   = useState(true)
 
-  const [tableSearch,    setTableSearch]    = useState('')
-  const [pageSizeFilter, setPageSizeFilter] = useState('')
-  const [tableSortKey,   setTableSortKey]   = useState('updatedAt_desc')
+  const tableSearch    = q.search, pageSizeFilter = q.paper, tableSortKey = q.sort
+  const setTableSearch    = v => setQ({ search: v })
+  const setPageSizeFilter = v => setQ({ paper: v })
+  const setTableSortKey   = v => setQ({ sort: v })
 
   const tableVisible = useMemo(() => {
     let list = [...templates]
@@ -131,6 +143,7 @@ export default function TemplatesPage() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load() }, [load])
+  useEffect(() => { getAiStatus().then(s => setAiAvailable(!!s?.available)).catch(() => {}) }, [])
 
   const handleDelete = async (id, name) => {
     if (!confirm(`Delete template "${name}"?`)) return
@@ -169,6 +182,11 @@ export default function TemplatesPage() {
         </div>
         <div className="flex items-center gap-3">
           <ViewToggle view={view} onChange={setView} />
+          {aiAvailable && (
+            <button className="btn btn-secondary" onClick={() => setAiOpen(true)}>
+              Create with AI
+            </button>
+          )}
           <button className="btn btn-secondary" onClick={() => setUploadOpen(true)}>
             Upload HTML
           </button>
@@ -365,6 +383,15 @@ export default function TemplatesPage() {
                               <path strokeLinecap="round" strokeLinejoin="round" d="M5 15V5a2 2 0 012-2h10"/>
                             </svg>
                           </button>
+                          {canShare && (
+                            <button onClick={() => setShareTemplate(t)}
+                              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 transition-colors"
+                              title="Share with another organisation">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                            </svg>
+                            </button>
+                          )}
                           {can('delete') && (
                             <button onClick={() => handleDelete(t.id, t.name)}
                               className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500 transition-colors"
@@ -396,6 +423,7 @@ export default function TemplatesPage() {
                 onEdit={() => navigate(`/builder/${t.id}`)}
                 onGenerate={() => navigate(`/generate?templateId=${t.id}`)}
                 onClone={() => setCloneSource(t)}
+                onShare={canShare ? () => setShareTemplate(t) : null}
                 onDelete={can('delete') ? () => handleDelete(t.id, t.name) : null}
                 onVersions={() => setVersionTemplate(t)}
                 onPreview={() => setPreviewTemplate(t)}
@@ -433,11 +461,21 @@ export default function TemplatesPage() {
         onCreate={createTemplate}
         onCreated={(created) => { setUploadOpen(false); toast.success('Template created from HTML'); navigate(`/builder/${created.id}`) }}
       />
+      <AiTemplateFromDocumentModal
+        open={aiOpen} kind="PDF"
+        onClose={() => setAiOpen(false)}
+        onCreate={createTemplate}
+        onCreated={(created) => { setAiOpen(false); toast.success('Template created with AI'); navigate(`/builder/${created.id}`) }}
+      />
       <TemplateCloneModal
         open={!!cloneSource} source={cloneSource} cloneFn={cloneTemplate}
         onClose={() => setCloneSource(null)}
         onCloned={() => { setCloneSource(null); toast.success('Template cloned'); load() }}
       />
+      {shareTemplate && (
+        <ShareTemplateModal templateId={shareTemplate.id} templateType="TEMPLATE" templateName={shareTemplate.name}
+          onClose={() => setShareTemplate(null)} />
+      )}
     </div>
   )
 }
@@ -639,7 +677,7 @@ function StarterCard({ template, category, onOpen }) {
 }
 
 /* ── My Templates: TemplateCard ──────────────────────────────────────────── */
-function TemplateCard({ template, onEdit, onGenerate, onDelete = null, onClone = null, onVersions, onPreview }) {
+function TemplateCard({ template, onEdit, onGenerate, onDelete = null, onClone = null, onShare = null, onVersions, onPreview }) {
   const date = fmtDate(template.updatedAt)
 
   return (
@@ -767,6 +805,13 @@ function TemplateCard({ template, onEdit, onGenerate, onDelete = null, onClone =
                 <rect x="9" y="9" width="11" height="11" rx="2"/>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 15V5a2 2 0 012-2h10"/>
               </svg>
+            </button>
+          )}
+          {onShare && (
+            <button className="btn btn-ghost btn-sm px-2" onClick={onShare} title="Share with another organisation">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                            </svg>
             </button>
           )}
           {onDelete && (

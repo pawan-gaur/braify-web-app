@@ -42,13 +42,13 @@ export const TABS = [
   {
     label: 'Analytics',
     heading: 'Full reporting & analytics dashboard',
-    desc: 'Get deep visibility into how your team uses Braify. Custom date ranges, E-Sign conversion funnels, template usage rankings, per-user activity breakdowns, scheduled email reports and exportable PNG/PDF charts — all in one Analytics tab.',
+    desc: 'Get deep visibility into how your team uses Braify. Custom date ranges, E-Sign conversion funnels, template usage rankings, per-user activity breakdowns and exportable PNG/PDF charts — all in one Analytics tab. Scheduled email reports are coming soon.',
     points: [
       'Custom date range (7d / 30d / 90d / custom)',
       'E-Sign funnel: Sent → Viewed → Signed drop-off',
       'Template usage analytics (most & least used)',
       'Per-user / per-org activity breakdown',
-      'Scheduled weekly/monthly PDF reports by email',
+      'Scheduled email reports (coming soon)',
       'Export charts as PNG or print to PDF',
       'Real-time activity feed with 30-second live polling',
     ],
@@ -121,7 +121,7 @@ export const FEATURE_GRID = [
   { icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9v11a2 2 0 01-2 2z', title: 'PDF Templates',        desc: 'Drag-and-drop builder, 7 starter categories, live preview and Handlebars placeholders.', color: '#2F5BF0' },
   { icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', title: 'Email Templates',      desc: 'Rich HTML editor, Resend integration, placeholder fill and automatic version snapshots.', color: '#6D52E8' },
   { icon: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z', title: 'E-Sign',                desc: 'Upload or generate PDFs, place signature fields, send a secure link and track completion.', color: '#0d9488' },
-  { icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', title: 'Analytics & Reporting', desc: 'Custom date range, E-Sign funnel, template usage rankings, scheduled email reports and chart exports.', color: '#f59e0b' },
+  { icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', title: 'Analytics & Reporting', desc: 'Custom date range, E-Sign funnel, template usage rankings and chart exports.', color: '#f59e0b' },
   { icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z', title: 'File Storage',          desc: 'Org-scoped cloud file management. Upload, organise and link files to templates and documents.', color: '#0891b2' },
   { icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z', title: 'Feature Access Control', desc: 'Assign PDF, Email, E-Sign and File Storage per org. Sidebar and routes auto-gate to licensed modules.', color: '#f43f5e' },
   { icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z', title: 'Multi-Org & Roles',      desc: 'Isolated workspaces per organisation. Four-tier hierarchy: Platform Admin › Org Admin › Admin › User.', color: '#6D52E8' },
@@ -145,43 +145,37 @@ export const PLANS = [
     cta: 'Get started free',
     ctaStyle: 'bg-gray-900 text-white hover:bg-gray-800',
     features: [
-      { text: 'PDF template builder', included: true },
-      { text: 'Email template builder', included: true },
-      { text: 'E-Sign — up to 10 docs/month', included: true },
-      { text: 'File storage (1 GB)', included: true },
-      { text: 'Version history (last 10 snapshots)', included: true },
-      { text: 'Audit log (30-day retention)', included: true },
-      { text: 'REST API access', included: true },
+      // Limits mirror SubscriptionPlan.FREE (backend) — keep in sync.
+      { text: 'PDF & email template builders', included: true },
+      { text: 'E-signature with signer inbox', included: true },
+      { text: '50 documents / month (PDFs generated, e-sign sent, files uploaded)', included: true },
+      { text: '512 MB managed file storage', included: true },
       { text: '3 team members', included: true },
-      { text: 'Basic analytics', included: true },
-      { text: 'Advanced analytics & funnels', included: false },
-      { text: 'Scheduled email reports', included: false },
-      { text: 'Custom date range analytics', included: false },
+      { text: 'REST API — 1,000 calls / month', included: true },
+      { text: 'Version history & audit log', included: true },
+      { text: 'Analytics dashboard', included: true },
       { text: 'Priority support', included: false },
     ],
   },
   {
     name: 'Pro',
-    badge: 'Free during beta',
+    badge: '14-day free trial',
     badgeColor: 'bg-brand-100 text-brand-700',
     price: '$29',
     period: '/month',
     highlight: true,
-    desc: 'Full analytics, unlimited E-Sign and advanced reporting for growing teams.',
-    cta: 'Start for free',
+    desc: 'Higher limits for growing teams sending documents every day.',
+    cta: 'Start free trial',
     ctaStyle: 'bg-brand text-white hover:bg-brand-hover',
     features: [
+      // Limits mirror SubscriptionPlan.PROFESSIONAL (backend) — keep in sync.
       { text: 'Everything in Starter', included: true },
-      { text: 'Unlimited E-Sign documents', included: true },
-      { text: 'File storage (25 GB)', included: true },
-      { text: 'Unlimited version history', included: true },
-      { text: 'Audit log (1-year retention)', included: true },
-      { text: 'Advanced analytics & funnels', included: true },
-      { text: 'Scheduled email reports (weekly/monthly)', included: true },
-      { text: 'Custom date range analytics', included: true },
-      { text: 'Exportable charts (PNG/PDF)', included: true },
+      { text: '500 documents / month', included: true },
+      { text: '5 GB managed file storage', included: true },
       { text: 'Up to 25 team members', included: true },
-      { text: 'API key management & usage logs', included: true },
+      { text: 'REST API — 10,000 calls / month', included: true },
+      { text: 'Bulk email campaigns & bulk e-sign', included: true },
+      { text: 'Role-based feature access', included: true },
       { text: 'Priority support', included: false },
     ],
   },
@@ -192,22 +186,18 @@ export const PLANS = [
     price: 'Custom',
     period: 'pricing',
     highlight: false,
-    desc: 'Multi-org management, dedicated support and custom SLAs for large organisations.',
+    desc: 'Unlimited usage, your own storage and assisted onboarding for large organisations.',
     cta: 'Contact sales',
     ctaStyle: 'bg-white text-gray-900 border border-gray-300 hover:bg-gray-50',
     features: [
+      // Limits mirror SubscriptionPlan.ENTERPRISE (backend) — keep in sync.
       { text: 'Everything in Pro', included: true },
-      { text: 'Unlimited team members', included: true },
-      { text: 'Multi-org platform admin console', included: true },
-      { text: 'Per-org feature access control', included: true },
-      { text: 'Unlimited file storage', included: true },
-      { text: 'Audit log (unlimited retention)', included: true },
-      { text: 'Template sharing across orgs', included: true },
-      { text: 'Real-time activity feed / WebSocket', included: true },
-      { text: 'Custom onboarding & migration', included: true },
-      { text: 'Dedicated account manager', included: true },
-      { text: 'SLA-backed uptime guarantee', included: true },
-      { text: 'SSO / SAML integration', included: true },
+      { text: 'Unlimited documents, team members & API calls', included: true },
+      { text: 'Use your own cloud bucket (AWS, Azure or GCP)', included: true },
+      { text: 'Tamper-evident audit log with export', included: true },
+      { text: 'Template sharing across organisations', included: true },
+      { text: 'Assisted onboarding & migration', included: true },
+      { text: 'Priority support', included: true },
     ],
   },
 ]
@@ -226,8 +216,8 @@ export const FEATURE_SLUGS = {
 }
 
 /* ─── Hero announcement + microcopy ─────────────────────────────────────── */
-export const ANNOUNCEMENT = 'New: Analytics dashboard, scheduled reports & file storage now live'
-export const HERO_NOTES = ['No credit card required', 'Free plan available', 'Pro free during beta']
+export const ANNOUNCEMENT = 'New: instant sign-up, signer inbox & managed file storage'
+export const HERO_NOTES = ['No credit card required', 'Free plan available', '14-day Pro trial']
 
 /* ─── Social proof ──────────────────────────────────────────────────────── */
 /* Real customers (logos self-hosted in /public/clients), shown first in the strip. */
@@ -270,9 +260,9 @@ export const BILLING_NOTES = [
 ]
 
 export const FAQ = [
-  { q: 'What counts as a document?', a: 'Any E-Sign document you create and send counts toward your monthly limit. Drafts that are never sent do not count.' },
-  { q: 'Can I upgrade or downgrade?', a: 'Yes — upgrades take effect immediately; downgrades take effect at the start of your next billing cycle. Your data is never deleted.' },
-  { q: 'Is there a free trial for Pro?', a: 'Pro is completely free during our beta. After the beta period ends you will be given 30 days notice before any charges begin.' },
+  { q: 'What counts as a document?', a: 'Each PDF you generate, e-sign document you send and file you upload counts toward your monthly allowance. Drafts that are never sent do not count.' },
+  { q: 'Can I upgrade or downgrade?', a: 'Yes — upgrade any time from Settings → Plan & Billing, and cancel or change your card from the billing portal. You keep Pro until the end of the paid period, and your data is never deleted when you change plan.' },
+  { q: 'Is there a free trial for Pro?', a: 'Yes — every new workspace gets Pro free for 14 days, no card needed. If you don’t subscribe, it moves to the Free plan automatically.' },
 ]
 
 /* ─── Footer ────────────────────────────────────────────────────────────── */

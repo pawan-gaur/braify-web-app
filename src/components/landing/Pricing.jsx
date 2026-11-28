@@ -14,7 +14,7 @@ const Pricing = forwardRef(function Pricing({ onNavigate }, ref) {
     <section ref={ref} id="pricing" aria-labelledby="pricing-title" className="py-24 md:py-28 scroll-mt-16 bg-gradient-to-b from-[#FBFEFE] to-[#E9FBFC] border-y border-[#D6F1F4]">
       <div className="max-w-[1180px] mx-auto px-4 sm:px-6">
         <SectionHead id="pricing-title" n="06" eyebrow="Simple, transparent pricing" title="Start free." accent="Scale when you need to.">
-          All plans include core document automation. Pro is free during our beta period.
+          All plans include core document automation. Try Pro free for 14 days — no card needed.
         </SectionHead>
 
         {/* Annual / monthly toggle */}
@@ -67,7 +67,7 @@ const Pricing = forwardRef(function Pricing({ onNavigate }, ref) {
                 </p>
                 <p className="text-[14px] text-[#587079] leading-relaxed mb-6">{plan.desc}</p>
 
-                <button onClick={() => onNavigate(plan.name === 'Enterprise' ? '#' : '/get-started')}
+                <button onClick={() => onNavigate(plan.name === 'Enterprise' ? '/contact-sales' : '/get-started')}
                   className={`w-full py-3 rounded-xl text-sm font-semibold transition-all mb-6 ${plan.ctaStyle}`}>
                   {plan.cta}
                 </button>

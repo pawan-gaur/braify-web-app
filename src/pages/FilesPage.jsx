@@ -7,6 +7,7 @@ import {
 import Breadcrumbs from '../components/ui/Breadcrumbs'
 import FileDropZone from '../components/ui/FileDropZone'
 import ViewToggle, { useView } from '../components/ui/ViewToggle'
+import useUrlState from '../hooks/useUrlState'
 import { IconX, IconArrowLeft, IconArrowRight } from '../components/ui/icons'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -94,8 +95,6 @@ function UploadSuccess({ result, onDone }) {
     { label: 'Size',        value: fmtBytes(result.fileSizeBytes)                   },
     { label: 'Type',        value: titleCase(result.documentType)                   },
     { label: 'Cloud',       value: result.cloudProvider                             },
-    { label: 'Bucket',      value: result.bucket                                    },
-    { label: 'Storage key', value: result.storageKey, mono: true, truncate: true   },
     { label: 'Folder',      value: result.folder || '—'                             },
     { label: 'Status',      value: result.status                                    },
     { label: 'Uploaded',    value: fmtDate(result.createdAt)                        },
@@ -145,7 +144,7 @@ function UploadSuccess({ result, onDone }) {
 // ── Upload Modal ──────────────────────────────────────────────────────────────
 
 function UploadModal({ orgId, onClose, onUploaded }) {
-  const { addToast } = useToast()
+  const toast = useToast()
   const [file,     setFile]     = useState(null)
   const [meta,     setMeta]     = useState({ folder: '', documentType: 'OTHER', description: '', tags: '' })
   const [loading,  setLoading]  = useState(false)
@@ -153,7 +152,7 @@ function UploadModal({ orgId, onClose, onUploaded }) {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!file) return addToast({ type: 'error', message: 'Please select a file.' })
+    if (!file) return toast.error('Please select a file.')
     setLoading(true)
     try {
       const tags = meta.tags ? meta.tags.split(',').map(t => t.trim()).filter(Boolean) : []
@@ -161,7 +160,7 @@ function UploadModal({ orgId, onClose, onUploaded }) {
       setUploaded(result)
       onUploaded()
     } catch (err) {
-      addToast({ type: 'error', message: err.message })
+      toast.error(err.message)
     } finally {
       setLoading(false)
     }
@@ -457,6 +456,7 @@ function FilterBar({ keyword, onSearch, docType, onDocType, statusFilt, onStatus
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
         </svg>
         <input type="text" placeholder="Search name, description or tag…"
+          defaultValue={keyword}
           onChange={e => handleSearch(e.target.value)}
           className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-accent-500 focus:border-transparent placeholder-gray-400"/>
       </div>
@@ -611,16 +611,16 @@ function FileContent({ data, view, onDownload, onDelete, showOrg, orgNames, sort
 // ══════════════════════════════════════════════════════════════════════════════
 
 function AdminFilesView() {
-  const { addToast } = useToast()
+  const toast = useToast()
   const [view, setView]           = useView('files-view-admin', 'table')
   const [data, setData]           = useState(null)
   const [loading, setLoading]     = useState(true)
-  const [page, setPage]           = useState(0)
-  const [keyword, setKeyword]     = useState('')
-  const [docType, setDocType]     = useState('')
-  const [statusFilt, setStatusFilt] = useState('')
-  const [sortKey, setSortKey]     = useState('createdAt_DESC')
-  const [filterOrgId, setFilterOrgId] = useState('')
+  // Paging, search, filters and sort live in the URL so Back restores the same list
+  const [q, setQ] = useUrlState({ page: 0, keyword: '', type: '', status: '', sort: 'createdAt_DESC', org: '' })
+  const { page, keyword, type: docType, status: statusFilt, sort: sortKey, org: filterOrgId } = q
+  const setPage = pg => setQ({ page: pg })
+  const setFilterOrgId = v => setQ(prev => ({ org: typeof v === 'function' ? v(prev.org) : v, page: 0 }))
+  const setKeyword = v => setQ(prev => (prev.keyword === v ? {} : { keyword: v, page: 0 }))
   const [orgs, setOrgs]           = useState([])        // [{id, name}]
   const [orgNames, setOrgNames]   = useState({})        // {id -> name}
   const [showStats, setShowStats] = useState(true)
@@ -663,14 +663,16 @@ function AdminFilesView() {
       setData(result)
       setPage(pg)
     } catch (err) {
-      addToast({ type: 'error', message: err.message })
+      toast.error(err.message)
       setData(null)
     } finally {
       setLoading(false)
     }
   }, [filterOrgId, keyword, docType, statusFilt, sortBy, sortDir])
 
-  useEffect(() => { fetchFiles(0) }, [filterOrgId, keyword, docType, statusFilt, sortBy, sortDir])
+  // Filter setters reset page to 0 in the URL, so this restarts at 0 on filter changes and
+  // uses the restored page on mount.
+  useEffect(() => { fetchFiles(page) }, [filterOrgId, keyword, docType, statusFilt, sortBy, sortDir])
 
   return (
     <div className="p-6 max-w-screen-xl mx-auto">
@@ -794,12 +796,12 @@ function AdminFilesView() {
 
       {/* Filter Bar */}
       <FilterBar
-        onSearch={setKeyword}
-        docType={docType} onDocType={v => { setDocType(v); setPage(0) }}
-        statusFilt={statusFilt} onStatus={v => { setStatusFilt(v); setPage(0) }}
-        sortKey={sortKey} onSort={v => { setSortKey(v); setPage(0) }}
+        keyword={keyword} onSearch={setKeyword}
+        docType={docType} onDocType={v => setQ({ type: v, page: 0 })}
+        statusFilt={statusFilt} onStatus={v => setQ({ status: v, page: 0 })}
+        sortKey={sortKey} onSort={v => setQ({ sort: v, page: 0 })}
         extra={
-          <select value={filterOrgId} onChange={e => { setFilterOrgId(e.target.value); setPage(0) }}
+          <select value={filterOrgId} onChange={e => setQ({ org: e.target.value, page: 0 })}
             className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-accent-500">
             <option value="">All Organisations</option>
             {orgs.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
@@ -829,7 +831,7 @@ function AdminFilesView() {
         <FileContent data={data} view={view} showOrg orgNames={orgNames}
           onDownload={null} onDelete={null}
           sortBy={sortBy} sortDir={sortDir}
-          onSort={key => { setSortKey(key); setPage(0) }} />
+          onSort={key => setQ({ sort: key, page: 0 })} />
       )}
 
       <Pagination data={data} page={page} onPage={fetchFiles} />
@@ -843,18 +845,18 @@ function AdminFilesView() {
 
 function OrgFilesView() {
   const { user } = useAuth()
-  const { addToast } = useToast()
+  const toast = useToast()
   const orgId = user?.organizationId
 
   const [view, setView]             = useView('files-view', 'table')
   const [data, setData]             = useState(null)
   const [loading, setLoading]       = useState(true)
   const [showUpload, setShowUpload] = useState(false)
-  const [page, setPage]             = useState(0)
-  const [keyword, setKeyword]       = useState('')
-  const [docType, setDocType]       = useState('')
-  const [statusFilt, setStatusFilt] = useState('')
-  const [sortKey, setSortKey]       = useState('createdAt_DESC')
+  // Paging, search, filters and sort live in the URL so Back restores the same list
+  const [q, setQ] = useUrlState({ page: 0, keyword: '', type: '', status: '', sort: 'createdAt_DESC' })
+  const { page, keyword, type: docType, status: statusFilt, sort: sortKey } = q
+  const setPage = pg => setQ({ page: pg })
+  const setKeyword = v => setQ(prev => (prev.keyword === v ? {} : { keyword: v, page: 0 }))
 
   const PAGE_SIZE = 20
   const [sortBy, sortDir] = sortKey.split('_')
@@ -881,9 +883,9 @@ function OrgFilesView() {
       setPage(pg)
     } catch (err) {
       if (err.message?.includes('Cloud setup not exists')) {
-        addToast({ type: 'warning', message: 'Cloud storage is not configured yet. Go to Settings → Cloud Storage.' })
+        toast.warning('Cloud storage is not configured yet. Go to Settings → Cloud Storage.')
       } else {
-        addToast({ type: 'error', message: err.message })
+        toast.error(err.message)
       }
       setData(null)
     } finally {
@@ -891,25 +893,27 @@ function OrgFilesView() {
     }
   }, [orgId, keyword, docType, statusFilt, sortBy, sortDir])
 
-  useEffect(() => { fetchFiles(0) }, [orgId, keyword, docType, statusFilt, sortBy, sortDir])
+  // Filter setters reset page to 0 in the URL, so this restarts at 0 on filter changes and
+  // uses the restored page on mount.
+  useEffect(() => { fetchFiles(page) }, [orgId, keyword, docType, statusFilt, sortBy, sortDir])
 
   async function handleDownload(fileId, fileOrgId) {
     try {
       const res = await getFileDownloadUrl(fileOrgId ?? orgId, fileId)
       window.open(res.downloadUrl, '_blank', 'noopener')
-      addToast({ type: 'success', message: `Download link valid for ${Math.floor(res.expiresInSeconds / 60)} min` })
+      toast.success(`Download link valid for ${Math.floor(res.expiresInSeconds / 60)} min`)
     } catch (err) {
-      addToast({ type: 'error', message: err.message })
+      toast.error(err.message)
     }
   }
 
   async function handleDelete(fileId, fileOrgId) {
     try {
       await deleteFile(fileOrgId ?? orgId, fileId)
-      addToast({ type: 'success', message: 'File deleted successfully.' })
+      toast.success('File deleted successfully.')
       fetchFiles(page)
     } catch (err) {
-      addToast({ type: 'error', message: err.message })
+      toast.error(err.message)
     }
   }
 
@@ -961,10 +965,10 @@ function OrgFilesView() {
 
       {/* Filter Bar */}
       <FilterBar
-        onSearch={setKeyword}
-        docType={docType} onDocType={v => { setDocType(v); setPage(0) }}
-        statusFilt={statusFilt} onStatus={v => { setStatusFilt(v); setPage(0) }}
-        sortKey={sortKey} onSort={v => { setSortKey(v); setPage(0) }}
+        keyword={keyword} onSearch={setKeyword}
+        docType={docType} onDocType={v => setQ({ type: v, page: 0 })}
+        statusFilt={statusFilt} onStatus={v => setQ({ status: v, page: 0 })}
+        sortKey={sortKey} onSort={v => setQ({ sort: v, page: 0 })}
       />
 
       {/* Content */}
@@ -995,7 +999,7 @@ function OrgFilesView() {
         <FileContent data={data} view={view} showOrg={false}
           onDownload={handleDownload} onDelete={handleDelete}
           sortBy={sortBy} sortDir={sortDir}
-          onSort={key => { setSortKey(key); setPage(0) }} />
+          onSort={key => setQ({ sort: key, page: 0 })} />
       )}
 
       <Pagination data={data} page={page} onPage={fetchFiles} />

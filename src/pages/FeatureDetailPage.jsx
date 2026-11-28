@@ -148,14 +148,14 @@ Authorization: Bearer <api-key>
     gradient: 'linear-gradient(135deg,#f59e0b,#b45309)',
     icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
     tagline: 'Full visibility into how your organisation uses Braify',
-    desc: 'The Analytics dashboard gives every role a tailored view of their document activity. Custom date ranges, E-Sign conversion funnels, template usage rankings, per-user activity breakdowns, scheduled email reports and exportable charts — all role-scoped automatically.',
+    desc: 'The Analytics dashboard gives every role a tailored view of their document activity. Custom date ranges, E-Sign conversion funnels, template usage rankings, per-user activity breakdowns and exportable charts — all role-scoped automatically. Scheduled email reports are coming soon.',
     badge: 'Analytics & Reporting',
     badgeColor: 'bg-amber-100 text-amber-700',
     steps: [
       { step: '01', title: 'Open the dashboard', body: 'Navigate to the Dashboard and click the "Analytics" tab. The date range defaults to last 30 days — adjust with the 7d / 30d / 90d quick-select or pick a custom date range.' },
       { step: '02', title: 'Explore the E-Sign funnel', body: 'The E-Sign tab shows Sent → Viewed → Signed conversion rates as a visual funnel, so you can spot where signers are dropping off.' },
       { step: '03', title: 'Review template usage', body: 'The Analytics tab ranks your templates by usage — most used, least used, and zero-usage templates. Quickly identify stale templates and popular ones.' },
-      { step: '04', title: 'Schedule & export', body: 'Set up weekly or monthly PDF summary reports by email in the Scheduled Reports panel. Export any chart as a PNG file or print to PDF with one click.' },
+      { step: '04', title: 'Export & share', body: 'Export any chart as a PNG file or print to PDF with one click. Scheduled email reports are coming soon.' },
     ],
     capabilities: [
       'Overview: PDFs generated, emails sent, e-sign docs, active users',
@@ -163,7 +163,7 @@ Authorization: Bearer <api-key>
       'E-Sign funnel: Sent → Viewed → Signed with drop-off %',
       'Template usage analytics: most used, least used, zero-use',
       'Per-user activity breakdown (Org Admin: by user; Platform Admin: by org)',
-      'Scheduled email reports: weekly or monthly PDF summary',
+      'Scheduled email reports (coming soon)',
       'Export charts as PNG or print dashboard to PDF',
       'Real-time activity feed with 30-second polling',
       'Role-scoped data: Org Admin sees own org, Platform Admin sees all',
@@ -172,7 +172,7 @@ Authorization: Bearer <api-key>
     orgSetup: [
       { title: 'Access the Dashboard', body: 'Every authenticated user lands on the Dashboard at /dashboard. The Analytics tab is always available — no extra feature flag required.' },
       { title: 'Set your date range', body: 'Click "Analytics" → use the Quick-select (7d / 30d / 90d) or open the Custom Date Range picker. All charts and counts update instantly.' },
-      { title: 'Configure scheduled reports', body: 'In the Scheduled Reports panel, choose weekly or monthly cadence and enter the recipient email(s). Reports are saved to your browser and will run on the schedule.' },
+      { title: 'Export a chart', body: 'Use the export button on any chart to download it as a PNG or print it to PDF.' },
       { title: 'Export charts', body: 'Hover over any chart and click the "Export PNG" button to save the chart image, or use your browser\'s Print (Ctrl+P) to produce a PDF of the full dashboard.' },
     ],
     apiSnippet: `GET /api/dashboard/stats?from=2026-05-01&to=2026-05-31

@@ -1,3 +1,7 @@
+/* GrapesJS editor base styles, bundled with the builder chunk (pinned to the
+   installed grapesjs version) instead of a render-blocking unpkg <link> on every page. */
+@import 'grapesjs/dist/css/grapes.min.css';
+
 /* ─────────────────────────────────────────────────────────
    Builder theme tokens — ported from the approved redesign
    preview. Light by default; `.dark` on <html> flips them for

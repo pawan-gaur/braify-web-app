@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { mfaStatus, mfaSetup, mfaEnable, mfaDisable, mfaRegenerate } from '../../services/api'
 import { useToast } from '../../context/ToastContext'
+import { useAuth } from '../../context/AuthContext'
 
-const errMsg = (e) => e?.response?.data?.message || e?.message || 'Something went wrong.'
+const errMsg = (e) => e?.message || 'Something went wrong.'
 
 /**
  * Two-factor authentication settings. Behaviour adapts to the org policy:
@@ -12,6 +14,7 @@ const errMsg = (e) => e?.response?.data?.message || e?.message || 'Something wen
  */
 export default function MfaCard() {
   const toast = useToast()
+  const { user, setUser } = useAuth()
   const [status,  setStatus]  = useState(null)   // { orgPolicy, enabled, enrolledAt, recoveryCodesRemaining }
   const [loading, setLoading] = useState(true)
   const [busy,    setBusy]    = useState(false)
@@ -43,6 +46,7 @@ export default function MfaCard() {
       setSetupData(null); setCode('')
       await load()
       toast.success('Two-factor authentication enabled.')
+      setUser?.(u => u && ({ ...u, mustSetupMfa: false }))
     } catch (e) { toast.error(errMsg(e)) }
     finally { setBusy(false) }
   }
@@ -69,6 +73,10 @@ export default function MfaCard() {
 
   const policy  = status?.orgPolicy
   const enabled = status?.enabled
+  // Platform Admins have no org — "required" can only come from the platform-wide policy they control.
+  const policyHint = user?.role === 'PLATFORM_ADMIN' && (
+    <> Change it in <Link to="/settings/platform/security" className="underline">Security Policies</Link>.</>
+  )
 
   return (
     <div className="card space-y-4">
@@ -112,7 +120,7 @@ export default function MfaCard() {
             Add a second step at sign-in using an authenticator app (Google Authenticator, Authy, 1Password…).
             {policy === 'REQUIRED' && (
               <span className="block mt-1 text-amber-600 dark:text-amber-400 font-medium">
-                2FA is required by policy.
+                2FA is required by policy.{policyHint}
               </span>
             )}
           </p>
@@ -164,7 +172,7 @@ export default function MfaCard() {
             )}
           </div>
           {policy === 'REQUIRED' && (
-            <p className="text-xs text-gray-400">2FA is required by policy, so it can't be turned off.</p>
+            <p className="text-xs text-gray-400">2FA is required by policy, so it can't be turned off.{policyHint}</p>
           )}
         </div>
       )}

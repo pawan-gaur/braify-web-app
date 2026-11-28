@@ -69,7 +69,7 @@ export default function AiAssistBar({ context = 'PDF', getHtml, onApply, suggest
         setNotice({ type: 'error', text: res?.message || 'The AI could not complete that request.' })
       }
     } catch (e) {
-      setNotice({ type: 'error', text: e?.response?.data?.message || e.message || 'Request failed.' })
+      setNotice({ type: 'error', text: e.message || 'Request failed.' })
     } finally {
       setBusy(false)
     }

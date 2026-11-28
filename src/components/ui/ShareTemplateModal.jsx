@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import {
   searchOrganizations,
+  findShareTargetOrg,
   shareTemplate,
   revokeShare,
   getSharesForTemplate,
 } from '../../services/api'
 import { useToast } from '../../context/ToastContext'
+import { useAuth, ROLES } from '../../context/AuthContext'
 
 const PERMISSIONS = [
   {
@@ -38,6 +40,8 @@ const PERMISSIONS = [
  */
 export default function ShareTemplateModal({ templateId, templateType, templateName, onClose }) {
   const toast = useToast()
+  const { user } = useAuth()
+  const isPlatformAdmin = user?.role === ROLES.PLATFORM_ADMIN
 
   // Org search
   const [orgQuery,      setOrgQuery]      = useState('')
@@ -65,12 +69,17 @@ export default function ShareTemplateModal({ templateId, templateType, templateN
 
   // Debounced org search
   useEffect(() => {
-    if (!orgQuery.trim()) { setOrgResults([]); return }
+    const q = orgQuery.trim()
+    if (!q) { setOrgResults([]); return }
+    // Org admins can't browse other tenants: they look one up by a member's exact email.
+    if (!isPlatformAdmin && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(q)) { setOrgResults([]); return }
     const t = setTimeout(async () => {
       setSearchLoading(true)
       try {
-        const data = await searchOrganizations(orgQuery)
-        setOrgResults(data.filter(o => o.active))
+        const data = isPlatformAdmin
+          ? (await searchOrganizations(q)).filter(o => o.active)
+          : [await findShareTargetOrg(q)]
+        setOrgResults(data)
       } catch {
         setOrgResults([])
       } finally {
@@ -78,7 +87,7 @@ export default function ShareTemplateModal({ templateId, templateType, templateN
       }
     }, 350)
     return () => clearTimeout(t)
-  }, [orgQuery])
+  }, [orgQuery, isPlatformAdmin])
 
   const handleShare = async () => {
     if (!selectedOrg) { toast.error('Please select a target organisation.'); return }
@@ -165,7 +174,7 @@ export default function ShareTemplateModal({ templateId, templateType, templateN
                 <input
                   type="text"
                   className="form-input pl-9"
-                  placeholder="Search organisation by name…"
+                  placeholder={isPlatformAdmin ? 'Search organisation by name…' : 'Email of someone in the other organisation'}
                   value={orgQuery}
                   onChange={e => setOrgQuery(e.target.value)}
                 />

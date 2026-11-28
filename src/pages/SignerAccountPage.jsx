@@ -69,24 +69,28 @@ export default function SignerAccountPage() {
         {error && <div className="alert-error border rounded-xl px-4 py-3 text-sm">{error}</div>}
 
         <div>
-          <label className="form-label">Email</label>
-          <input className="form-input" value={user?.email || ''} disabled readOnly />
+          <label className="form-label" htmlFor="acct-email">Email</label>
+          <input
+                  id="acct-email" className="form-input" value={user?.email || ''} disabled readOnly />
         </div>
         {needsCurrent && (
           <div>
-            <label className="form-label">Current password</label>
-            <input type="password" autoComplete="current-password" className="form-input"
+            <label className="form-label" htmlFor="acct-current">Current password</label>
+            <input
+                  id="acct-current" type="password" autoComplete="current-password" className="form-input"
               value={current} onChange={e => setCurrent(e.target.value)} />
           </div>
         )}
         <div>
-          <label className="form-label">New password</label>
-          <input type="password" autoComplete="new-password" className="form-input"
+          <label className="form-label" htmlFor="acct-new">New password</label>
+          <input
+                  id="acct-new" type="password" autoComplete="new-password" className="form-input"
             value={next} onChange={e => setNext(e.target.value)} />
         </div>
         <div>
-          <label className="form-label">Confirm new password</label>
-          <input type="password" autoComplete="new-password" className="form-input"
+          <label className="form-label" htmlFor="acct-confirm">Confirm new password</label>
+          <input
+                  id="acct-confirm" type="password" autoComplete="new-password" className="form-input"
             value={confirm} onChange={e => setConfirm(e.target.value)} />
         </div>
         <button type="submit" disabled={saving} className="btn btn-primary w-full justify-center disabled:opacity-60">

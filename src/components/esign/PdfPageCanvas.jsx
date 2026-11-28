@@ -1,12 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import * as pdfjsLib from 'pdfjs-dist'
-// Bundle the worker via Vite's ?worker (emits a .js chunk and instantiates it for us)
-// instead of ?url. A ?url import emits a .mjs file, and many production static hosts serve
-// .mjs with a non-JS MIME type, which blocks the module worker from loading — leaving the
-// PDF blank in prod while it works in dev. ?worker sidesteps the MIME/path problem entirely.
-import PdfjsWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?worker'
-
-pdfjsLib.GlobalWorkerOptions.workerPort = new PdfjsWorker()
+// pdf.js + its worker load lazily on first use (see utils/pdfjsLoader.js for why it's ?worker).
+import { getPdfjs } from '../../utils/pdfjsLoader'
 
 /**
  * Renders a single page of a PDF to a <canvas> via pdfjs-dist.
@@ -27,6 +21,7 @@ export default function PdfPageCanvas({ source, pageNumber, onPageCountChange, o
   useEffect(() => {
     if (!source || !canvasRef.current) return
     let cancelled = false
+    let renderTask = null   // in-flight page.render(); cancelled on cleanup so a re-run can reuse the canvas
     setFailed(false)
 
     ;(async () => {
@@ -40,6 +35,8 @@ export default function PdfPageCanvas({ source, pageNumber, onPageCountChange, o
           const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0))
           loadParams  = { data: bytes }
         }
+        const pdfjsLib = await getPdfjs()
+        if (cancelled) return
         const pdf = await pdfjsLib.getDocument(loadParams).promise
         if (cancelled) return
 
@@ -73,13 +70,14 @@ export default function PdfPageCanvas({ source, pageNumber, onPageCountChange, o
 
         const ctx = canvas.getContext('2d')
         ctx.clearRect(0, 0, canvas.width, canvas.height)
-        await page.render({ canvasContext: ctx, viewport: scaled }).promise
+        renderTask = page.render({ canvasContext: ctx, viewport: scaled })
+        await renderTask.promise
       } catch (err) {
-        if (!cancelled) { console.error('PDF render error:', err); setFailed(true); onError?.(err) }
+        if (!cancelled && err?.name !== 'RenderingCancelledException') { console.error('PDF render error:', err); setFailed(true); onError?.(err) }
       }
     })()
 
-    return () => { cancelled = true }
+    return () => { cancelled = true; renderTask?.cancel() }
   }, [source, pageNumber, zoom])   // re-render at the new width when the zoom level changes
 
   if (failed) {

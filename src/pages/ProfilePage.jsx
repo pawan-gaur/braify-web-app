@@ -1,10 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { updateProfile, changePassword, uploadAvatar, getMyAuditLog } from '../services/api'
+import { updateProfile, changePassword, uploadAvatar, uploadToStorage, getMyAuditLog, getMySummary } from '../services/api'
 import MfaCard from '../components/profile/MfaCard'
 import useDocumentTitle from '../hooks/useDocumentTitle'
 import Breadcrumbs from '../components/ui/Breadcrumbs'
+import { ProfileSidebar, ProfileOverview, UnderlineTabs, ROLE_LABEL, PROFILE_ICONS as I } from '../components/profile/ProfileParts'
+import { FEATURES } from '../config/features'
 
 const CRUMBS = [
   { label: 'Dashboard', to: '/' },
@@ -23,28 +26,32 @@ const ACTION_BADGE = {
   SESSION_REVOKED:  'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
 }
 
-import { fmtDateTime as fmtDate } from '../utils/date'
-
-function Avatar({ user, size = 'lg' }) {
-  const s = size === 'lg' ? 'w-24 h-24 text-2xl' : 'w-12 h-12 text-base'
-  if (user.profilePicture) {
-    return <img src={user.profilePicture} alt="" className={`${s} rounded-full object-cover`} />
-  }
-  const initials = `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase()
-  return (
-    <div className={`${s} rounded-full bg-gradient-to-br from-brand-500 to-accent-600 flex items-center justify-center text-white font-bold`}>
-      {initials}
-    </div>
-  )
-}
+import { fmtDateTime as fmtDate, fmtDate as fmtDay } from '../utils/date'
 
 export default function ProfilePage() {
   useDocumentTitle('My Profile')
-  const { user, setUser } = useAuth()
+  const { user, setUser, hasFeature } = useAuth()
   const toast = useToast()
   const fileRef = useRef(null)
 
-  const [tab, setTab] = useState('info')  // 'info' | 'password' | 'activity'
+  // ?setup=password|mfa — sent here by ProtectedRoute until required setup is done.
+  const setup = new URLSearchParams(useLocation().search).get('setup')
+  const navigate = useNavigate()
+  const [tab, setTab] = useState(setup === 'password' ? 'password' : setup === 'mfa' ? 'security' : 'overview')  // 'overview' | 'info' | 'password' | 'security' | 'activity'
+
+  /* Overview (stats, documents, activity) — null while loading, { unavailable } on failure */
+  const [summary, setSummary] = useState(null)
+  useEffect(() => {
+    getMySummary().then(setSummary).catch(() => setSummary({ unavailable: true }))
+  }, [user?.mustSetupMfa])   // re-read after MFA setup so the security facts update
+
+  // After the required password change: on to MFA if that's required too, else to the dashboard.
+  // (Not after enabling MFA — the recovery codes are on screen and must be saved first.)
+  useEffect(() => {
+    if (setup !== 'password' || !user || user.mustChangePassword) return
+    if (user.mustSetupMfa) setTab('security')
+    else navigate('/dashboard', { replace: true })
+  }, [setup, user?.mustChangePassword, user?.mustSetupMfa]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /* Info form */
   const [info, setInfo]         = useState({ firstName: user?.firstName || '', lastName: user?.lastName || '', bio: user?.bio || '' })
@@ -98,6 +105,7 @@ export default function ProfilePage() {
       await changePassword({ currentPassword: pw.currentPassword, newPassword: pw.newPassword })
       toast.success('Password changed successfully.')
       setPw({ currentPassword: '', newPassword: '', confirm: '' })
+      setUser(u => ({ ...u, mustChangePassword: false }))
     } catch (err) {
       toast.error(err.message || 'Failed to change password.')
     } finally {
@@ -111,97 +119,105 @@ export default function ProfilePage() {
     if (file.size > 2 * 1024 * 1024) { toast.error('Image must be smaller than 2 MB.'); return }
     setUploadingAvatar(true)
     try {
-      const reader = new FileReader()
-      reader.onload = async (ev) => {
-        try {
-          const base64 = ev.target.result
-          const updated = await uploadAvatar(base64)
-          setUser(u => ({ ...u, profilePicture: updated.profilePicture }))
-          toast.success('Profile picture updated.')
-        } catch (err) {
-          toast.error(err.message || 'Failed to upload avatar.')
-        } finally {
-          setUploadingAvatar(false)
-        }
-      }
-      reader.readAsDataURL(file)
-    } catch {
+      const stored  = await uploadToStorage(file, 'AVATAR')
+      const updated = await uploadAvatar(stored.id)
+      setUser(u => ({ ...u, profilePicture: updated.profilePicture }))
+      toast.success('Profile picture updated.')
+    } catch (err) {
+      toast.error(err.message || 'Failed to upload avatar.')
+    } finally {
       setUploadingAvatar(false)
     }
   }
 
-  const ROLE_LABEL = {
-    PLATFORM_ADMIN: 'Platform Admin',
-    ORG_ADMIN:      'Org Admin',
-    ADMIN:          'Admin',
-    USER:           'User',
-  }
+
+  const avatarButton = (
+    <>
+      <button
+        onClick={() => fileRef.current?.click()}
+        disabled={uploadingAvatar}
+        className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-white dark:bg-gray-700 border-2
+                   border-gray-100 dark:border-gray-600 flex items-center justify-center
+                   shadow hover:bg-brand-50 transition-colors"
+        title="Change photo"
+      >
+        {uploadingAvatar
+          ? <svg className="animate-spin w-3.5 h-3.5 text-brand-500" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+          : <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>}
+      </button>
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+    </>
+  )
+
+  const moreItems = [
+    { label: 'Change photo',        icon: I.user,   onClick: () => fileRef.current?.click(), disabled: uploadingAvatar },
+    { label: 'Edit personal info',  icon: I.pen,    onClick: () => setTab('info') },
+    { label: 'Change password',     icon: I.key,    onClick: () => setTab('password') },
+    { label: 'Two-factor authentication', icon: I.shield, onClick: () => setTab('security') },
+  ]
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-8">
-      <Breadcrumbs items={CRUMBS} />
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+      <div className="grid gap-6 grid-cols-[minmax(0,1fr)] lg:grid-cols-[300px_minmax(0,1fr)] items-start">
+        <ProfileSidebar user={user || {}} summary={summary} avatarSlot={avatarButton} moreItems={moreItems}
+          activityHref={user?.email ? `/audit-log?by=${encodeURIComponent(user.email)}` : undefined} />
 
-      {/* Profile header card */}
-      <div className="mt-4 mb-6 card flex items-center gap-6">
-        <div className="relative">
-          <Avatar user={user || {}} />
-          <button
-            onClick={() => fileRef.current?.click()}
-            disabled={uploadingAvatar}
-            className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-white dark:bg-gray-700 border-2
-                       border-gray-100 dark:border-gray-600 flex items-center justify-center
-                       shadow hover:bg-brand-50 transition-colors"
-            title="Change photo"
-          >
-            {uploadingAvatar
-              ? <svg className="animate-spin w-3.5 h-3.5 text-brand-500" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
-              : <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>}
-          </button>
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-            {user?.firstName} {user?.lastName}
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{user?.email}</p>
-          <div className="flex items-center gap-2 mt-2">
-            <span className="badge badge-brand text-[11px]">{ROLE_LABEL[user?.role] || user?.role}</span>
-            {user?.organizationName && (
-              <span className="badge badge-violet text-[11px]">{user?.organizationName}</span>
-            )}
-            {user?.mustChangePassword && (
-              <span className="text-[11px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">
-                Password setup required
-              </span>
-            )}
+        <div className="min-w-0">
+          <Breadcrumbs items={CRUMBS} />
+
+          {/* Header */}
+          <div className="mt-3 mb-5">
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-ink dark:text-white">
+              {user?.firstName} {user?.lastName}
+            </h1>
+            <div className="flex items-center gap-2 mt-2 flex-wrap text-xs text-ink-4">
+              <span>Joined on: <span className="font-semibold text-ink-2 dark:text-gray-300">{fmtDay(user?.createdAt) || '—'}</span></span>
+              <span className="badge badge-brand text-[11px]">{ROLE_LABEL[user?.role] || user?.role}</span>
+              {user?.organizationName && (
+                <span className="badge badge-violet text-[11px]">{user?.organizationName}</span>
+              )}
+              {user?.mustChangePassword && (
+                <span className="text-[11px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">
+                  Password setup required
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 p-1 rounded-xl bg-ink-8 dark:bg-gray-800 border border-ink-7 dark:border-gray-700 mb-6 w-fit">
-        {[
-          { id: 'info',     label: 'Personal Info' },
-          { id: 'password', label: 'Change Password' },
-          { id: 'security', label: 'Security' },
-          { id: 'activity', label: 'Activity Log' },
-        ].map(t => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all
-              ${tab === t.id
-                ? 'bg-gradient-accent text-white shadow-soft'
-                : 'text-ink-3 hover:text-ink dark:text-gray-400 dark:hover:text-gray-200'}`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+          {(user?.mustChangePassword || user?.mustSetupMfa) && (
+            <div className="alert-warning border rounded-xl px-4 py-3 text-sm mb-5">
+              {user?.mustChangePassword
+                ? 'Please set a new password before you continue.'
+                : user?.role === 'PLATFORM_ADMIN'
+                  ? <>Two-factor authentication is required platform-wide. Set up an authenticator app on the Security tab to continue, or turn the requirement off in <Link to="/settings/platform/security" className="font-semibold underline">Security Policies</Link>.</>
+                  : 'Your organisation requires two-factor authentication. Set up an authenticator app on the Security tab to continue.'}
+            </div>
+          )}
+          {setup === 'mfa' && !user?.mustChangePassword && !user?.mustSetupMfa && (
+            <div className="alert-success border rounded-xl px-4 py-3 text-sm mb-5 flex items-center justify-between gap-3 flex-wrap">
+              <span>Two-factor authentication is on. Save your recovery codes, then continue.</span>
+              <button className="btn btn-primary btn-sm" onClick={() => navigate('/dashboard', { replace: true })}>Continue</button>
+            </div>
+          )}
+
+          <UnderlineTabs value={tab} onChange={setTab} tabs={[
+            { id: 'overview', label: 'Overview' },
+            { id: 'info',     label: 'Personal Info' },
+            { id: 'password', label: 'Change Password' },
+            { id: 'security', label: 'Security' },
+            { id: 'activity', label: 'Account History' },
+          ]} />
+          <div className="mt-5">
+
+      {/* Tab: Overview */}
+      {tab === 'overview' && (
+        <ProfileOverview summary={summary} isSelf
+          canOpenESign={hasFeature?.(FEATURES.E_SIGN)} esignListHref="/esign" />
+      )}
 
       {/* Tab: Personal Info */}
       {tab === 'info' && (
-        <form onSubmit={handleSaveInfo} className="card space-y-4">
+        <form onSubmit={handleSaveInfo} className="card space-y-4 max-w-3xl">
           <h2 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Personal Information</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -238,15 +254,15 @@ export default function ProfilePage() {
 
       {/* Tab: Change Password */}
       {tab === 'password' && (
-        <form onSubmit={handleChangePassword} className="card space-y-4">
+        <form onSubmit={handleChangePassword} className="card space-y-4 max-w-3xl">
           <h2 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">Change Password</h2>
           <div>
-            <label className="form-label">Current Password *</label>
+            <label className="form-label">Current Password {user?.mustChangePassword ? '' : '*'}</label>
             <div className="relative">
               <input type={showPw ? 'text' : 'password'} className="form-input pr-10"
                 placeholder="Enter current password"
                 value={pw.currentPassword}
-                onChange={e => setPw(p => ({ ...p, currentPassword: e.target.value }))} required />
+                onChange={e => setPw(p => ({ ...p, currentPassword: e.target.value }))} required={!user?.mustChangePassword} />
               <button type="button" onClick={() => setShowPw(!showPw)}
                 className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -283,11 +299,14 @@ export default function ProfilePage() {
       )}
 
       {/* Tab: Security (2FA) */}
-      {tab === 'security' && <MfaCard />}
+      {tab === 'security' && <div className="max-w-3xl"><MfaCard /></div>}
 
       {/* Tab: Activity Log */}
       {tab === 'activity' && (
-        <div className="card p-0 overflow-hidden">
+        <div className="card p-0 overflow-hidden max-w-3xl">
+          <p className="px-5 pt-4 pb-3 text-xs text-ink-4 border-b border-ink-7 dark:border-gray-700">
+            Changes made to your account — by you or by an administrator.
+          </p>
           {loadingLogs ? (
             <div className="flex items-center justify-center py-16 text-gray-400 gap-3">
               <div className="w-5 h-5 border-2 border-accent-500 border-t-transparent rounded-full animate-spin"/>
@@ -318,6 +337,9 @@ export default function ProfilePage() {
           )}
         </div>
       )}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

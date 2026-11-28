@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { http } from '../services/api'
 import { FEATURES } from '../config/features'
+import { resetEmailContacts } from '../hooks/useEmailContacts'
 
 /* ── Role helpers ────────────────────────────────────────────────────────── */
 export const ROLES = {
@@ -91,6 +92,8 @@ export function AuthProvider({ children }) {
   const [featureRoleAccess, setFeatureRoleAccess] = useState(null)
   const [loading,           setLoading]           = useState(true)
   const [lastUser,          setLastUser]          = useState(readLastUser)
+  // What the org's plan allows (bulk features, trial) — Braify users only; null until loaded.
+  const [entitlements,      setEntitlements]      = useState(null)
 
   /* ── Restore session on mount ── */
   useEffect(() => {
@@ -123,6 +126,19 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  /* ── Plan entitlements (re-fetched on sign-in and after billing changes) ── */
+  const refreshEntitlements = useCallback(() => {
+    return http.get('/billing/entitlements')
+      .then(r => { setEntitlements(r.data); return r.data })
+      .catch(() => null)   // older backend / no access — features stay as before
+  }, [])
+
+  useEffect(() => {
+    const signer = user?.accountType === ACCOUNT_TYPES.SIGNER || user?.role === 'SIGNER'
+    if (user && !signer) refreshEntitlements()
+    else setEntitlements(null)
+  }, [user?.id, user?.accountType, user?.role, refreshEntitlements]) // eslint-disable-line react-hooks/exhaustive-deps
+
   /* ── Keep axios interceptor in sync with token changes ── */
   useEffect(() => {
     if (token) {
@@ -136,6 +152,9 @@ export function AuthProvider({ children }) {
 
   /* Apply a successful auth response (token + user + features + theme). */
   const applySession = useCallback((data) => {
+    // Persist synchronously: child effects (e.g. the Dashboard's first fetch) can run before
+    // the token-sync effect below, and would otherwise go out without a token.
+    try { localStorage.setItem(TOKEN_KEY, data.token) } catch { /* ignore */ }
     setToken(data.token)
     const userObj = {
       id:                 data.userId,
@@ -198,6 +217,19 @@ export function AuthProvider({ children }) {
     return applySession(data)
   }, [applySession])
 
+  /* ── Instant self-serve sign-up ── */
+  const signupStart = useCallback(async (form) => {
+    const res = await http.post('/auth/signup/start', form)
+    return res.data   // { message, resendAfterSeconds, ttlMinutes }
+  }, [])
+
+  const signupComplete = useCallback(async (form, code) => {
+    const res  = await http.post('/auth/signup/complete', { ...form, code, deviceInfo: deviceInfo() })
+    const data = res.data
+    if (data.mfaRequired) return { mfaRequired: true, mfaToken: data.mfaToken }
+    return applySession(data)
+  }, [applySession])
+
   /* ── MFA challenge — step 2 of login ── */
   const verifyMfa = useCallback(async (mfaToken, code) => {
     const res  = await http.post('/auth/login/mfa', { mfaToken, code, deviceInfo: deviceInfo() })
@@ -219,6 +251,7 @@ export function AuthProvider({ children }) {
       setUser(null)
       setFeatures([])
       setFeatureRoleAccess(null)
+      resetEmailContacts()   // org-scoped cache — must not leak to the next user in this tab
       // NOTE: the remembered identity is intentionally KEPT on logout so the next visit
       // shows the "Welcome back" password-only prompt (Gmail-style quick re-login).
       // "Sign in as a different user" on the login page clears it via forgetLastUser().
@@ -268,6 +301,10 @@ export function AuthProvider({ children }) {
     setFeatureRoleAccess,  // expose so BrandingPage can refresh after saving access rules
     loading,
     isAuthenticated: !!user,
+    entitlements,
+    refreshEntitlements,
+    /** Bulk email / bulk e-sign allowed on this plan (true until entitlements load — server enforces). */
+    bulkEnabled: entitlements ? entitlements.bulkEnabled !== false : true,
     /**
      * True for anyone limited to the signer inbox: a signer-portal session, or a Braify
      * account with role SIGNER (the backend denies that role everywhere outside the inbox).
@@ -278,6 +315,8 @@ export function AuthProvider({ children }) {
     login,
     requestLoginCode,
     loginWithCode,
+    signupStart,
+    signupComplete,
     verifyMfa,
     logout,
     can,
